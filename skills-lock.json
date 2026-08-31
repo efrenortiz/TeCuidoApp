@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "django-security": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "skillPath": "skills/django-security/SKILL.md",
+      "computedHash": "9bb29e8ddc48d8a0ab4ed4c42732586c1b5af8e09340ca58ac759a39f493639f"
+    },
+    "pytest": {
+      "source": "imankulov/skills",
+      "sourceType": "github",
+      "skillPath": "skills/pytest/SKILL.md",
+      "computedHash": "52cdc3e3e927ff564ff7cdb4b0dd7de9c58e6b42ec098662f9d81eba5ae8d317"
+    }
+  }
+}

@@ -1,0 +1,1362 @@
+# TeCuidoApp — Requirements
+
+## 1. Descripción del proyecto
+
+**TeCuidoApp** es una aplicación Web para la gestión integral de un consultorio médico especializado en **gineco-obstetricia**.
+
+La aplicación será desarrollada en:
+
+- **Python**
+- **Django**
+- **PostgreSQL** como base de datos
+- **Redis** y **Celery** para tareas asíncronas y programadas, cuando sea necesario
+- Almacenamiento privado para documentos y archivos médicos
+- Generación de documentos PDF
+
+El sistema tendrá tres grandes áreas de operación:
+
+1. Gestión administrativa del consultorio.
+2. Gestión clínica y agenda por parte del médico.
+3. Portal para pacientes y responsables.
+
+La aplicación debe diseñarse con una arquitectura modular, segura, mantenible y preparada para incorporar funcionalidades futuras.
+
+---
+
+## 2. Objetivo general
+
+Proporcionar una plataforma Web que permita administrar consultorios, médicos, pacientes, responsables, agenda y disponibilidad; facilitar la atención médica; mantener un expediente clínico histórico; emitir recetas y solicitudes de estudios; administrar documentos clínicos; y permitir al paciente o responsable consultar información y documentos asociados a sus citas.
+
+El sistema debe priorizar:
+
+- Seguridad.
+- Privacidad.
+- Trazabilidad.
+- Integridad de la información clínica.
+- Control de permisos.
+- Usabilidad para médicos, administradores y pacientes/responsables.
+- Historial de cambios y acciones relevantes.
+
+---
+
+# 3. Alcance funcional
+
+## 3.1 Roles
+
+El sistema debe contemplar inicialmente los siguientes roles:
+
+### Administrador
+
+Tiene acceso global a la aplicación y puede administrar:
+
+- Usuarios.
+- Médicos.
+- Consultorios.
+- Relaciones médico-consultorio.
+- Configuraciones generales.
+- Información administrativa.
+- Auditoría.
+
+El administrador debe tener acceso global a la información de la aplicación de acuerdo con los permisos establecidos.
+
+Todo acceso del administrador a información clínica sensible debe quedar registrado en auditoría.
+
+### Médico
+
+Puede:
+
+- Iniciar sesión.
+- Administrar su disponibilidad.
+- Consultar y administrar su agenda.
+- Enviar invitaciones de registro a prospectos.
+- Registrar y actualizar pacientes y responsables.
+- Programar citas en nombre del paciente/responsable.
+- Registrar la llegada del paciente o gestionar el estado de atención.
+- Consultar el contexto clínico del paciente.
+- Crear y actualizar historia clínica.
+- Registrar consultas médicas.
+- Registrar diagnósticos e impresión diagnóstica.
+- Registrar tratamientos y evolución.
+- Emitir recetas.
+- Generar solicitudes de laboratorio, gabinete y otros estudios.
+- Generar documentos PDF.
+- Consultar documentos históricos relacionados con el paciente.
+- Concluir una consulta y marcar la cita como atendida.
+
+El médico es responsable de las decisiones clínicas. TeCuidoApp no debe realizar diagnósticos automáticos ni indicar tratamientos de forma autónoma.
+
+### Paciente
+
+Puede:
+
+- Registrarse mediante una invitación enviada por su médico.
+- Verificar su correo electrónico.
+- Iniciar sesión.
+- Consultar y actualizar la información permitida de su perfil.
+- Consultar sus citas.
+- Solicitar citas.
+- Confirmar citas.
+- Consultar el historial de citas.
+- Consultar y descargar recetas.
+- Consultar y descargar indicaciones de tratamiento.
+- Consultar y descargar solicitudes de estudios.
+- Adjuntar archivos a solicitudes de atención/cita.
+- Consultar los documentos que tenga autorización para visualizar.
+
+### Responsable
+
+Puede realizar las operaciones permitidas para un paciente y además:
+
+- Gestionar uno o más pacientes a su cargo.
+- Registrar pacientes menores de edad o personas que requieran responsable.
+- Solicitar citas para un paciente a su cargo.
+- Consultar citas por paciente.
+- Consultar y descargar documentos de los pacientes que tenga autorizados.
+- Actualizar la información permitida de los pacientes a su cargo.
+
+La relación entre responsable y paciente debe quedar registrada de manera explícita y debe poder soportar al menos un paciente por responsable.
+
+---
+
+# 4. Modelo de identidad y usuarios
+
+Debe existir un modelo de usuario central para autenticación y autorización.
+
+No se deben crear sistemas independientes de autenticación para cada rol.
+
+La arquitectura deberá permitir asociar a un mismo usuario diferentes perfiles funcionales de acuerdo con las necesidades futuras, manteniendo una separación clara entre:
+
+- Usuario/autenticación.
+- Persona.
+- Paciente.
+- Responsable.
+- Médico.
+
+La cuenta de correo electrónico utilizada para el registro debe ser única.
+
+Debe implementarse:
+
+- Verificación de correo electrónico.
+- Recuperación de contraseña.
+- Cambio de contraseña.
+- Activación/desactivación de cuentas.
+- Control de permisos por rol.
+- Registro de fecha y hora de último acceso cuando resulte conveniente.
+
+---
+
+# 5. Pacientes y responsables
+
+## 5.1 Paciente
+
+Un paciente puede ser:
+
+- Mayor de edad y no requerir responsable.
+- Menor de edad.
+- Persona que requiere responsable.
+
+La información general del paciente debe contemplar como mínimo:
+
+### Identificación
+
+- Nombre(s).
+- Apellido paterno.
+- Apellido materno.
+- Fecha de nacimiento.
+- Sexo.
+- CURP, si se decide incluir.
+- Nacionalidad.
+
+### Contacto
+
+- Correo electrónico.
+- Teléfono celular personal.
+- Teléfono alternativo, si aplica.
+- Contacto de emergencia.
+
+### Domicilio
+
+- Calle.
+- Número.
+- Colonia.
+- Código postal.
+- Municipio/alcaldía.
+- Estado.
+- País.
+
+### Información médica relevante
+
+- Alergias.
+- Tipo sanguíneo, si se conoce.
+- Enfermedades crónicas.
+- Medicamentos actuales.
+- Antecedentes quirúrgicos.
+- Hospitalizaciones relevantes.
+
+### Información gineco-obstétrica
+
+La arquitectura debe permitir registrar y ampliar posteriormente:
+
+- Menarca.
+- FUM.
+- Características del ciclo menstrual.
+- Gestas.
+- Partos.
+- Cesáreas.
+- Abortos.
+- Embarazos ectópicos.
+- Complicaciones obstétricas previas.
+- Método anticonceptivo.
+- Información relacionada con embarazo actual, cuando aplique.
+
+## 5.2 Responsable
+
+La información del responsable debe contemplar como mínimo:
+
+- Nombre(s).
+- Apellido paterno.
+- Apellido materno.
+- Fecha de nacimiento.
+- Correo electrónico.
+- Teléfono celular.
+- Teléfono alternativo, si aplica.
+- Domicilio.
+- Relación con el paciente.
+- Contacto alternativo.
+- Datos de identificación, si posteriormente fueran requeridos.
+
+Relaciones posibles:
+
+- Madre.
+- Padre.
+- Tutor legal.
+- Familiar.
+- Cuidador.
+- Otro.
+
+La relación responsable-paciente debe ser una entidad explícita y debe permitir controlar qué acciones puede realizar el responsable.
+
+---
+
+# 6. Relación paciente-médico
+
+Un paciente no debe quedar limitado arquitectónicamente a un único médico.
+
+La relación entre paciente y médico debe permitir múltiples médicos, por ejemplo:
+
+- Médico tratante.
+- Médico sustituto.
+- Otro médico del consultorio.
+
+Cuando un prospecto se registra utilizando la liga de invitación enviada por un médico, el sistema debe asociar automáticamente al paciente con dicho médico.
+
+---
+
+# 7. Prospectos e invitaciones
+
+Los prospectos no son considerados pacientes hasta que completen correctamente su registro.
+
+El médico debe poder enviar a un prospecto una liga de registro al correo electrónico proporcionado.
+
+La invitación debe:
+
+- Contener un token seguro.
+- Tener expiración.
+- Ser de un solo uso o quedar invalidada después de completarse.
+- Asociar al futuro paciente con el médico que generó la invitación.
+- Registrar fecha y hora de creación.
+- Registrar fecha y hora de utilización o expiración.
+- Permitir identificar el estado de la invitación.
+
+El correo electrónico debe verificarse mediante liga o código antes de concluir el proceso de registro.
+
+---
+
+# 8. Consultorios
+
+El administrador puede:
+
+- Consultar consultorios.
+- Dar de alta consultorios.
+- Modificar consultorios.
+- Desactivar consultorios.
+
+Cada consultorio debe poder almacenar información administrativa relevante, por ejemplo:
+
+- Nombre.
+- Descripción.
+- Dirección, si aplica.
+- Teléfono.
+- Estatus activo/inactivo.
+
+La aplicación debe permitir asignar médicos a consultorios.
+
+La relación médico-consultorio debe poder registrar qué médicos trabajan en qué consultorios.
+
+---
+
+# 9. Configuración del consultorio
+
+Debe existir una configuración general del consultorio, contemplando al menos:
+
+- Nombre comercial.
+- Nombre del establecimiento o consultorio.
+- Dirección.
+- Teléfono.
+- Correo electrónico.
+- Logo.
+- Horarios de atención generales.
+- Zona horaria.
+- Datos que deban aparecer en documentos PDF.
+
+Los documentos generados deben utilizar esta configuración y no valores codificados directamente en el código.
+
+---
+
+# 10. Agenda y disponibilidad
+
+El médico debe poder:
+
+- Crear disponibilidad.
+- Modificar disponibilidad.
+- Eliminar/desactivar disponibilidad.
+- Consultar disponibilidad.
+
+Debe poder establecer la duración de las citas.
+
+La duración por defecto será de **1 hora**, pero debe ser configurable.
+
+La disponibilidad debe diseñarse en dos niveles:
+
+### Reglas de disponibilidad
+
+Ejemplo:
+
+- Lunes: 09:00–13:00.
+- Martes: 09:00–13:00 y 16:00–19:00.
+
+### Excepciones
+
+Ejemplo:
+
+- Día no disponible.
+- Horario especial.
+- Horario extraordinario.
+
+Debe impedirse la generación de conflictos entre citas y disponibilidades incompatibles.
+
+La disponibilidad de una combinación de **médico + consultorio** no debe empalmarse con otra asignación incompatible.
+
+El sistema debe evitar que dos pacientes puedan reservar simultáneamente el mismo espacio.
+
+---
+
+# 11. Bloqueo temporal durante la reserva
+
+Cuando un paciente/responsable seleccione un horario disponible para iniciar una reserva, el horario podrá quedar **bloqueado temporalmente durante 15 minutos**.
+
+Si la solicitud no concluye correctamente dentro del periodo de bloqueo:
+
+- La reserva temporal expira.
+- El horario vuelve a estar disponible.
+
+La implementación debe utilizar mecanismos apropiados de concurrencia y transacciones de base de datos para evitar dobles reservaciones.
+
+---
+
+# 12. Solicitudes de atención — CareRequest
+
+TeCuidoApp debe incluir un módulo funcional denominado **CareRequest**.
+
+CareRequest representa una solicitud de atención iniciada por el paciente o responsable y es independiente de la cita definitiva.
+
+La solicitud debe incluir:
+
+- Paciente relacionado.
+- Responsable que realiza la solicitud, cuando aplique.
+- Fecha y hora de creación.
+- Motivo de la solicitud.
+- Padecimiento o síntoma reportado.
+- Descripción libre del problema.
+- Archivos adjuntos.
+- Estado de la solicitud.
+- Fecha y hora de actualización.
+
+Ejemplos de archivos:
+
+- PDF de laboratorio.
+- Imagen.
+- Fotografía.
+- Documento clínico.
+
+La solicitud puede posteriormente convertirse en una cita.
+
+## 12.1 Estados de CareRequest
+
+Como mínimo:
+
+- Nueva.
+- En revisión.
+- Atendida.
+- Convertida en cita.
+- Cancelada.
+- Cerrada.
+
+La aplicación no debe efectuar diagnóstico automático sobre el contenido de CareRequest.
+
+El médico debe decidir clínicamente la atención apropiada.
+
+---
+
+# 13. Citas
+
+Una cita debe ser una entidad independiente de la consulta médica.
+
+Debe asociarse como mínimo con:
+
+- Paciente.
+- Médico.
+- Consultorio.
+- Fecha/hora inicial.
+- Fecha/hora final.
+- Duración.
+- Usuario que la creó.
+- Motivo/origen de la cita.
+- Solicitud CareRequest relacionada, cuando aplique.
+- Responsable solicitante, cuando aplique.
+- Estado.
+- Fechas de creación y modificación.
+
+Debe distinguirse claramente:
+
+- Paciente que será atendido.
+- Responsable que realizó o gestionó la cita.
+
+## 13.1 Estados de una cita
+
+Se deberán contemplar como mínimo:
+
+- Pendiente de confirmación.
+- Confirmada.
+- En espera.
+- En consulta / en realización.
+- Concluida / atendida.
+- Cancelada por paciente.
+- Cancelada por médico/consultorio.
+- Reprogramada.
+- No se presentó (`NO_SHOW`).
+- Liberada.
+
+La falta de confirmación no equivale automáticamente a que el paciente haya faltado.
+
+El estado `NO_SHOW` solamente debe utilizarse cuando se determine que el paciente efectivamente no se presentó.
+
+---
+
+# 14. Confirmación, cancelación y reprogramación
+
+El sistema debe permitir:
+
+- Confirmar una cita.
+- Cancelar una cita.
+- Reprogramar una cita.
+- Registrar quién realizó la acción.
+- Registrar fecha/hora de la acción.
+- Mantener trazabilidad de cambios.
+
+La cancelación debe distinguir su origen:
+
+- Paciente/responsable.
+- Médico.
+- Administrador.
+- Consultorio.
+
+Cuando una cita se reprograma, debe conservarse el historial del cambio.
+
+---
+
+# 15. Pacientes que no se presentan
+
+Cuando un paciente no se presenta, la cita debe poder marcarse como:
+
+**NO_SHOW / No se presentó**.
+
+Debe registrarse:
+
+- Fecha y hora.
+- Usuario que marcó la inasistencia.
+- Observaciones opcionales.
+
+La aplicación no debe convertir automáticamente una falta de confirmación en una inasistencia.
+
+El sistema puede posteriormente permitir reglas configurables relacionadas con pacientes que acumulan inasistencias, pero esta funcionalidad no constituye una restricción automática inicial.
+
+---
+
+# 16. Check-in y sala de espera
+
+Debe existir un mecanismo de **check-in** para registrar que el paciente llegó al consultorio.
+
+El check-in debe almacenar:
+
+- Fecha y hora de llegada.
+- Usuario que registró la llegada.
+
+La agenda del médico debe permitir visualizar los pacientes del día y distinguir:
+
+- Pendiente.
+- Confirmada.
+- Llegó.
+- En consulta.
+- Atendida.
+- No se presentó.
+
+El sistema debe poder mostrar una lista de pacientes en espera.
+
+---
+
+# 17. Consulta médica
+
+La **Consulta / MedicalEncounter** debe ser independiente de la cita.
+
+Una cita puede generar una consulta médica.
+
+La consulta debe conservar un historial permanente y no debe sobrescribirse como si fuera un simple registro actual.
+
+Debe contener como mínimo:
+
+- Paciente.
+- Médico.
+- Cita relacionada.
+- Fecha/hora.
+- Motivo de consulta.
+- Exploración física.
+- Paraclínicos.
+- Impresión diagnóstica.
+- Manejo/tratamiento.
+- Pronóstico.
+- Evolución.
+- Observaciones clínicas.
+
+El médico debe poder registrar información adicional relevante.
+
+TeCuidoApp no debe emitir diagnósticos ni recomendaciones clínicas autónomas.
+
+---
+
+# 18. Historia clínica
+
+En la primera versión, la historia clínica puede utilizar campos de texto abierto guiados por secciones.
+
+Debe contemplar como mínimo:
+
+- Antecedentes heredofamiliares.
+- Antecedentes personales patológicos.
+- Antecedentes personales no patológicos.
+- Tipo de vivienda.
+- Antecedentes gineco-obstétricos.
+- Otros antecedentes relevantes.
+
+La historia clínica debe permanecer disponible como parte del expediente.
+
+Los registros históricos de las consultas no deben sobrescribirse.
+
+---
+
+# 19. Resumen clínico para el médico
+
+Al abrir el expediente de un paciente, el sistema debe mostrar un resumen de contexto clínico.
+
+Debe contemplar, cuando exista información:
+
+### Datos generales
+
+- Edad.
+- Fecha de nacimiento.
+- Peso y talla recientes.
+- IMC, si existe información suficiente.
+- Alergias.
+- Tipo sanguíneo, si se conoce.
+
+### Antecedentes
+
+- Enfermedades crónicas.
+- Cirugías.
+- Hospitalizaciones.
+- Medicamentos actuales.
+- Antecedentes familiares relevantes.
+
+### Antecedentes gineco-obstétricos
+
+- Gineco-obstétricos relevantes.
+- Embarazos previos.
+- Complicaciones obstétricas.
+- Información de embarazo actual, si aplica.
+
+### Información clínica reciente
+
+- Últimos diagnósticos registrados.
+- Tratamientos actuales.
+- Medicamentos actuales.
+- Últimas consultas.
+- Últimos laboratorios.
+- Últimos estudios de imagen.
+- Resultados de histopatologías.
+- Evolución reciente.
+
+---
+
+# 20. Alertas clínicas
+
+Debe existir el concepto de **alerta clínica** visible al médico.
+
+Ejemplos:
+
+- Alergia a un medicamento.
+- Embarazo actual.
+- Hipertensión.
+- Diabetes gestacional previa.
+- Cesárea previa.
+- Otro riesgo o consideración clínica.
+
+Una alerta debe permitir almacenar:
+
+- Tipo.
+- Descripción.
+- Fecha de creación.
+- Usuario que la creó.
+- Estatus activa/inactiva.
+- Fecha de resolución, cuando aplique.
+
+Las alertas activas deben mostrarse de forma destacada en el resumen clínico.
+
+Las alertas son informativas y no sustituyen el criterio médico.
+
+---
+
+# 21. Recetas médicas
+
+El médico debe poder elaborar recetas relacionadas con una consulta.
+
+Una receta debe incluir como mínimo:
+
+- Paciente.
+- Médico.
+- Consulta.
+- Fecha de emisión.
+- Medicamentos.
+- Indicaciones de uso.
+- Dosis.
+- Frecuencia.
+- Duración, cuando aplique.
+- Observaciones.
+
+Una receta debe generar un **PDF**.
+
+El PDF debe poder:
+
+- Consultarse.
+- Descargar.
+- Imprimirse.
+
+El paciente/responsable autorizado debe poder consultar y descargar recetas desde su portal.
+
+Las recetas históricas no deben modificarse sin dejar trazabilidad.
+
+---
+
+# 22. Solicitudes de laboratorio, gabinete y otros estudios
+
+El médico debe poder generar solicitudes para:
+
+- Laboratorios clínicos.
+- Estudios de gabinete.
+- Histopatologías.
+- Otros estudios.
+
+La solicitud debe incluir:
+
+- Paciente.
+- Médico.
+- Consulta.
+- Fecha de emisión.
+- Tipo de estudio.
+- Estudios solicitados.
+- Indicaciones.
+- Observaciones.
+
+Debe generarse un PDF.
+
+El paciente/responsable autorizado debe poder consultar y descargar la solicitud.
+
+---
+
+# 23. Documentos clínicos
+
+Debe existir una entidad genérica para documentos asociados a:
+
+- Paciente.
+- Cita.
+- Consulta.
+- Receta.
+- Solicitud de estudio.
+- CareRequest.
+
+Los documentos deben almacenar como mínimo:
+
+- Archivo.
+- Nombre original.
+- Tipo de documento.
+- Descripción.
+- Fecha de creación.
+- Usuario que lo cargó/generó.
+- Paciente relacionado.
+- Relaciones clínicas correspondientes.
+
+Tipos iniciales:
+
+- Laboratorio.
+- Gabinete.
+- Histopatología.
+- Fotografía.
+- Receta.
+- Indicaciones.
+- Solicitud de estudio.
+- Otro.
+
+Los documentos médicos deben almacenarse en un medio **privado**, no en una carpeta pública accesible directamente.
+
+Toda descarga debe pasar por autorización en servidor.
+
+La aplicación debe validar que el usuario tenga permiso para acceder al archivo solicitado.
+
+---
+
+# 24. Versionado y trazabilidad de documentos
+
+Los documentos clínicos emitidos por TeCuidoApp deben conservar su versión histórica.
+
+Una receta o solicitud que ya fue emitida no debe sobrescribirse silenciosamente.
+
+Cuando exista una corrección, debe quedar registro de:
+
+- Versión.
+- Fecha/hora.
+- Usuario.
+- Motivo de modificación.
+- Relación con la versión anterior.
+
+El sistema debe poder identificar cuál es la versión vigente.
+
+---
+
+# 25. Dashboard del médico
+
+El médico debe disponer de un panel principal con:
+
+### Agenda del día
+
+- Citas programadas.
+- Citas confirmadas.
+- Pacientes que llegaron.
+- Pacientes en espera.
+- Pacientes en consulta.
+- Citas atendidas.
+- Inasistencias.
+
+### Alertas operativas
+
+- Citas sin confirmar.
+- Nuevas solicitudes CareRequest.
+- Documentos nuevos.
+- Otras alertas relevantes.
+
+### Próximas citas
+
+Debe poder consultar sus siguientes citas de manera rápida.
+
+---
+
+# 26. Dashboard del paciente/responsable
+
+Debe existir un panel con:
+
+### Próxima cita
+
+- Fecha.
+- Hora.
+- Médico.
+- Consultorio.
+- Estado.
+
+### Mis citas
+
+- Próximas.
+- Históricas.
+- Canceladas.
+- No realizadas.
+
+### Mis documentos
+
+- Recetas.
+- Indicaciones.
+- Solicitudes.
+- Resultados/documentos clínicos autorizados.
+
+En caso de responsable, la información debe poder filtrarse por paciente.
+
+---
+
+# 27. Notificaciones por correo
+
+El sistema debe enviar correos electrónicos para:
+
+- Invitación de registro.
+- Verificación de correo.
+- Recuperación de contraseña.
+- Cita creada.
+- Cita modificada.
+- Cita cancelada.
+- Confirmación de cita.
+- Recordatorios.
+- Otras notificaciones operativas definidas por la aplicación.
+
+## 27.1 Recordatorios
+
+Inicialmente deben contemplarse recordatorios:
+
+- 15 días antes.
+- 10 días antes.
+- 5 días antes.
+- 1 día antes.
+
+Las reglas deben diseñarse de forma configurable para poder modificarse sin cambiar código.
+
+La falta de confirmación no debe cancelar automáticamente la cita.
+
+La cita debe permanecer reservada hasta que una regla explícita la libere.
+
+---
+
+# 28. Canales de notificación
+
+El diseño deberá permitir posteriormente múltiples canales:
+
+- Email.
+- WhatsApp.
+- SMS u otros canales futuros.
+
+La integración con WhatsApp queda **fuera de la primera versión**.
+
+Sin embargo, la arquitectura de notificaciones debe evitar acoplar la lógica de negocio directamente a un proveedor concreto.
+
+---
+
+# 29. Privacidad y seguridad
+
+Dado que TeCuidoApp manejará información médica, se debe considerar la información clínica como información altamente sensible.
+
+El sistema debe implementar:
+
+- Autenticación segura.
+- Autorización basada en roles/permisos.
+- Verificación de correo.
+- Recuperación segura de contraseña.
+- Protección CSRF.
+- Protección contra accesos no autorizados.
+- Validación de archivos.
+- Almacenamiento privado de documentos.
+- Control de acceso por objeto.
+- Auditoría.
+- Baja lógica de registros sensibles.
+- Registro de acciones relevantes.
+- Configuración segura de producción.
+
+No se debe asumir que ocultar una URL es suficiente para proteger un documento.
+
+---
+
+# 30. Consentimiento y aviso de privacidad
+
+El sistema debe contemplar un mecanismo para registrar la aceptación de:
+
+- Aviso de privacidad.
+- Términos y condiciones.
+- Consentimientos que correspondan al funcionamiento de la plataforma.
+
+La aceptación debe registrar:
+
+- Usuario.
+- Fecha/hora.
+- Versión del documento aceptado.
+
+La implementación técnica no sustituye la revisión legal de los avisos, consentimientos y obligaciones aplicables.
+
+---
+
+# 31. Auditoría
+
+Debe existir un módulo de auditoría.
+
+Debe registrar acciones relevantes, especialmente sobre información clínica.
+
+Ejemplos:
+
+- Inicio de sesión.
+- Consulta de expediente.
+- Creación/modificación de consulta.
+- Creación/modificación de receta.
+- Generación de documento.
+- Descarga de documento.
+- Modificación de paciente.
+- Cambio de permisos.
+- Desactivación de usuario.
+- Acceso de administrador a información sensible.
+
+El registro debe incluir, cuando aplique:
+
+- Usuario.
+- Fecha/hora.
+- Acción.
+- Entidad afectada.
+- Identificador del registro.
+- Información suficiente para reconstruir el evento.
+
+---
+
+# 32. Baja lógica
+
+Los registros clínicos y usuarios importantes no deben eliminarse físicamente de forma rutinaria.
+
+Debe utilizarse un mecanismo de desactivación/baja lógica cuando corresponda.
+
+Por ejemplo:
+
+- Usuario activo/inactivo.
+- Paciente activo/inactivo.
+- Médico activo/inactivo.
+- Consultorio activo/inactivo.
+
+El historial clínico debe conservarse de acuerdo con las políticas definidas.
+
+---
+
+# 33. Control de permisos
+
+El sistema debe aplicar permisos a nivel de funcionalidad y de objeto.
+
+Ejemplos:
+
+- Un paciente sólo puede consultar su información.
+- Un responsable sólo puede consultar la información de los pacientes que tiene autorizados.
+- Un médico puede consultar los pacientes con los que tiene relación y las reglas de acceso definidas.
+- El administrador tiene acceso global, sujeto a auditoría.
+- La información clínica no debe exponerse por URLs directas sin autorización.
+
+---
+
+# 34. Búsqueda de pacientes
+
+El médico y los perfiles autorizados deben poder buscar pacientes por:
+
+- Nombre.
+- Apellidos.
+- Teléfono.
+- Correo electrónico.
+
+Desde los resultados se debe poder acceder rápidamente, según permisos, a:
+
+- Información general.
+- Próximas citas.
+- Historial de consultas.
+- Recetas.
+- Estudios.
+- Documentos.
+- Alertas clínicas.
+
+---
+
+# 35. Datos administrativos y médicos históricos
+
+Debe distinguirse entre:
+
+### Datos actuales
+
+Por ejemplo:
+
+- Teléfono actual.
+- Domicilio actual.
+- Medicamentos actuales.
+- Alertas actualmente activas.
+
+### Información histórica
+
+Por ejemplo:
+
+- Consultas anteriores.
+- Diagnósticos registrados en consultas anteriores.
+- Tratamientos anteriores.
+- Recetas históricas.
+- Estudios históricos.
+
+Las modificaciones de información relevante deben mantener trazabilidad.
+
+---
+
+# 36. Reglas de negocio principales
+
+1. La cuenta de correo del usuario debe ser única.
+2. El correo debe verificarse para completar el registro.
+3. Los prospectos no son pacientes hasta concluir el registro.
+4. Una invitación de médico asociará automáticamente al paciente con ese médico.
+5. Un paciente puede estar relacionado con uno o más médicos.
+6. Un responsable puede estar relacionado con uno o más pacientes.
+7. Una cita debe identificar al paciente que será atendido.
+8. Cuando aplique, una cita debe identificar al responsable que la solicitó o gestionó.
+9. Una cita pertenece a un médico y consultorio.
+10. No deben existir citas superpuestas para el mismo médico/consultorio.
+11. El sistema debe impedir dobles reservas del mismo horario.
+12. Una reserva iniciada puede bloquear el horario durante 15 minutos.
+13. Una cita no confirmada no significa que el paciente haya faltado.
+14. `NO_SHOW` debe representar una inasistencia real.
+15. La consulta médica es independiente de la cita.
+16. Las consultas concluidas deben conservar su historial.
+17. Las recetas y solicitudes emitidas deben conservar su trazabilidad.
+18. Los documentos médicos deben tener acceso privado y autorizado.
+19. Las acciones sensibles deben auditarse.
+20. Los registros clínicos no deben eliminarse físicamente de manera rutinaria.
+21. TeCuidoApp no diagnostica ni decide tratamientos de forma autónoma.
+22. Las decisiones clínicas pertenecen al médico.
+
+---
+
+# 37. Requisitos no funcionales
+
+## Seguridad
+
+La aplicación debe seguir las buenas prácticas de seguridad de Django y de aplicaciones Web.
+
+Debe configurarse adecuadamente:
+
+- `DEBUG=False` en producción.
+- Variables de entorno para secretos.
+- Protección de cookies.
+- HTTPS en producción.
+- Protección CSRF.
+- Validación de entradas.
+- Restricción de tipos y tamaños de archivos.
+- Protección de descargas.
+- Políticas apropiadas de contraseñas.
+- Manejo seguro de tokens.
+
+## Mantenibilidad
+
+La aplicación debe utilizar una arquitectura modular.
+
+Se recomienda separar responsabilidades funcionales en aplicaciones Django independientes cuando tenga sentido.
+
+No se deben introducir dependencias innecesarias.
+
+## Pruebas
+
+Los módulos críticos deben disponer de pruebas automatizadas, especialmente:
+
+- Autenticación.
+- Permisos.
+- Registro de pacientes.
+- Relaciones responsable-paciente.
+- Invitaciones.
+- Agenda.
+- Prevención de conflictos.
+- Bloqueos temporales.
+- CareRequest.
+- Citas.
+- Cambios de estado.
+- Expediente.
+- Recetas.
+- Documentos.
+- Seguridad de descargas.
+- Auditoría.
+
+---
+
+# 38. Arquitectura Django propuesta
+
+TeCuidoApp debe mantenerse dentro de un único proyecto Django.
+
+Las funcionalidades podrán separarse en aplicaciones Django internas, por ejemplo:
+
+```text
+TeCuido/
+├── manage.py
+├── config/
+├── accounts/
+├── patients/
+├── doctors/
+├── clinics/
+├── appointments/
+├── care_requests/
+├── medical_records/
+├── prescriptions/
+├── clinical_documents/
+├── notifications/
+└── audit/
+```
+
+Los nombres son una propuesta y pueden ajustarse durante el diseño técnico.
+
+## 38.1 CareRequest
+
+`CareRequest` debe ser una **Django app dentro del mismo proyecto**, no un proyecto independiente.
+
+No necesita su propio `requirements.md`.
+
+La especificación general de todo el sistema debe permanecer en este `requirements.md`.
+
+En caso de que posteriormente alguna app requiera una especificación técnica específica, puede documentarse mediante documentación complementaria, pero no debe duplicarse innecesariamente el requerimiento general.
+
+---
+
+# 39. Separación por aplicaciones
+
+La separación en Django debe utilizarse para organizar responsabilidades, no para crear sistemas independientes.
+
+Las relaciones entre apps deben ser claras y evitar dependencias circulares.
+
+El modelo de datos debe priorizar:
+
+- Integridad referencial.
+- Claridad.
+- Facilidad de consulta.
+- Historial.
+- Seguridad.
+
+---
+
+# 40. Generación de PDFs
+
+El sistema debe generar documentos PDF para:
+
+- Recetas.
+- Solicitudes de laboratorio.
+- Solicitudes de gabinete.
+- Otros documentos clínicos que se agreguen posteriormente.
+
+Los documentos deben:
+
+- Identificar al paciente.
+- Identificar al médico.
+- Identificar al consultorio.
+- Mostrar fecha/hora.
+- Contener la información emitida.
+- Tener una presentación adecuada para impresión.
+- Conservar la versión emitida.
+
+---
+
+# 41. MVP / evolución por fases
+
+El desarrollo debe realizarse por fases.
+
+## Fase 1 — Fundaciones
+
+- Configuración del proyecto.
+- Usuarios.
+- Roles.
+- Autenticación.
+- Verificación de correo.
+- Recuperación de contraseña.
+- Médicos.
+- Consultorios.
+- Pacientes.
+- Responsables.
+- Invitaciones.
+
+## Fase 2 — Agenda
+
+- Disponibilidad.
+- Citas.
+- Estados.
+- Confirmaciones.
+- Cancelaciones.
+- Reprogramaciones.
+- Bloqueo de 15 minutos.
+- Prevención de conflictos.
+- Check-in.
+
+## Fase 3 — Gestión clínica
+
+- Historia clínica.
+- Consultas.
+- Evolución.
+- Diagnósticos.
+- Tratamientos.
+- Pronóstico.
+- Alertas clínicas.
+- Resumen clínico.
+
+## Fase 4 — Documentos
+
+- Recetas.
+- Solicitudes de laboratorio.
+- Solicitudes de gabinete.
+- PDFs.
+- Archivos adjuntos.
+- Descargas autorizadas.
+- Versionado.
+
+## Fase 5 — CareRequest y operación
+
+- Solicitudes de atención.
+- Conversión de CareRequest a cita.
+- Dashboard médico.
+- Dashboard paciente/responsable.
+- Sala de espera.
+- Búsqueda.
+
+## Fase 6 — Notificaciones y auditoría
+
+- Emails.
+- Recordatorios.
+- Confirmaciones.
+- Auditoría.
+- Consentimientos.
+- Revisión de seguridad.
+
+El desarrollo debe implementarse progresivamente. No se debe intentar construir todas las fases en una sola iteración.
+
+---
+
+# 42. Funcionalidades explícitamente fuera del alcance actual
+
+Las siguientes funcionalidades no forman parte de la primera etapa y no deben incorporarse sin una decisión posterior:
+
+- Integración con WhatsApp.
+- MFA/2FA.
+- Interoperabilidad FHIR.
+- Facturación.
+- Pagos en línea.
+- Inventario.
+- Farmacia.
+- Aseguradoras.
+- Videoconsultas.
+- Aplicación móvil nativa.
+- Multi-clínica.
+- Firma electrónica avanzada.
+- IA para diagnóstico.
+- IA para prescripción o decisión clínica.
+- Estadística clínica avanzada.
+
+Estas funcionalidades pueden evaluarse en versiones futuras.
+
+---
+
+# 43. Principios de desarrollo para Claude Code
+
+Claude Code debe tratar este archivo como la especificación funcional de referencia.
+
+Antes de realizar cambios importantes en la arquitectura debe:
+
+1. Revisar el alcance existente.
+2. Mantener compatibilidad con las reglas de negocio.
+3. Evitar duplicación innecesaria.
+4. Preferir soluciones idiomáticas de Django.
+5. Utilizar migraciones para cambios de base de datos.
+6. Agregar pruebas para reglas críticas.
+7. No introducir funcionalidades fuera del alcance sin indicarlo.
+8. Mantener separación entre lógica clínica, lógica de agenda y lógica de autenticación.
+9. Aplicar control de acceso tanto en interfaz como en servidor.
+10. Mantener auditoría de operaciones sensibles.
+11. No eliminar información clínica histórica de forma destructiva.
+12. Explicar cualquier decisión arquitectónica que modifique significativamente el modelo definido aquí.
+
+---
+
+# 44. Definición conceptual de entidades principales
+
+Como guía inicial, el dominio debe contemplar al menos:
+
+```text
+User
+Person
+Doctor
+Patient
+Responsible
+ResponsiblePatientRelationship
+Clinic
+DoctorClinic
+Invitation
+AvailabilityRule
+AvailabilityException
+Appointment
+CareRequest
+MedicalRecord
+MedicalEncounter / Consultation
+ClinicalAlert
+Prescription
+PrescriptionItem
+StudyOrder
+ClinicalDocument
+Notification
+AuditLog
+Consent
+```
+
+Los nombres definitivos de modelos Django pueden cambiar durante el diseño técnico, pero las responsabilidades funcionales deben conservarse.
+
+---
+
+# 45. Principio fundamental de diseño clínico
+
+La información clínica debe tratarse como información histórica.
+
+No se debe diseñar el expediente como una única colección de campos que se sobrescribe continuamente.
+
+La información debe poder responder:
+
+- Qué se sabía en cada consulta.
+- Qué indicó el médico.
+- Qué receta se emitió.
+- Qué estudio se solicitó.
+- Cuándo ocurrió.
+- Quién lo registró.
+- Qué cambios posteriores se realizaron.
+
+La trazabilidad y el historial son requisitos fundamentales del sistema.
+
+---
+
+# 46. Resultado esperado
+
+Al concluir las fases iniciales, TeCuidoApp deberá permitir que:
+
+### Administrador
+
+Administre usuarios, médicos, consultorios, asignaciones y configuración general.
+
+### Médico
+
+Administre su agenda, atienda pacientes, consulte contexto clínico, mantenga el expediente, registre consultas y emita documentos clínicos.
+
+### Paciente
+
+Administre su información permitida, solicite/gestione citas y consulte sus documentos.
+
+### Responsable
+
+Gestione pacientes a su cargo y realice las operaciones autorizadas en nombre de ellos.
+
+### Sistema
+
+Mantenga:
+
+- Seguridad.
+- Privacidad.
+- Historial clínico.
+- Auditoría.
+- Documentos.
+- Notificaciones.
+- Integridad de citas.
+- Control de acceso.
+
+El sistema no debe realizar diagnósticos ni decisiones médicas autónomas.

@@ -1,0 +1,7 @@
+{
+  "enabledPlugins": {
+    "django-celery-expert@django-ai-plugins": true,
+    "django-safe-migration@django-ai-plugins": true,
+    "django-reviewer@django-ai-plugins": true
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": {
+    "django-expert@django-ai-plugins": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)"
+    ]
+  }
+}
