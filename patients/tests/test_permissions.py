@@ -2,6 +2,7 @@ from datetime import date
 
 from django.contrib.auth.models import AnonymousUser
 from django.test import TestCase
+from django.utils import timezone
 
 from accounts.models import Person, User
 from doctors.models import Doctor
@@ -11,7 +12,11 @@ from patients.models import (
     Responsible,
     ResponsiblePatientRelationship,
 )
-from patients.services.permissions import can_edit_patient, can_view_patient
+from patients.services.permissions import (
+    can_edit_patient,
+    can_view_patient,
+    doctor_has_active_relationship,
+)
 
 
 def _make_person(email, first_name):
@@ -22,7 +27,9 @@ def _make_person(email, first_name):
 
 
 def _make_patient(email, first_name="Pat"):
-    return Patient.objects.create(person=_make_person(email, first_name), sex=Patient.Sex.FEMALE)
+    return Patient.objects.create(
+        person=_make_person(email, first_name), sex=Patient.Sex.FEMALE, regime=Patient.Regime.ADULT
+    )
 
 
 def _make_doctor(email):
@@ -79,6 +86,7 @@ class ResponsibleAccessTests(TestCase):
             responsible=responsible,
             patient=patient,
             relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
+            status=ResponsiblePatientRelationship.Status.ACTIVE,
         )
         self.assertTrue(can_view_patient(responsible.person.user, patient))
 
@@ -95,6 +103,8 @@ class ResponsibleAccessTests(TestCase):
             patient=patient,
             relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
             status=ResponsiblePatientRelationship.Status.INACTIVE,
+            deactivated_at=timezone.now(),
+            deactivation_reason=ResponsiblePatientRelationship.DeactivationReason.OTHER,
         )
         self.assertFalse(can_view_patient(responsible.person.user, patient))
 
@@ -148,3 +158,41 @@ class EditPermissionTests(TestCase):
 
         other_patient = _make_patient("edit2@example.com", "Other")
         self.assertFalse(can_edit_patient(other_patient.person.user, patient))
+
+
+class DoctorHasActiveRelationshipTests(TestCase):
+    """ADR-007 §3.8 addendum: any relationship_type qualifies for the
+    adult-regime transition, not just TRATANTE."""
+
+    def test_doctor_with_active_relationship_of_any_type_qualifies(self):
+        doctor = _make_doctor("doc-any-type@example.com")
+        patient = _make_patient("dp-any-type@example.com")
+        DoctorPatientRelationship.objects.create(
+            doctor=doctor,
+            patient=patient,
+            relationship_type=DoctorPatientRelationship.RelationType.SUSTITUTO,
+        )
+        self.assertTrue(doctor_has_active_relationship(doctor, patient))
+
+    def test_doctor_without_relationship_does_not_qualify(self):
+        doctor = _make_doctor("doc-none@example.com")
+        patient = _make_patient("dp-none@example.com")
+        self.assertFalse(doctor_has_active_relationship(doctor, patient))
+
+    def test_doctor_with_inactive_relationship_does_not_qualify(self):
+        doctor = _make_doctor("doc-inactive@example.com")
+        patient = _make_patient("dp-inactive@example.com")
+        DoctorPatientRelationship.objects.create(doctor=doctor, patient=patient, is_active=False)
+        self.assertFalse(doctor_has_active_relationship(doctor, patient))
+
+    def test_deactivated_doctor_does_not_qualify_despite_active_relationship(self):
+        doctor = _make_doctor("doc-deactivated@example.com")
+        patient = _make_patient("dp-deactivated@example.com")
+        DoctorPatientRelationship.objects.create(doctor=doctor, patient=patient)
+        doctor.is_active = False
+        doctor.save(update_fields=["is_active"])
+        self.assertFalse(doctor_has_active_relationship(doctor, patient))
+
+    def test_none_doctor_does_not_qualify(self):
+        patient = _make_patient("dp-none-doctor@example.com")
+        self.assertFalse(doctor_has_active_relationship(None, patient))

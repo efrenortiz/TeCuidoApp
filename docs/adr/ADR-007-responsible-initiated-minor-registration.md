@@ -33,6 +33,10 @@ negocio distintos y debilitaría garantías de seguridad ya documentadas en ADR-
 Esta ADR registra la decisión de tratarlos como dos flujos explícitamente separados y define
 las implicaciones arquitectónicas del segundo.
 
+Además del registro inicial, esta ADR cubre el ciclo de vida completo del régimen de menor de
+edad: también fija (§3.8) el mecanismo por el cual un paciente registrado como menor pasa a
+régimen adulto, quedando fuera del alcance de sus responsables.
+
 ---
 
 ## 2. Problema
@@ -168,38 +172,122 @@ sola**:
   otro responsable, información del paciente) — mismo principio anti-enumeración que ADR-003
   §18, aplicado aquí a un contexto distinto (vinculación, no invitación).
 
-**Implicación de modelado (a resolver en implementación, no aquí):** `ResponsiblePatientRelationship.is_active`
-hoy solo representa baja lógica (¿la relación sigue vigente?). "Pendiente de aprobación" es un
-estado *distinto* de "vigente" y de "desactivada" — una relación nunca aprobada no debe verse
-igual que una que sí fue aprobada y luego se desactivó. Modelar ambos estados con el mismo
-booleano perdería esa distinción. La forma exacta (un campo adicional, un estado separado,
-u otro mecanismo) se decide al implementar, pero debe preservar esta distinción de tres
-estados: nunca-aprobada / vigente / desactivada.
+**Implementado como:** `ResponsiblePatientRelationship.status` (`CharField` con `choices`
+`PENDING`/`ACTIVE`/`INACTIVE`, reemplazando el `is_active` booleano original) — nunca-aprobada
+/ vigente / desactivada como tres estados distintos, no colapsados en un solo booleano.
 
-### 3.8 Transición a paciente adulto — computada, no programada; reutiliza el consentimiento de §3.7
+**Sin `default` a nivel de campo, deliberadamente.** Ni `ACTIVE` ni `PENDING` son un default
+seguro de forma genérica: cada operación de negocio sabe si está creando una relación ya
+aprobada (alta de menor nuevo, §3.2) o una que requiere aprobación (coincidencia por CURP,
+más arriba) — dejar que un `default` decida por omisión es exactamente el tipo de activación
+implícita que "deny by default" (ADR-004) prohíbe. Como Django no rechaza un `CharField` sin
+`default` ni valor explícito (inserta `""` silenciosamente), la garantía real es un
+`CheckConstraint` en `Meta.constraints` que solo permite los tres valores del enum — omitir
+`status` falla con `IntegrityError`, no con una activación accidental.
 
-Cumplir 18 años no dispara ningún cambio de estado por sí mismo (detalle completo en
-`requirements.md` §7.2.8). Decisiones concretas:
+### 3.8 Transición a régimen adulto — mecanismo concreto (addendum 2026-09-08)
 
-- La mayoría de edad es una condición **computada en el momento de cada verificación de
-  acceso** a partir de `Person.birth_date` — nunca un valor que un proceso programado
-  reescriba en la fecha exacta del cumpleaños. Fase 1 no incorpora Celery ni tareas
-  programadas; introducir esa infraestructura solo para esto violaría CLAUDE.md §13
-  (no agregar dependencias sin necesidad real).
-- Ninguna `ResponsiblePatientRelationship` existente se desactiva, modifica ni elimina por
-  el solo hecho de que el paciente cumpla 18 años. Continuidad del cuidado sobre revocación
-  silenciosa.
-- La UI debe hacer visible la transición (ver `docs/design/screens.md` §6.5 y §6.7) — esto es
-  una capa de presentación informativa, no un cambio de autorización en sí mismo.
-- **No se diseña un mecanismo de consentimiento nuevo para esta transición.** Si el paciente,
-  ya adulto, llega a tener su propia cuenta (`User`) — mecanismo todavía pendiente, §5 —,
-  cualquier `ResponsiblePatientRelationship` sobre su expediente, incluida la heredada de su
-  minoría de edad, queda sujeta a la misma regla de consentimiento de §3.7 (vincular a un
-  paciente con `User` propio requiere su consentimiento). Es el mismo mecanismo aplicado
-  también a relaciones preexistentes, no uno paralelo.
-- No se introduce una expiración forzosa por tiempo. Un límite estricto (p. ej. "N días tras
-  el cumpleaños") es una decisión separada y, si se toma, probablemente requeriría
-  infraestructura de tareas programadas — explícitamente fuera de alcance aquí.
+**Addendum:** esta sección originalmente solo fijaba que cumplir 18 años no dispara ningún
+cambio automático, y dejaba el mecanismo real como pendiente ("no se diseña un mecanismo de
+consentimiento nuevo... queda sujeto a §5"). Al aterrizar el diseño con el usuario, se decidió
+el mecanismo concreto. El texto original se conserva tachado al final de esta sección; lo que
+sigue es la decisión vigente.
+
+**Modelo de datos.** La autorización del paciente sobre su propio expediente es un concepto
+distinto de su edad cronológica — se separan en dos campos independientes:
+
+```text
+Person.is_minor   → computado desde birth_date (sin cambios, ADR-007 §3.6)
+Patient.regime    → MINOR | ADULT — almacenado, cambia solo por transición explícita
+```
+
+- `Patient.regime`: `CharField` con `choices` (`MINOR`/`ADULT`), **sin `default` de campo**
+  (mismo motivo que `ResponsiblePatientRelationship.status`, §3.7: cada creación de `Patient`
+  debe declararlo explícitamente — `register_minor_patient` siempre pasa `MINOR`;
+  `accept_invitation`, al ser un adulto autorregistrándose, siempre pasa `ADULT`). Un
+  `CheckConstraint` restringe la columna a esos dos valores, para que un `Patient` creado sin
+  especificar `regime` falle con `IntegrityError` en vez de insertar `""`.
+- `Patient.regime_changed_at`: `DateTimeField` nulo — se llena únicamente al ejecutar la
+  transición.
+- `Patient.regime_changed_by`: `ForeignKey` a `doctors.Doctor`, nulo, `on_delete=PROTECT` —
+  igual criterio de trazabilidad que el resto del sistema (nunca perder quién hizo qué).
+
+`ResponsiblePatientRelationship` gana dos campos para poder decir "quién tuvo autorización
+sobre este paciente, desde cuándo y hasta cuándo, y por qué terminó":
+
+- `deactivated_at`: `DateTimeField` nulo mientras la relación siga `PENDING`/`ACTIVE`.
+- `deactivation_reason`: `CharField` con `choices` (`ADULT_TRANSITION`, `REQUEST_REJECTED`,
+  `OTHER`), **sin `default` de campo** — cada servicio que desactive una relación declara su
+  motivo explícitamente. Un `CheckConstraint` exige que, cuando `status = INACTIVE`,
+  `deactivated_at` y `deactivation_reason` no sean nulos — mismo patrón ya usado en
+  `Invitation.used_at` (requiere `status = USED`). `reject_relationship_request` (ya
+  implementado, ADR-007 §3.7) queda pendiente de actualizarse para pasar
+  `deactivation_reason=REQUEST_REJECTED` — no se hace en este addendum, queda registrado como
+  trabajo de implementación pendiente.
+
+**Quién puede ejecutar la transición y cuándo.** Cualquier médico con `DoctorPatientRelationship`
+**activa** hacia el paciente — sin restringir por `relationship_type` (tratante, sustituto u
+otro sirven igual). El disparador de negocio es que el paciente manifieste, en consulta, por
+teléfono o de viva voz, su voluntad de ser tratado como adulto; el sistema no exige ni valida
+un artefacto de consentimiento independiente — la acción del médico en el sistema **es** la
+constancia de esa manifestación, bajo su responsabilidad profesional. Mientras ningún médico
+la ejecute, el paciente se sigue tratando como menor sin importar su edad cronológica.
+
+**Candado legal.** La transición se rechaza (en servidor, no solo en UI) si `Person.is_minor`
+sigue siendo `True` en el momento de ejecutarla.
+
+**Operación, atómica en un solo paso** (`patients/services/minors.py`,
+`transition_patient_to_adult(*, patient, performed_by_doctor)`):
+
+1. Rechaza si `patient.regime` ya es `ADULT` (operación no repetible — es irreversible).
+2. Rechaza si `patient.person.is_minor` es `True` (candado legal).
+3. Rechaza si `performed_by_doctor` no tiene `DoctorPatientRelationship` activa con `patient`.
+4. `patient.regime = ADULT`, `regime_changed_at = ahora`, `regime_changed_by = performed_by_doctor`.
+5. **Todas** las `ResponsiblePatientRelationship` `ACTIVE` de ese paciente → `INACTIVE`,
+   `deactivated_at = ahora`, `deactivation_reason = ADULT_TRANSITION` — en la misma
+   transacción, no una por una.
+6. No crea, exige ni modifica ningún `User`. Deliberadamente desacoplado: un paciente puede
+   quedar en `regime = ADULT` sin cuenta propia todavía. Quién autoriza que la obtenga más
+   adelante sigue siendo una decisión pendiente e independiente (§5) — no bloquea ni condiciona
+   esta transición.
+
+**Irreversible.** Una vez `ADULT`, no existe operación para volver a `MINOR` dentro de este
+flujo.
+
+**No se introduce ninguna entidad de auditoría nueva.** La traza completa vive en los campos
+ya descritos (`Patient.regime_changed_at`/`regime_changed_by` + `deactivated_at`/
+`deactivation_reason` en cada relación) — no se necesita un modelo `PatientAdultTransition`
+separado para esto.
+
+---
+
+<details>
+<summary>Texto original de esta sección (reemplazado por el addendum de arriba)</summary>
+
+> Cumplir 18 años no dispara ningún cambio de estado por sí mismo (detalle completo en
+> `requirements.md` §7.2.8). Decisiones concretas:
+>
+> - La mayoría de edad es una condición computada en el momento de cada verificación de
+>   acceso a partir de `Person.birth_date` — nunca un valor que un proceso programado
+>   reescriba en la fecha exacta del cumpleaños. Fase 1 no incorpora Celery ni tareas
+>   programadas; introducir esa infraestructura solo para esto violaría CLAUDE.md §13
+>   (no agregar dependencias sin necesidad real).
+> - Ninguna `ResponsiblePatientRelationship` existente se desactiva, modifica ni elimina por
+>   el solo hecho de que el paciente cumpla 18 años. Continuidad del cuidado sobre revocación
+>   silenciosa.
+> - La UI debe hacer visible la transición (ver `docs/design/screens.md` §6.5 y §6.7) — esto
+>   es una capa de presentación informativa, no un cambio de autorización en sí mismo.
+> - No se diseña un mecanismo de consentimiento nuevo para esta transición. Si el paciente,
+>   ya adulto, llega a tener su propia cuenta (`User`) — mecanismo todavía pendiente, §5 —,
+>   cualquier `ResponsiblePatientRelationship` sobre su expediente, incluida la heredada de su
+>   minoría de edad, queda sujeta a la misma regla de consentimiento de §3.7 (vincular a un
+>   paciente con `User` propio requiere su consentimiento). Es el mismo mecanismo aplicado
+>   también a relaciones preexistentes, no uno paralelo.
+> - No se introduce una expiración forzosa por tiempo. Un límite estricto (p. ej. "N días tras
+>   el cumpleaños") es una decisión separada y, si se toma, probablemente requeriría
+>   infraestructura de tareas programadas — explícitamente fuera de alcance aquí.
+
+</details>
 
 ---
 
@@ -252,6 +340,23 @@ Rechazada. Obligar una acción inmediata en una fecha específica, sin período 
 interrumpiría el cuidado si el paciente no está listo o disponible para hacerlo ese día. Se
 prefiere una transición visible pero no bloqueante (§3.8).
 
+### Alternativa H — Condicionar la transición a régimen adulto a que el paciente obtenga un `User`
+
+Rechazada. Son dos decisiones independientes: "¿el paciente controla ahora su propio
+expediente, fuera del alcance de sus responsables?" (resuelto en §3.8) y "¿el paciente tiene
+credenciales propias para entrar al sistema?" (todavía pendiente, §5). Exigir la segunda para
+resolver la primera bloquearía la transición — y por lo tanto el fin de la autorización de los
+responsables — a un trámite adicional (verificación de identidad, creación de cuenta) que no
+tiene nada que ver con la mayoría de edad en sí. Se prefiere desacoplarlas: la transición de
+régimen no crea, exige ni modifica ningún `User`.
+
+### Alternativa I — Desactivar las relaciones de responsables una por una, no en bloque
+
+Rechazada. Dejaría una ventana en la que el paciente ya es legalmente adulto pero algún
+responsable conserva acceso activo simplemente porque su relación no fue la primera en
+procesarse. La transición se modela como una sola operación atómica que cierra todas las
+relaciones `ACTIVE` a la vez (§3.8), sin estados intermedios observables.
+
 ---
 
 ## 5. Casos fuera de esta decisión (pendientes)
@@ -262,11 +367,15 @@ debe asumirse ni implementarse sin una decisión funcional adicional (ver `requi
 
 - Si un paciente menor puede tener correo electrónico propio, y bajo qué condiciones.
 - Bajo qué condiciones y quién autoriza que un paciente (menor o ya adulto) obtenga
-  credenciales propias (`User`) más adelante — de esto depende poder aplicar el consentimiento
-  de §3.7/§3.8.
+  credenciales propias (`User`) más adelante, y qué verificación de identidad requiere ese
+  trámite. Esta decisión es independiente de la transición de régimen (§3.8, addendum): un
+  paciente puede quedar en `regime = ADULT` sin tener nunca un `User` propio.
 - Mecanismo de consentimiento para vincular un responsable a un paciente que ya gestiona su
-  propia cuenta (§3.7) — el mismo mecanismo se aplica también a relaciones heredadas de la
-  minoría de edad (§3.8).
+  propia cuenta (§3.7) — aplica cuando ese paciente exista con `User` propio, sea cual sea su
+  `regime`. No aplica a la transición de régimen en sí (§3.8), que no crea ni requiere `User`.
+- Si un paciente ya en `regime = ADULT` puede, más adelante y por su propia cuenta, revocar o
+  volver a autorizar el acceso de un responsable — la transición de §3.8 solo cubre el cierre
+  inicial en bloque ejecutado por el médico, no la gestión posterior por el propio paciente.
 - Qué ocurre cuando una coincidencia por CURP no tiene ningún responsable activo a quien
   pedirle aprobación — hereda la indefinición ya marcada en ADR-004 §36 sobre el alcance del
   Administrador.
@@ -292,6 +401,11 @@ requiere actualizar esta ADR o crear una nueva, siguiendo CLAUDE.md §7.
 - No hubo impacto en el esquema de `accounts.Invitation`, `Person`, `Doctor`, `Clinic`:
   `Person.user` nullable ya cubría el caso (§3.3); se agregaron las propiedades computadas
   `Person.age`/`Person.is_minor` (sin migración).
+- El addendum de §3.8 (2026-09-08) agregó `Patient.regime`/`regime_changed_at`/
+  `regime_changed_by` y `ResponsiblePatientRelationship.deactivated_at`/`deactivation_reason`
+  (migración `patients.0004`, con backfill de `regime` para filas ya existentes a partir de la
+  edad cronológica de cada `Person` en el momento de migrar) y el servicio
+  `transition_patient_to_adult` — ver checklist §8.
 
 ---
 
@@ -344,6 +458,10 @@ tests (`patients/tests/test_minors.py`, `patients/tests/test_views_minors.py`,
 - [x] `ResponsiblePatientRelationship` distingue nunca-aprobada / vigente / desactivada como
       tres estados distintos (`status`, `Status.PENDING/ACTIVE/INACTIVE`) — no colapsados en
       un solo booleano.
+- [x] `status` no tiene `default` de campo; un `CheckConstraint` (no solo `choices`, que no es
+      una garantía a nivel de base de datos) rechaza cualquier fila que no especifique uno de
+      los tres valores válidos — probado en
+      `test_status_has_no_default_and_must_be_supplied_explicitly`.
 - [x] No existe ningún job/tarea programada que reescriba el estado de una relación al
       cumplir el paciente 18 años — la mayoría de edad se computa en cada verificación.
 - [x] Cumplir 18 años no desactiva, elimina ni modifica ninguna `ResponsiblePatientRelationship`
@@ -354,16 +472,58 @@ tests (`patients/tests/test_minors.py`, `patients/tests/test_views_minors.py`,
 - [x] Los puntos de §5 de esta ADR siguen marcados como pendientes en el código (docstring de
       `patients/services/minors.py`), no resueltos por omisión.
 
+**Transición a régimen adulto (§3.8, addendum 2026-09-08) — implementada 2026-09-08**
+(`patients/models.py`, `patients/services/minors.py::transition_patient_to_adult`,
+`patients/views.py::TransitionPatientToAdultView`, migración `patients.0004`). Los puntos
+marcados `[x]` están cubiertos por tests (`patients/tests/test_models.py`,
+`patients/tests/test_minors.py::AdultTransitionTests`,
+`patients/tests/test_views_minors.py::TransitionToAdultViewTests`,
+`patients/tests/test_permissions.py::DoctorHasActiveRelationshipTests`).
+
+- [x] `Patient.regime` existe, sin `default` de campo, con `CheckConstraint` restringiendo a
+      `MINOR`/`ADULT` — mismo patrón que `ResponsiblePatientRelationship.status` — probado en
+      `test_regime_has_no_default_and_must_be_supplied_explicitly`.
+- [x] `Patient.regime_changed_at`/`regime_changed_by` (FK a `doctors.Doctor`,
+      `on_delete=PROTECT`) quedan `NULL` hasta la primera transición.
+- [x] `ResponsiblePatientRelationship.deactivated_at`/`deactivation_reason` existen, sin
+      `default` de campo, con `CheckConstraint` exigiendo ambos no nulos cuando
+      `status=INACTIVE` — probado en `test_inactive_status_requires_deactivation_info`.
+- [x] `register_minor_patient` pasa `regime=MINOR` explícitamente; `accept_invitation` pasa
+      `regime=ADULT` explícitamente — ninguna creación de `Patient` depende de un default.
+- [x] `reject_relationship_request` pasa `deactivation_reason=REQUEST_REJECTED` al desactivar
+      — probado en `test_reject_records_deactivation_reason`.
+- [x] Existe `transition_patient_to_adult(*, patient, performed_by_doctor)`, atómico, que
+      rechaza: `regime` ya `ADULT` (`PatientAlreadyAdult`); `Person.is_minor` todavía `True`
+      (`PatientStillMinor`); médico sin `DoctorPatientRelationship` activa hacia el paciente
+      (`DoctorNotAuthorizedForTransition`).
+- [x] La transición desactiva, en la misma operación, **todas** las
+      `ResponsiblePatientRelationship` `ACTIVE` del paciente (`deactivation_reason=
+      ADULT_TRANSITION`) — no una por una; una relación `PENDING` no se toca — probado en
+      `test_deactivates_every_active_relationship_in_one_operation`.
+- [x] La transición no crea, exige ni modifica ningún `User` — probado explícitamente en
+      `test_never_creates_or_requires_a_user`.
+- [x] No existe ninguna operación que revierta `regime` de `ADULT` a `MINOR` — probado en
+      `test_is_irreversible`.
+- [x] Cualquier `relationship_type` de `DoctorPatientRelationship` califica, no solo
+      `TRATANTE` — probado en `test_any_relationship_type_qualifies_not_only_tratante`.
+- [x] UI: acción "Marcar como adulto" en detalle de paciente (`docs/design/screens.md` §6.5),
+      con confirmación vía `Modal` (`<dialog>` nativo), visible solo cuando `regime=MINOR`,
+      `Person.is_minor=False` y el médico tiene relación activa — la autorización real se
+      revalida en el servicio, no solo en la condición que oculta el botón.
+
 ---
 
 ## 9. Estado
 
-**Accepted — implementado (2026-09-08)**
+**Accepted — implementado (2026-09-08)**, incluido el addendum de §3.8 (diseñado 2026-09-08,
+implementado 2026-09-08): la transición a régimen adulto ya está construida, no solo
+documentada (ver checklist §8).
 
-El flujo de registro de paciente menor por responsable está implementado para Fase 1
-(`patients/services/minors.py`, `patients/views.py`, `patients/forms.py`,
-`docs/design/screens.md` §6.8/§6.7). Los puntos de §5 siguen explícitamente no resueltos, tal
-como se documentaron ahí — no se asumieron ni se implementaron por omisión.
+El flujo de registro de paciente menor por responsable y el de transición a régimen adulto
+están ambos implementados para Fase 1 (`patients/services/minors.py`, `patients/views.py`,
+`patients/forms.py`, `patients/models.py`, migración `patients.0004`,
+`docs/design/screens.md` §6.5/§6.7/§6.8). Los puntos de §5 siguen explícitamente no resueltos,
+tal como se documentaron ahí — no se asumieron ni se implementaron por omisión.
 
 Cualquier modificación significativa deberá documentarse mediante una actualización de esta
 ADR o una nueva ADR relacionada.

@@ -3,6 +3,33 @@
 {% block app_content %}
 {% include "components/_patient_context_header.html" with patient=patient %}
 
+{% if can_transition_to_adult %}
+<div class="patient-detail-actions">
+  <button type="button" class="btn btn--secondary" onclick="document.getElementById('modal-adult-transition').showModal()">
+    Marcar como adulto
+  </button>
+</div>
+
+<dialog id="modal-adult-transition" class="modal">
+  <div class="modal__body">
+    <h2 class="modal__title">Marcar como adulto</h2>
+    <p class="modal__text">
+      Esta acción es irreversible: {{ patient.person }} pasará a tener autorización propia
+      sobre su expediente y se desactivará el acceso de todos sus responsables actuales.
+    </p>
+    <form method="post" action="{% url 'patients:transition_to_adult' patient.pk %}">
+      {% csrf_token %}
+      <div class="modal__actions">
+        <button type="button" class="btn btn--secondary" onclick="document.getElementById('modal-adult-transition').close()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn--danger">Confirmar transición</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+{% endif %}
+
 {% comment %}
 Bloques de design-system.md §28. "Información gineco-obstétrica" e "Historial"
 no se incluyen — no existen en Fase 1 (docs/design/screens.md §6.5).
@@ -135,7 +162,13 @@ no se incluyen — no existen en Fase 1 (docs/design/screens.md §6.5).
       <dt class="data-list__label">{{ relationship.get_relationship_type_display }}</dt>
       <dd class="data-list__value">
         {{ relationship.responsible }}
-        {% include "components/_badge.html" with text=relationship.is_active|yesno:"Activa,Inactiva" variant=relationship.is_active|yesno:"success,neutral" %}
+        {% if relationship.status == "ACTIVE" %}
+          {% include "components/_badge.html" with text="Vigente" variant="success" %}
+        {% elif relationship.status == "PENDING" %}
+          {% include "components/_badge.html" with text="Pendiente de aprobación" variant="warning" %}
+        {% else %}
+          {% include "components/_badge.html" with text="Desactivada" variant="neutral" %}
+        {% endif %}
       </dd>
     </div>
     {% endfor %}

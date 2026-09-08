@@ -1,0 +1,98 @@
+[
+  {
+    "model": "patients.doctorpatientrelationship",
+    "pk": 1,
+    "fields": {
+      "doctor": 1,
+      "patient": 1,
+      "relationship_type": "TRATANTE",
+      "is_active": true,
+      "created_at": "2026-09-07T12:00:00Z"
+    }
+  },
+  {
+    "model": "patients.doctorpatientrelationship",
+    "pk": 2,
+    "fields": {
+      "doctor": 1,
+      "patient": 2,
+      "relationship_type": "TRATANTE",
+      "is_active": true,
+      "created_at": "2026-09-07T12:01:00Z"
+    }
+  },
+  {
+    "model": "patients.doctorpatientrelationship",
+    "pk": 3,
+    "fields": {
+      "doctor": 2,
+      "patient": 3,
+      "relationship_type": "TRATANTE",
+      "is_active": true,
+      "created_at": "2026-09-07T12:02:00Z"
+    }
+  },
+  {
+    "model": "patients.doctorpatientrelationship",
+    "pk": 4,
+    "fields": {
+      "doctor": 1,
+      "patient": 4,
+      "relationship_type": "OTRO",
+      "is_active": true,
+      "created_at": "2026-09-07T12:03:00Z"
+    }
+  },
+  {
+    "model": "patients.responsiblepatientrelationship",
+    "pk": 1,
+    "fields": {
+      "responsible": 1,
+      "patient": 1,
+      "relationship_type": "MADRE",
+      "status": "ACTIVE",
+      "created_at": "2026-09-07T12:04:00Z"
+    }
+  },
+  {
+    "model": "patients.responsiblepatientrelationship",
+    "pk": 2,
+    "fields": {
+      "responsible": 1,
+      "patient": 2,
+      "relationship_type": "MADRE",
+      "status": "ACTIVE",
+      "created_at": "2026-09-07T12:05:00Z"
+    }
+  },
+  {
+    "model": "clinics.doctorclinic",
+    "pk": 1,
+    "fields": {
+      "doctor": 1,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-09-07T12:06:00Z"
+    }
+  },
+  {
+    "model": "clinics.doctorclinic",
+    "pk": 2,
+    "fields": {
+      "doctor": 1,
+      "clinic": 2,
+      "is_active": true,
+      "created_at": "2026-09-07T12:07:00Z"
+    }
+  },
+  {
+    "model": "clinics.doctorclinic",
+    "pk": 3,
+    "fields": {
+      "doctor": 2,
+      "clinic": 1,
+      "is_active": true,
+      "created_at": "2026-09-07T12:08:00Z"
+    }
+  }
+]

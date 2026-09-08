@@ -2,6 +2,7 @@ from datetime import date
 
 from django.db import IntegrityError, transaction
 from django.test import TestCase
+from django.utils import timezone
 
 from accounts.models import Person, User
 from doctors.models import Doctor
@@ -25,7 +26,9 @@ def _make_doctor(email):
 
 
 def _make_patient(email, first_name="Pat"):
-    return Patient.objects.create(person=_make_person(email, first_name), sex=Patient.Sex.FEMALE)
+    return Patient.objects.create(
+        person=_make_person(email, first_name), sex=Patient.Sex.FEMALE, regime=Patient.Regime.ADULT
+    )
 
 
 def _make_responsible(email, first_name="Resp"):
@@ -64,11 +67,13 @@ class ResponsibleModelTests(TestCase):
             responsible=responsible,
             patient=patient_a,
             relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
+            status=ResponsiblePatientRelationship.Status.ACTIVE,
         )
         ResponsiblePatientRelationship.objects.create(
             responsible=responsible,
             patient=patient_b,
             relationship_type=ResponsiblePatientRelationship.RelationType.TUTOR_LEGAL,
+            status=ResponsiblePatientRelationship.Status.ACTIVE,
         )
 
         self.assertEqual(responsible.patient_relationships.count(), 2)
@@ -80,16 +85,61 @@ class ResponsibleModelTests(TestCase):
             responsible=responsible,
             patient=patient,
             relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
+            status=ResponsiblePatientRelationship.Status.ACTIVE,
         )
 
         relation.status = ResponsiblePatientRelationship.Status.INACTIVE
-        relation.save(update_fields=["status"])
+        relation.deactivated_at = timezone.now()
+        relation.deactivation_reason = ResponsiblePatientRelationship.DeactivationReason.OTHER
+        relation.save(update_fields=["status", "deactivated_at", "deactivation_reason"])
 
         self.assertTrue(
             ResponsiblePatientRelationship.objects.filter(
                 pk=relation.pk, status=ResponsiblePatientRelationship.Status.INACTIVE
             ).exists()
         )
+
+
+class ResponsiblePatientRelationshipStatusTests(TestCase):
+    def test_status_has_no_default_and_must_be_supplied_explicitly(self):
+        # Deny-by-default (ADR-004): omitting `status` must fail loudly, not
+        # silently fall back to some default state. Without an explicit
+        # `default=` on the field, Django would otherwise insert "" here —
+        # the CheckConstraint is what actually turns that into a hard error.
+        responsible = _make_responsible("resp-status@example.com")
+        patient = _make_patient("p-status@example.com")
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                ResponsiblePatientRelationship.objects.create(
+                    responsible=responsible,
+                    patient=patient,
+                    relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
+                )
+
+    def test_inactive_status_requires_deactivation_info(self):
+        # Same deny-by-default reasoning, applied to the deactivation trace
+        # (ADR-007 §3.8 addendum): INACTIVE without a reason/timestamp must
+        # fail loudly at the DB level, not silently accept an incomplete row.
+        responsible = _make_responsible("resp-deact@example.com")
+        patient = _make_patient("p-deact@example.com")
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                ResponsiblePatientRelationship.objects.create(
+                    responsible=responsible,
+                    patient=patient,
+                    relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
+                    status=ResponsiblePatientRelationship.Status.INACTIVE,
+                )
+
+
+class PatientRegimeTests(TestCase):
+    def test_regime_has_no_default_and_must_be_supplied_explicitly(self):
+        person = _make_person("p-regime@example.com", "NoRegime")
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                Patient.objects.create(person=person, sex=Patient.Sex.FEMALE)
 
 
 class RelationshipUniquenessTests(TestCase):
@@ -109,6 +159,7 @@ class RelationshipUniquenessTests(TestCase):
             responsible=responsible,
             patient=patient,
             relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
+            status=ResponsiblePatientRelationship.Status.ACTIVE,
         )
 
         with self.assertRaises(IntegrityError):
@@ -117,4 +168,5 @@ class RelationshipUniquenessTests(TestCase):
                     responsible=responsible,
                     patient=patient,
                     relationship_type=ResponsiblePatientRelationship.RelationType.OTRO,
+                    status=ResponsiblePatientRelationship.Status.ACTIVE,
                 )

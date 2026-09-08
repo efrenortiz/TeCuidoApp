@@ -1,0 +1,156 @@
+[
+  {
+    "model": "accounts.person",
+    "pk": 1,
+    "fields": {
+      "user": 2,
+      "first_name": "Carmen",
+      "last_name_paterno": "Hernandez",
+      "last_name_materno": "Vega",
+      "birth_date": "1975-05-20",
+      "phone": "3316038923",
+      "alternative_phone": "",
+      "street": "",
+      "exterior_number": "",
+      "neighborhood": "",
+      "postal_code": "",
+      "municipality": "Zapopan",
+      "state": "Jalisco",
+      "country": "México",
+      "created_at": "2026-09-07T12:00:00Z",
+      "updated_at": "2026-09-07T12:00:00Z"
+    }
+  },
+  {
+    "model": "accounts.person",
+    "pk": 2,
+    "fields": {
+      "user": 3,
+      "first_name": "Alejandro",
+      "last_name_paterno": "Martínez",
+      "last_name_materno": "Ruiz",
+      "birth_date": "1982-03-14",
+      "phone": "3312345678",
+      "alternative_phone": "",
+      "street": "",
+      "exterior_number": "",
+      "neighborhood": "",
+      "postal_code": "",
+      "municipality": "Zapopan",
+      "state": "Jalisco",
+      "country": "México",
+      "created_at": "2026-09-07T12:01:00Z",
+      "updated_at": "2026-09-07T12:01:00Z"
+    }
+  },
+  {
+    "model": "accounts.person",
+    "pk": 3,
+    "fields": {
+      "user": 4,
+      "first_name": "Ana Sofía",
+      "last_name_paterno": "Hernández",
+      "last_name_materno": "López",
+      "birth_date": "1990-08-12",
+      "phone": "3311111111",
+      "alternative_phone": "",
+      "street": "",
+      "exterior_number": "",
+      "neighborhood": "",
+      "postal_code": "",
+      "municipality": "Zapopan",
+      "state": "Jalisco",
+      "country": "México",
+      "created_at": "2026-09-07T12:02:00Z",
+      "updated_at": "2026-09-07T12:02:00Z"
+    }
+  },
+  {
+    "model": "accounts.person",
+    "pk": 4,
+    "fields": {
+      "user": 5,
+      "first_name": "María Fernanda",
+      "last_name_paterno": "López",
+      "last_name_materno": "García",
+      "birth_date": "1988-11-03",
+      "phone": "3322222222",
+      "alternative_phone": "",
+      "street": "",
+      "exterior_number": "",
+      "neighborhood": "",
+      "postal_code": "",
+      "municipality": "Zapopan",
+      "state": "Jalisco",
+      "country": "México",
+      "created_at": "2026-09-07T12:03:00Z",
+      "updated_at": "2026-09-07T12:03:00Z"
+    }
+  },
+  {
+    "model": "accounts.person",
+    "pk": 5,
+    "fields": {
+      "user": 6,
+      "first_name": "Carlos Alberto",
+      "last_name_paterno": "Ramírez",
+      "last_name_materno": "Torres",
+      "birth_date": "1979-06-25",
+      "phone": "3333333333",
+      "alternative_phone": "",
+      "street": "",
+      "exterior_number": "",
+      "neighborhood": "",
+      "postal_code": "",
+      "municipality": "Guadalajara",
+      "state": "Jalisco",
+      "country": "México",
+      "created_at": "2026-09-07T12:04:00Z",
+      "updated_at": "2026-09-07T12:04:00Z"
+    }
+  },
+  {
+    "model": "accounts.person",
+    "pk": 6,
+    "fields": {
+      "user": 7,
+      "first_name": "Patricia",
+      "last_name_paterno": "Gómez",
+      "last_name_materno": "Sánchez",
+      "birth_date": "1970-02-18",
+      "phone": "3344444444",
+      "alternative_phone": "",
+      "street": "",
+      "exterior_number": "",
+      "neighborhood": "",
+      "postal_code": "",
+      "municipality": "Zapopan",
+      "state": "Jalisco",
+      "country": "México",
+      "created_at": "2026-09-07T12:05:00Z",
+      "updated_at": "2026-09-07T12:05:00Z"
+    }
+  },
+  {
+    "model": "accounts.person",
+    "pk": 7,
+    "fields": {
+      "user": null,
+      "first_name": "Menor",
+      "last_name_paterno": "Demo",
+      "last_name_materno": "",
+      "birth_date": "2015-09-10",
+      "phone": "",
+      "alternative_phone": "",
+      "street": "",
+      "exterior_number": "",
+      "neighborhood": "",
+      "postal_code": "",
+      "municipality": "",
+      "state": "",
+      "country": "México",
+      "created_at": "2026-09-07T12:06:00Z",
+      "updated_at": "2026-09-07T12:06:00Z"
+    }
+  }
+]

@@ -1,6 +1,6 @@
 /*
- * Componentes — solo los que usan las 13 pantallas de Fase 1
- * (docs/design/screens.md §5-6). Table/Modal/Pagination/Tabs/Breadcrumb/
+ * Componentes — solo los que usan las pantallas de Fase 1
+ * (docs/design/screens.md §5-6). Table/Pagination/Tabs/Breadcrumb/
  * Dropdown/Tooltip/Sidebar/Navbar no se implementan aquí porque ninguna
  * pantalla de Fase 1 los necesita todavía (design-system.md §55).
  */
@@ -436,4 +436,52 @@
 .inline-form {
   display: inline-block;
   margin-left: var(--space-2);
+}
+
+/* Utility: right-aligned action row above a page's Card blocks (e.g.
+   "Marcar como adulto" on patient_detail.html). */
+.patient-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-5);
+}
+
+/* ---------------------------------------------------------------- */
+/* Modal — Design System §22, §40 (primer uso real en Fase 1: "Marcar */
+/* como adulto", screens.md §6.5). Implementado sobre <dialog> nativo: */
+/* se abre con showModal() y se cierra con close() desde el template   */
+/* que lo usa — sin JS ni dependencias adicionales; el navegador ya    */
+/* da el backdrop, el foco atrapado y el cierre con Escape.            */
+/* ---------------------------------------------------------------- */
+
+.modal {
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: 0;
+  max-width: 480px;
+  width: calc(100% - var(--space-6));
+  box-shadow: var(--shadow-md);
+}
+
+.modal::backdrop {
+  background: rgba(26, 34, 38, 0.5);
+}
+
+.modal__body {
+  padding: var(--space-6);
+}
+
+.modal__title {
+  margin: 0 0 var(--space-3);
+}
+
+.modal__text {
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-secondary);
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
 }

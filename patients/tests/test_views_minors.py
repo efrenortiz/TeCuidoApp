@@ -4,7 +4,13 @@ from django.test import TestCase
 from django.urls import reverse
 
 from accounts.models import Person, User
-from patients.models import Patient, Responsible, ResponsiblePatientRelationship
+from doctors.models import Doctor
+from patients.models import (
+    DoctorPatientRelationship,
+    Patient,
+    Responsible,
+    ResponsiblePatientRelationship,
+)
 
 
 def _make_responsible(email, first_name="Resp", **person_kwargs):
@@ -25,6 +31,7 @@ def _make_patient(
     birth_date=date(2015, 6, 1),
     last_name_paterno="Minor",
     last_name_materno="",
+    regime=Patient.Regime.MINOR,
 ):
     person = Person.objects.create(
         first_name=first_name,
@@ -32,7 +39,7 @@ def _make_patient(
         last_name_materno=last_name_materno,
         birth_date=birth_date,
     )
-    return Patient.objects.create(person=person, sex=Patient.Sex.MALE, curp=curp)
+    return Patient.objects.create(person=person, sex=Patient.Sex.MALE, curp=curp, regime=regime)
 
 
 MINOR_STEP1_PAYLOAD = {
@@ -215,3 +222,100 @@ class ApproveRejectViewTests(TestCase):
         response = self.client.get(reverse("patients:my_dependents"))
         self.assertContains(response, "Requester Test")
         self.assertContains(response, "Solicitud pendiente")
+
+    def test_reject_records_deactivation_reason(self):
+        self.client.login(username="approver@example.com", password="s3cure-pass!")
+        self.client.post(reverse("patients:reject_relationship_request", args=[self.pending.pk]))
+        self.pending.refresh_from_db()
+        self.assertIsNotNone(self.pending.deactivated_at)
+        self.assertEqual(
+            self.pending.deactivation_reason,
+            ResponsiblePatientRelationship.DeactivationReason.REQUEST_REJECTED,
+        )
+
+
+def _make_doctor(email, first_name="Doc"):
+    user = User.objects.create_user(email=email, password="s3cure-pass!")
+    person = Person.objects.create(
+        user=user, first_name=first_name, last_name_paterno="Tor", birth_date=date(1980, 1, 1)
+    )
+    return Doctor.objects.create(person=person)
+
+
+class TransitionToAdultViewTests(TestCase):
+    """docs/design/screens.md §6.5, ADR-007 §3.8 addendum."""
+
+    def setUp(self):
+        self.doctor = _make_doctor("transition-doc@example.com")
+        # Chronologically adult (born 1990) but still in MINOR regime — the
+        # only state from which the action should be reachable.
+        self.patient = _make_patient(
+            "Adulto", birth_date=date(1990, 1, 1), regime=Patient.Regime.MINOR
+        )
+        self.responsible = _make_responsible("transition-resp@example.com")
+        self.relationship = ResponsiblePatientRelationship.objects.create(
+            responsible=self.responsible,
+            patient=self.patient,
+            relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
+            status=ResponsiblePatientRelationship.Status.ACTIVE,
+        )
+
+    def _login_doctor(self):
+        self.client.login(username="transition-doc@example.com", password="s3cure-pass!")
+
+    def test_doctor_with_active_relationship_transitions_patient(self):
+        DoctorPatientRelationship.objects.create(doctor=self.doctor, patient=self.patient)
+        self._login_doctor()
+
+        response = self.client.post(
+            reverse("patients:transition_to_adult", args=[self.patient.pk])
+        )
+
+        self.assertRedirects(response, reverse("patients:patient_detail", args=[self.patient.pk]))
+        self.patient.refresh_from_db()
+        self.assertEqual(self.patient.regime, Patient.Regime.ADULT)
+        self.assertIsNotNone(self.patient.regime_changed_at)
+        self.assertEqual(self.patient.regime_changed_by, self.doctor)
+
+        self.relationship.refresh_from_db()
+        self.assertEqual(self.relationship.status, ResponsiblePatientRelationship.Status.INACTIVE)
+        self.assertEqual(
+            self.relationship.deactivation_reason,
+            ResponsiblePatientRelationship.DeactivationReason.ADULT_TRANSITION,
+        )
+
+    def test_doctor_without_relationship_gets_404(self):
+        self._login_doctor()
+        response = self.client.post(
+            reverse("patients:transition_to_adult", args=[self.patient.pk])
+        )
+        self.assertEqual(response.status_code, 404)
+        self.patient.refresh_from_db()
+        self.assertEqual(self.patient.regime, Patient.Regime.MINOR)
+
+    def test_non_doctor_role_is_forbidden(self):
+        self.client.login(username="transition-resp@example.com", password="s3cure-pass!")
+        response = self.client.post(
+            reverse("patients:transition_to_adult", args=[self.patient.pk])
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_anonymous_user_is_redirected_to_login(self):
+        response = self.client.post(
+            reverse("patients:transition_to_adult", args=[self.patient.pk])
+        )
+        self.assertEqual(response.status_code, 302)
+
+    def test_still_minor_chronologically_is_rejected(self):
+        DoctorPatientRelationship.objects.create(doctor=self.doctor, patient=self.patient)
+        self.patient.person.birth_date = date(2015, 6, 1)
+        self.patient.person.save(update_fields=["birth_date"])
+        self._login_doctor()
+
+        response = self.client.post(
+            reverse("patients:transition_to_adult", args=[self.patient.pk])
+        )
+
+        self.assertRedirects(response, reverse("patients:patient_detail", args=[self.patient.pk]))
+        self.patient.refresh_from_db()
+        self.assertEqual(self.patient.regime, Patient.Regime.MINOR)

@@ -1,0 +1,128 @@
+[
+  {
+    "model": "accounts.user",
+    "pk": 1,
+    "fields": {
+      "password": "pbkdf2_sha256$870000$95-Eo6GU5Evgkq1T$NB5MFuaZOHvplDBXQzL3VoNiCJ++iu1qSUL2EFH+nyM=",
+      "last_login": null,
+      "is_superuser": true,
+      "email": "admin@tecuido.test",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2026-09-07T12:00:00Z",
+      "email_verified": true,
+      "groups": [
+        1
+      ],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "accounts.user",
+    "pk": 2,
+    "fields": {
+      "password": "pbkdf2_sha256$870000$i-JJaki7jERzsawI$OEzNB5iXhCmBYMirEDf8ROmu0Qqws4dp+7lOBz3N1Sk=",
+      "last_login": null,
+      "is_superuser": false,
+      "email": "dra.carmen.hernandez@gmail.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-09-07T12:01:00Z",
+      "email_verified": true,
+      "groups": [
+        2
+      ],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "accounts.user",
+    "pk": 3,
+    "fields": {
+      "password": "pbkdf2_sha256$870000$i-JJaki7jERzsawI$OEzNB5iXhCmBYMirEDf8ROmu0Qqws4dp+7lOBz3N1Sk=",
+      "last_login": null,
+      "is_superuser": false,
+      "email": "dr.martinez@tecuido.test",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-09-07T12:02:00Z",
+      "email_verified": true,
+      "groups": [
+        2
+      ],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "accounts.user",
+    "pk": 4,
+    "fields": {
+      "password": "pbkdf2_sha256$870000$pjLXlVIAvQXK9X38$v5cBGqOvghIDJ1/1pLmvNltkA53hUINq0b9uS9/ITAQ=",
+      "last_login": null,
+      "is_superuser": false,
+      "email": "ana.paciente@tecuido.test",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-09-07T12:03:00Z",
+      "email_verified": true,
+      "groups": [
+        3
+      ],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "accounts.user",
+    "pk": 5,
+    "fields": {
+      "password": "pbkdf2_sha256$870000$pjLXlVIAvQXK9X38$v5cBGqOvghIDJ1/1pLmvNltkA53hUINq0b9uS9/ITAQ=",
+      "last_login": null,
+      "is_superuser": false,
+      "email": "maria.paciente@tecuido.test",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-09-07T12:04:00Z",
+      "email_verified": true,
+      "groups": [
+        3
+      ],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "accounts.user",
+    "pk": 6,
+    "fields": {
+      "password": "pbkdf2_sha256$870000$pjLXlVIAvQXK9X38$v5cBGqOvghIDJ1/1pLmvNltkA53hUINq0b9uS9/ITAQ=",
+      "last_login": null,
+      "is_superuser": false,
+      "email": "carlos.paciente@tecuido.test",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-09-07T12:05:00Z",
+      "email_verified": true,
+      "groups": [
+        3
+      ],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "accounts.user",
+    "pk": 7,
+    "fields": {
+      "password": "pbkdf2_sha256$870000$lMchzQEL5DclVS3S$h3NCUihpKwWtvg/OeakG8V2QyuGluTFLus251Kj0lEE=",
+      "last_login": null,
+      "is_superuser": false,
+      "email": "patricia.responsable@tecuido.test",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2026-09-07T12:06:00Z",
+      "email_verified": true,
+      "groups": [
+        4
+      ],
+      "user_permissions": []
+    }
+  }
+]

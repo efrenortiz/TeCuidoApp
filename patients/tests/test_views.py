@@ -12,7 +12,7 @@ def _make_patient(email, first_name="Pat"):
     person = Person.objects.create(
         user=user, first_name=first_name, last_name_paterno="Test", birth_date=date(1990, 1, 1)
     )
-    return Patient.objects.create(person=person, sex=Patient.Sex.FEMALE)
+    return Patient.objects.create(person=person, sex=Patient.Sex.FEMALE, regime=Patient.Regime.ADULT)
 
 
 class PatientDetailViewObjectPermissionTests(TestCase):

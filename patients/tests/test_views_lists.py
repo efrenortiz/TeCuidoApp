@@ -25,7 +25,7 @@ def _make_patient(email, first_name="Pat", phone=""):
         birth_date=date(1990, 1, 1),
         phone=phone,
     )
-    return Patient.objects.create(person=person, sex=Patient.Sex.FEMALE)
+    return Patient.objects.create(person=person, sex=Patient.Sex.FEMALE, regime=Patient.Regime.ADULT)
 
 
 class PatientListViewTests(TestCase):

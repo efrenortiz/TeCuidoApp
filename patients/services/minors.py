@@ -8,6 +8,12 @@ duplicate. No code path here ever grants access on a mere data match: a
 match only ever produces a request that an already-authorized Responsible
 must approve via approve_relationship_request (ADR-007 §3.7).
 
+`transition_patient_to_adult` is the other atomic entry point: it moves a
+Patient from MINOR to ADULT regime and, in the same operation, deactivates
+every ResponsiblePatientRelationship the patient had (ADR-007 §3.8
+addendum, requirements.md §7.2.8). Irreversible; never creates or requires
+a User.
+
 Explicitly NOT covered here — do not assume or half-implement any of these
 without a real functional decision first (requirements.md §7.2.9,
 ADR-007 §5):
@@ -21,10 +27,14 @@ ADR-007 §5):
 """
 
 from django.db import transaction
+from django.utils import timezone
 
 from accounts.models import Person
 from patients.models import Patient, ResponsiblePatientRelationship
-from patients.services.permissions import responsible_has_active_relationship
+from patients.services.permissions import (
+    doctor_has_active_relationship,
+    responsible_has_active_relationship,
+)
 
 
 class MinorRegistrationError(Exception):
@@ -59,6 +69,21 @@ class AlreadyLinked(MinorRegistrationError):
 class NotAuthorizedToDecide(MinorRegistrationError):
     """Raised by approve/reject when the acting responsible has no active
     relationship on the patient the request is about."""
+
+
+class PatientAlreadyAdult(MinorRegistrationError):
+    """The adult-regime transition (ADR-007 §3.8 addendum) is not
+    repeatable — `regime` is already ADULT."""
+
+
+class PatientStillMinor(MinorRegistrationError):
+    """Hard legal lock (ADR-007 §3.8 addendum): the transition is refused
+    while Person.is_minor is still True, no matter who requests it."""
+
+
+class DoctorNotAuthorizedForTransition(MinorRegistrationError):
+    """The acting doctor has no active DoctorPatientRelationship (any
+    relationship_type) with this patient."""
 
 
 def _normalize(value):
@@ -161,7 +186,7 @@ def register_minor_patient(*, responsible, person_data, patient_data, relationsh
         return match, relationship, "pending"
 
     person = Person.objects.create(**person_data)
-    patient = Patient.objects.create(person=person, **patient_data)
+    patient = Patient.objects.create(person=person, regime=Patient.Regime.MINOR, **patient_data)
     relationship = ResponsiblePatientRelationship.objects.create(
         responsible=responsible,
         patient=patient,
@@ -171,27 +196,65 @@ def register_minor_patient(*, responsible, person_data, patient_data, relationsh
     return patient, relationship, "created"
 
 
-def _transition_pending(*, relationship, approving_responsible, new_status):
+def _check_pending_and_authorized(*, relationship, approving_responsible):
     if relationship.status != ResponsiblePatientRelationship.Status.PENDING:
         raise MinorRegistrationError("Relationship is not pending approval")
     if not responsible_has_active_relationship(approving_responsible, relationship.patient):
         raise NotAuthorizedToDecide()
-    relationship.status = new_status
+
+
+def approve_relationship_request(*, relationship, approving_responsible):
+    _check_pending_and_authorized(
+        relationship=relationship, approving_responsible=approving_responsible
+    )
+    relationship.status = ResponsiblePatientRelationship.Status.ACTIVE
     relationship.save(update_fields=["status"])
     return relationship
 
 
-def approve_relationship_request(*, relationship, approving_responsible):
-    return _transition_pending(
-        relationship=relationship,
-        approving_responsible=approving_responsible,
-        new_status=ResponsiblePatientRelationship.Status.ACTIVE,
-    )
-
-
 def reject_relationship_request(*, relationship, approving_responsible):
-    return _transition_pending(
-        relationship=relationship,
-        approving_responsible=approving_responsible,
-        new_status=ResponsiblePatientRelationship.Status.INACTIVE,
+    _check_pending_and_authorized(
+        relationship=relationship, approving_responsible=approving_responsible
     )
+    relationship.status = ResponsiblePatientRelationship.Status.INACTIVE
+    relationship.deactivated_at = timezone.now()
+    relationship.deactivation_reason = ResponsiblePatientRelationship.DeactivationReason.REQUEST_REJECTED
+    relationship.save(update_fields=["status", "deactivated_at", "deactivation_reason"])
+    return relationship
+
+
+@transaction.atomic
+def transition_patient_to_adult(*, patient, performed_by_doctor):
+    """Atomically move `patient` from MINOR to ADULT regime (ADR-007 §3.8
+    addendum, requirements.md §7.2.8).
+
+    Irreversible: once ADULT, this can never be called again for the same
+    patient. Deactivates every ACTIVE ResponsiblePatientRelationship for
+    the patient in the same operation — never one at a time. Never
+    creates, requires, or modifies any User; obtaining one is a separate,
+    still-pending decision (requirements.md §7.2.9).
+    """
+    patient = Patient.objects.select_for_update().select_related("person").get(pk=patient.pk)
+
+    if patient.regime == Patient.Regime.ADULT:
+        raise PatientAlreadyAdult()
+    if patient.person.is_minor:
+        raise PatientStillMinor()
+    if not doctor_has_active_relationship(performed_by_doctor, patient):
+        raise DoctorNotAuthorizedForTransition()
+
+    now = timezone.now()
+    patient.regime = Patient.Regime.ADULT
+    patient.regime_changed_at = now
+    patient.regime_changed_by = performed_by_doctor
+    patient.save(update_fields=["regime", "regime_changed_at", "regime_changed_by"])
+
+    ResponsiblePatientRelationship.objects.filter(
+        patient=patient, status=ResponsiblePatientRelationship.Status.ACTIVE
+    ).update(
+        status=ResponsiblePatientRelationship.Status.INACTIVE,
+        deactivated_at=now,
+        deactivation_reason=ResponsiblePatientRelationship.DeactivationReason.ADULT_TRANSITION,
+    )
+
+    return patient

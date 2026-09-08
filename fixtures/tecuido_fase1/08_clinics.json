@@ -1,0 +1,28 @@
+[
+  {
+    "model": "clinics.clinic",
+    "pk": 1,
+    "fields": {
+      "name": "Consultorio TeCuido Centro",
+      "description": "Consultorio de prueba Fase 1",
+      "address": "Av. Moctezuma #4662, Jardines del Sol",
+      "phone": "3330303030",
+      "is_active": true,
+      "created_at": "2026-09-07T12:00:00Z",
+      "updated_at": "2026-09-07T12:00:00Z"
+    }
+  },
+  {
+    "model": "clinics.clinic",
+    "pk": 2,
+    "fields": {
+      "name": "Consultorio TeCuido Norte",
+      "description": "Segundo consultorio de prueba",
+      "address": "Av. Patria 1000, Zapopan",
+      "phone": "3330404040",
+      "is_active": true,
+      "created_at": "2026-09-07T12:01:00Z",
+      "updated_at": "2026-09-07T12:01:00Z"
+    }
+  }
+]

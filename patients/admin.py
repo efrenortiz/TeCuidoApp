@@ -10,8 +10,8 @@ from patients.models import (
 
 @admin.register(Patient)
 class PatientAdmin(admin.ModelAdmin):
-    list_display = ["person", "sex", "is_active", "created_at"]
-    list_filter = ["is_active", "sex"]
+    list_display = ["person", "sex", "regime", "is_active", "created_at"]
+    list_filter = ["is_active", "sex", "regime"]
     search_fields = ["person__first_name", "person__last_name_paterno", "curp"]
 
 
@@ -30,5 +30,5 @@ class DoctorPatientRelationshipAdmin(admin.ModelAdmin):
 
 @admin.register(ResponsiblePatientRelationship)
 class ResponsiblePatientRelationshipAdmin(admin.ModelAdmin):
-    list_display = ["responsible", "patient", "relationship_type", "status"]
-    list_filter = ["relationship_type", "status"]
+    list_display = ["responsible", "patient", "relationship_type", "status", "deactivation_reason"]
+    list_filter = ["relationship_type", "status", "deactivation_reason"]

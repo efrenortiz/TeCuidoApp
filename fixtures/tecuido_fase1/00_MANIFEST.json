@@ -1,0 +1,44 @@
+{
+  "fixture_set": "TeCuido Fase 1 - datos de prueba",
+  "intended_command": "python manage.py loaddata 01_groups.json 02_catalogs.json 03_users_and_profiles.json 04_relationships.json",
+  "required_primary_doctor": {
+    "name": "Carmen Hernandez Vega",
+    "email": "dra.carmen.hernandez@gmail.com",
+    "phone": "3316038923"
+  },
+  "documented_phase_1_entities": [
+    "accounts.User",
+    "accounts.Person",
+    "accounts.Invitation",
+    "doctors.Doctor",
+    "patients.Patient",
+    "patients.Responsible",
+    "patients.DoctorPatientRelationship",
+    "patients.ResponsiblePatientRelationship",
+    "clinics.Clinic",
+    "clinics.DoctorClinic"
+  ],
+  "documented_choice_values": {
+    "roles": [
+      "ADMINISTRATOR",
+      "DOCTOR",
+      "PATIENT",
+      "RESPONSIBLE"
+    ],
+    "responsible_relationship_types": [
+      "MADRE",
+      "PADRE",
+      "TUTOR_LEGAL",
+      "FAMILIAR",
+      "CUIDADOR",
+      "OTRO"
+    ],
+    "invitation_statuses": [
+      "PENDING",
+      "USED",
+      "EXPIRED",
+      "CANCELLED"
+    ]
+  },
+  "note": "Los documentos de arquitectura describen entidades y algunos campos mínimos, pero no contienen el esquema exacto del repositorio implementado (nombres reales de campos, PKs, choices, campos obligatorios, relaciones y app labels). Por seguridad no se inventan fixtures de dominio que podrían fallar al ejecutar loaddata o introducir datos incompatibles."
+}

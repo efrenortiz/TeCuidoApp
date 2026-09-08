@@ -1,0 +1,90 @@
+[
+  {
+    "model": "patients.patient",
+    "pk": 1,
+    "fields": {
+      "person": 3,
+      "curp": "",
+      "nationality": "Mexicana",
+      "sex": "F",
+      "emergency_contact_name": "Patricia Gómez Sánchez",
+      "emergency_contact_phone": "3344444444",
+      "blood_type": "O+",
+      "allergies": "",
+      "chronic_conditions": "",
+      "current_medications": "",
+      "surgical_history": "",
+      "relevant_hospitalizations": "",
+      "is_active": true,
+      "regime": "ADULT",
+      "created_at": "2026-09-07T12:00:00Z",
+      "updated_at": "2026-09-07T12:00:00Z"
+    }
+  },
+  {
+    "model": "patients.patient",
+    "pk": 2,
+    "fields": {
+      "person": 4,
+      "curp": "",
+      "nationality": "Mexicana",
+      "sex": "F",
+      "emergency_contact_name": "Patricia Gómez Sánchez",
+      "emergency_contact_phone": "3344444444",
+      "blood_type": "A+",
+      "allergies": "",
+      "chronic_conditions": "",
+      "current_medications": "",
+      "surgical_history": "",
+      "relevant_hospitalizations": "",
+      "is_active": true,
+      "regime": "ADULT",
+      "created_at": "2026-09-07T12:01:00Z",
+      "updated_at": "2026-09-07T12:01:00Z"
+    }
+  },
+  {
+    "model": "patients.patient",
+    "pk": 3,
+    "fields": {
+      "person": 5,
+      "curp": "",
+      "nationality": "Mexicana",
+      "sex": "M",
+      "emergency_contact_name": "",
+      "emergency_contact_phone": "",
+      "blood_type": "B+",
+      "allergies": "",
+      "chronic_conditions": "",
+      "current_medications": "",
+      "surgical_history": "",
+      "relevant_hospitalizations": "",
+      "is_active": true,
+      "regime": "ADULT",
+      "created_at": "2026-09-07T12:02:00Z",
+      "updated_at": "2026-09-07T12:02:00Z"
+    }
+  },
+  {
+    "model": "patients.patient",
+    "pk": 4,
+    "fields": {
+      "person": 7,
+      "curp": "",
+      "nationality": "Mexicana",
+      "sex": "F",
+      "emergency_contact_name": "Patricia Gómez Sánchez",
+      "emergency_contact_phone": "3344444444",
+      "blood_type": "",
+      "allergies": "",
+      "chronic_conditions": "",
+      "current_medications": "",
+      "surgical_history": "",
+      "relevant_hospitalizations": "",
+      "is_active": true,
+      "regime": "MINOR",
+      "created_at": "2026-09-07T12:03:00Z",
+      "updated_at": "2026-09-07T12:03:00Z"
+    }
+  }
+]

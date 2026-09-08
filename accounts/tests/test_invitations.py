@@ -56,6 +56,7 @@ class AcceptInvitationTests(TestCase):
             DoctorPatientRelationship.objects.filter(doctor=self.doctor, patient=patient).exists()
         )
         self.assertEqual(patient.person.user.email, "prospect2@example.com")
+        self.assertEqual(patient.regime, Patient.Regime.ADULT)
 
     def test_accept_with_unknown_token_raises_not_found(self):
         with self.assertRaises(invitations.InvitationNotFound):

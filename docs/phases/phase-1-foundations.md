@@ -1,11 +1,18 @@
 # TeCuidoApp — Phase 1 Foundations
 
-**Estado:** Planned
+**Estado:** PARTIALLY COMPLETED (actualizado 2026-09-08 — ver §26-27)
 **Fase:** 1 — Fundaciones
 **Stack:** Python + Django + PostgreSQL
 **Fuente funcional:** `requirements.md`
 **Guía arquitectónica:** `docs/architecture.md`
-**ADRs aplicables:** `docs/adr/ADR-001-custom-user-model.md` a `docs/adr/ADR-006-database-integrity-and-transactions.md`
+**ADRs aplicables:** `docs/adr/ADR-001-custom-user-model.md` a `docs/adr/ADR-007-responsible-initiated-minor-registration.md`
+
+La arquitectura base y el alcance funcional de Fase 1 están implementados, incluida la
+transición a régimen adulto (ADR-007 §3.8 addendum, 144 tests en verde). Queda **PARTIALLY
+COMPLETED**, no COMPLETADA, porque persisten decisiones funcionales explícitamente pendientes
+sobre la cuenta propia (`User`) del paciente adulto (§7.2.9 de `requirements.md`, §5 de
+ADR-007) — ver §26-27 para el detalle exacto de qué falta y por qué no se resuelve por
+omisión.
 
 ---
 
@@ -35,7 +42,10 @@ La Fase 1 comprende exclusivamente:
 - consultorios;
 - pacientes;
 - responsables;
-- invitaciones.
+- invitaciones;
+- registro de paciente menor iniciado por su responsable (ADR-007, `requirements.md` §7.2) —
+  **implementado**, no debe tratarse en ningún lugar de este documento como pendiente de
+  construir.
 
 Este alcance corresponde a la planificación por fases definida en `requirements.md`.
 
@@ -110,6 +120,7 @@ docs/adr/ADR-003-invitation-security.md
 docs/adr/ADR-004-role-and-object-permissions.md
 docs/adr/ADR-005-django-app-boundaries.md
 docs/adr/ADR-006-database-integrity-and-transactions.md
+docs/adr/ADR-007-responsible-initiated-minor-registration.md
 ```
 
 Jerarquía:
@@ -404,26 +415,89 @@ Debe poder evolucionar posteriormente para distinguir tipos como:
 
 ## 11.2 Responsible ↔ Patient
 
-Implementar:
+Implementado:
 
 ```text
 ResponsiblePatientRelationship
 ```
 
-Debe permitir:
+Permite:
 
 - múltiples pacientes por responsable;
-- estado activo/inactivo;
-- tipo de relación;
+- tipo de relación (Madre/Padre/Tutor legal/Familiar/Cuidador/Otro);
 - crecimiento futuro de reglas de autorización.
 
-El camino de creación real de esta relación para un paciente menor de edad — un responsable
-registrando directamente a un menor, sin que este acepte una invitación como si fuera un
-prospecto adulto — quedó definido en `requirements.md` §7.2 y
-`docs/adr/ADR-007-responsible-initiated-minor-registration.md`. No estaba detallado cuando se
-escribió esta sección originalmente; la implementación de ese flujo (servicio, vista, entidad
-de confirmación) sigue pendiente y es trabajo de Fase 1 todavía por hacer, no de una fase
-posterior.
+**Corrección respecto a la versión original de esta sección:** el estado de la relación **no**
+es un booleano `is_active` (activo/inactivo). Es `status`, con tres valores distintos:
+
+```text
+PENDING    — nunca aprobada; no concede acceso operativo
+ACTIVE     — vigente; concede acceso cuando la regla de negocio lo permita
+INACTIVE   — previamente aprobada y luego desactivada
+```
+
+`status` no tiene un valor por defecto a nivel de campo — cada operación de negocio debe
+elegirlo explícitamente (alta de menor nuevo → `ACTIVE`; coincidencia por CURP con paciente ya
+existente → `PENDING`, pendiente de que un responsable ya autorizado la apruebe). Un
+`CheckConstraint` en base de datos rechaza cualquier fila que no tenga uno de los tres valores
+— omitir `status` falla, no se activa por accidente (deny-by-default, ADR-004).
+
+**El registro de paciente menor iniciado por su responsable está implementado** — servicio
+(`patients/services/minors.py`), vistas y pantallas (`docs/design/screens.md` §6.7-6.8),
+conforme a `requirements.md` §7.2 y `docs/adr/ADR-007-responsible-initiated-minor-registration.md`.
+No debe describirse en ningún lugar de este documento como pendiente de construir.
+
+La operación de registro es atómica; el responsable se determina siempre por la sesión
+autenticada del servidor, nunca por un identificador enviado por el cliente; y el flujo no crea
+automáticamente ninguna `DoctorPatientRelationship`.
+
+### 11.2.1 Mayoría de edad
+
+La edad se deriva exclusivamente de `Person.birth_date`, calculada en el momento en que se
+necesita (propiedades `Person.age`/`Person.is_minor`). No existe ni debe existir un campo
+persistente que la almacene, ni una tarea programada (Celery u otra) que la recalcule al
+cumplirse el cumpleaños — Fase 1 no incorpora infraestructura de tareas programadas para esto.
+
+Cumplir 18 años, por sí solo:
+
+- NO elimina al paciente ni al responsable;
+- NO modifica ni desactiva automáticamente ninguna `ResponsiblePatientRelationship`;
+- NO genera un `User` para el paciente;
+- NO cambia `Patient.regime` — ese campo solo cambia mediante la transición explícita
+  descrita en §7.2.8 de `requirements.md` y en `docs/adr/ADR-007-...md` §3.8 (addendum).
+
+La UI puede señalar que el paciente ya es adulto cronológicamente pero sigue en
+`regime = MINOR` (`docs/design/screens.md` §6.5, §6.7), pero eso es únicamente informativo —
+nunca sustituye ni modifica la autorización real, que sigue derivándose exclusivamente de
+`ResponsiblePatientRelationship.status`. Solo un médico con relación activa, ejecutando la
+transición de §7.2.8, cambia esa autorización.
+
+### 11.2.2 Política de consentimiento a los 18 años
+
+**Resuelto e implementado (§7.2.8, `docs/adr/ADR-007-...md` §3.8 addendum, 2026-09-08):** el
+mecanismo de transición a régimen adulto está diseñado, documentado y construido en código
+(`Patient.regime`, `transition_patient_to_adult`, UI "Marcar como adulto"). Esto resuelve:
+
+- quién ejecuta la transición: un médico con `DoctorPatientRelationship` activa (cualquier
+  `relationship_type`) hacia el paciente;
+- qué sucede con el/los responsable(s) previamente autorizados: se desactivan **todos** en
+  bloque, en la misma operación (`ResponsiblePatientRelationship.status → INACTIVE`);
+- reversibilidad: no la hay — una vez `regime = ADULT`, no vuelve a `MINOR`.
+
+Lo que **sigue explícitamente pendiente** (no debe inferirse en código ni asumirse por
+omisión) es un subconjunto más pequeño que el original:
+
+1. cómo obtiene el paciente adulto una cuenta propia (`User`), cuando corresponda;
+2. cómo se verifica su identidad para ese trámite;
+3. cómo puede el paciente adulto, ya con cuenta propia, revocar o volver a autorizar el
+   acceso de un responsable por su cuenta (la transición de §7.2.8 solo cubre el cierre
+   inicial ejecutado por el médico, no la gestión posterior por el propio paciente);
+4. qué ocurre si el paciente nunca crea una cuenta propia — queda en `regime = ADULT` sin
+   `User`, sin que nadie tenga acceso operativo a su expediente hasta que él mismo autorice
+   a alguien.
+
+Ver `requirements.md` §7.2.9 y `docs/adr/ADR-007-responsible-initiated-minor-registration.md`
+§5 para el registro formal de estos pendientes.
 
 ---
 
@@ -859,98 +933,144 @@ No duplicar información funcional completa de `requirements.md` dentro de este 
 
 # 26. Definition of Done
 
-La Fase 1 se considera **COMPLETADA** únicamente cuando se cumplen todos los puntos aplicables:
+La Fase 1 se considera **COMPLETADA** únicamente cuando se cumplen todos los puntos aplicables.
+Estado actual (2026-09-08): marcados `[x]` los ya verificados por código/tests; `[ ]` los que
+siguen genuinamente pendientes — ver §27 para por qué el estado global sigue siendo
+**PARTIALLY COMPLETED** y no COMPLETADA pese a que la mayoría de los puntos ya está resuelta.
 
 ## Proyecto
 
-- [ ] El proyecto inicia correctamente.
-- [ ] Django `check` pasa.
-- [ ] PostgreSQL está correctamente integrado.
-- [ ] La configuración se puede reproducir.
+- [x] El proyecto inicia correctamente.
+- [x] Django `check` pasa.
+- [x] PostgreSQL está correctamente integrado.
+- [x] La configuración se puede reproducir (`.env.example`, `README.md`).
 
 ## Identidad
 
-- [ ] Existe Custom User Model.
-- [ ] `AUTH_USER_MODEL` está configurado.
-- [ ] El email es único.
-- [ ] User está separado de Person.
-- [ ] Las aplicaciones no importan directamente el User estándar de Django.
+- [x] Existe Custom User Model.
+- [x] `AUTH_USER_MODEL` está configurado.
+- [x] El email es único.
+- [x] User está separado de Person.
+- [x] Las aplicaciones no importan directamente el User estándar de Django.
 
 ## Roles
 
-- [ ] Existen los roles iniciales.
-- [ ] La autorización funcional está implementada.
-- [ ] El sistema puede evolucionar hacia múltiples perfiles.
+- [x] Existen los roles iniciales.
+- [x] La autorización funcional está implementada.
+- [x] El sistema puede evolucionar hacia múltiples perfiles.
 
 ## Perfiles
 
-- [ ] Doctor existe.
-- [ ] Patient existe.
-- [ ] Responsible existe.
-- [ ] Person está correctamente integrado.
+- [x] Doctor existe.
+- [x] Patient existe.
+- [x] Responsible existe.
+- [x] Person está correctamente integrado.
 
 ## Relaciones
 
-- [ ] Doctor-Patient está modelado explícitamente.
-- [ ] Responsible-Patient está modelado explícitamente.
-- [ ] Doctor-Clinic está modelado explícitamente.
-- [ ] Las relaciones permiten las cardinalidades requeridas.
+- [x] Doctor-Patient está modelado explícitamente.
+- [x] Responsible-Patient está modelado explícitamente.
+- [x] Doctor-Clinic está modelado explícitamente.
+- [x] Las relaciones permiten las cardinalidades requeridas.
 
 ## Authentication
 
-- [ ] Login funciona.
-- [ ] Logout funciona.
-- [ ] Cambio de password funciona.
-- [ ] Recuperación de password funciona.
-- [ ] Activación/desactivación funciona.
-- [ ] Verificación de email funciona.
+- [x] Login funciona (bloquea además correo no verificado — `requirements.md` §4/§36).
+- [x] Logout funciona.
+- [x] Cambio de password funciona.
+- [x] Recuperación de password funciona.
+- [x] Activación/desactivación funciona.
+- [x] Verificación de email funciona.
 
 ## Invitations
 
-- [ ] Invitation existe.
-- [ ] Token seguro.
-- [ ] Expiración.
-- [ ] Uso único.
-- [ ] Cancelación/invalidez cuando corresponda.
-- [ ] Médico generador identificado.
-- [ ] El médico no puede ser alterado por el cliente.
-- [ ] Registro completo genera el paciente correctamente.
-- [ ] Se crea la relación médico-paciente correspondiente.
-- [ ] La operación es atómica.
-- [ ] Existe protección contra consumo concurrente.
+- [x] Invitation existe.
+- [x] Token seguro.
+- [x] Expiración.
+- [x] Uso único.
+- [x] Cancelación/invalidez cuando corresponda.
+- [x] Médico generador identificado.
+- [x] El médico no puede ser alterado por el cliente.
+- [x] Registro completo genera el paciente correctamente.
+- [x] Se crea la relación médico-paciente correspondiente.
+- [x] La operación es atómica.
+- [x] Existe protección contra consumo concurrente.
+
+## Menores (ADR-007)
+
+- [x] Registro de menor iniciado por responsable está implementado
+      (`patients/services/minors.py`).
+- [x] No se crea automáticamente `DoctorPatientRelationship`.
+- [x] `Person.user` permanece vacío salvo decisión explícita.
+- [x] La edad se deriva de `birth_date` (`Person.age`/`Person.is_minor`), nunca de un campo
+      enviado por el cliente.
+- [x] No existe tarea programada para cambiar estado por cumpleaños.
+- [x] Cumplir 18 años no modifica automáticamente ninguna relación.
+- [x] La UI muestra la condición de adulto cuando corresponde, sin que eso otorgue ni quite
+      acceso por sí solo.
+- [x] Las coincidencias (CURP / nombre+fecha) no conceden acceso automáticamente.
+- [x] Las respuestas de coincidencia respetan anti-enumeración (mensaje genérico fijo).
+- [x] Mecanismo de transición a régimen adulto **diseñado y documentado** (§11.2.2,
+      `requirements.md` §7.2.8, `docs/adr/ADR-007-...md` §3.8 addendum) — resuelve quién
+      ejecuta la transición, qué pasa con los responsables previos y la reversibilidad.
+- [x] Mecanismo de transición a régimen adulto **implementado en código** (2026-09-08) —
+      `Patient.regime`/`regime_changed_at`/`regime_changed_by`,
+      `patients/services/minors.py::transition_patient_to_adult`,
+      `patients/views.py::TransitionPatientToAdultView`, UI "Marcar como adulto"
+      (`docs/design/screens.md` §6.5), migración `patients.0004` con backfill de `regime` para
+      filas existentes. Ver checklist completo en `docs/adr/ADR-007-...md` §8.
+- [ ] Política de cuenta propia (`User`) del paciente adulto (§11.2.2, subconjunto todavía
+      abierto) — **pendiente**, no resuelto por omisión.
+
+## ResponsiblePatientRelationship
+
+- [x] Existe `status` (reemplazó el `is_active` booleano original).
+- [x] Existen `PENDING`, `ACTIVE`, `INACTIVE` como estados distintos.
+- [x] `PENDING` no concede acceso (`patients/services/permissions.py`).
+- [x] `INACTIVE` no concede acceso.
+- [x] `status` no tiene default de campo; un `CheckConstraint` exige uno de los tres valores.
+- [x] La documentación ya no usa `is_active` para describir esta relación
+      (`docs/design/screens.md` corregido 2026-09-08).
 
 ## Seguridad
 
-- [ ] La autorización se valida en servidor.
-- [ ] Se aplica deny-by-default.
-- [ ] No existen secretos hardcodeados.
-- [ ] No se registran tokens sensibles en logs.
-- [ ] Los objetos no pueden accederse simplemente modificando un ID.
+- [x] La autorización se valida en servidor.
+- [x] Se aplica deny-by-default.
+- [x] No existen secretos hardcodeados.
+- [x] No se registran tokens sensibles en logs.
+- [x] Los objetos no pueden accederse simplemente modificando un ID.
 
 ## Base de datos
 
-- [ ] Foreign keys correctas.
-- [ ] Unique constraints apropiados.
-- [ ] Check constraints donde corresponda.
-- [ ] Índices apropiados.
-- [ ] Migraciones correctas.
-- [ ] Transacciones implementadas donde corresponda.
+- [x] Foreign keys correctas.
+- [x] Unique constraints apropiados.
+- [x] Check constraints donde corresponda.
+- [x] Índices apropiados.
+- [x] Migraciones correctas.
+- [x] Transacciones implementadas donde corresponda.
 
 ## Testing
 
-- [ ] Tests de autenticación pasan.
-- [ ] Tests de permisos pasan.
-- [ ] Tests de perfiles pasan.
-- [ ] Tests de relaciones pasan.
-- [ ] Tests de invitaciones pasan.
-- [ ] Tests negativos de autorización pasan.
-- [ ] No existen regresiones conocidas.
+- [x] Tests de autenticación pasan.
+- [x] Tests de permisos pasan.
+- [x] Tests de perfiles pasan.
+- [x] Tests de relaciones pasan.
+- [x] Tests de invitaciones pasan.
+- [x] Tests negativos de autorización pasan.
+- [x] No existen regresiones conocidas (144/144 en verde, incluida la transición a régimen
+      adulto).
 
 ## Documentación
 
-- [ ] README actualizado cuando corresponde.
-- [ ] Configuración documentada.
-- [ ] Decisiones arquitectónicas documentadas.
+- [x] README actualizado cuando corresponde.
+- [x] Configuración documentada.
+- [x] Decisiones arquitectónicas documentadas.
+- [x] No existen referencias que indiquen que el registro de menor ni la transición a régimen
+      adulto siguen sin implementar — verificado con grep sobre los 5 documentos afectados
+      (2026-09-08); mismo criterio a reaplicar si se vuelve a tocar esta área.
+- [x] Fase 2 no depende de ninguna decisión de §11.2.2 todavía no documentada — lo único
+      genuinamente abierto (política de cuenta propia del paciente adulto) queda explícito en
+      §11.2.2, `requirements.md` §7.2.9 y ADR-007 §5, no inferido.
 
 ---
 
@@ -973,7 +1093,22 @@ si ocurre cualquiera de los siguientes casos:
 - existe acceso a objetos no autorizados;
 - las operaciones críticas dejan estados parciales;
 - existen migraciones que no pueden ejecutarse desde una base limpia;
-- se incorporaron funcionalidades fuera del alcance de Fase 1 sin justificación.
+- se incorporaron funcionalidades fuera del alcance de Fase 1 sin justificación;
+- existe documentación que contradice una decisión ya aceptada en un ADR (por ejemplo,
+  describir el registro de menor como pendiente cuando ADR-007 ya lo define e implementa, o
+  usar `is_active` para `ResponsiblePatientRelationship` cuando el campo real es `status`);
+- la política de cuenta propia (`User`) para el paciente adulto (§11.2.2, puntos 1-4 del
+  subconjunto todavía abierto) sigue sin definirse.
+
+**Estado actual de Fase 1: PARTIALLY COMPLETED** por el último punto — la arquitectura, el
+código y los tests de todo lo ya implementado están completos y en verde (incluyendo el
+registro de menor por responsable y la transición a régimen adulto, ADR-007, implementada
+2026-09-08). `ResponsiblePatientRelationship.status` y `Patient.regime` ya resuelven
+"¿tiene el responsable autorización vigente sobre este paciente?" sin ambigüedad y Fase 2
+puede consumir ambos directamente. Lo único que falta para marcar Fase 1 como COMPLETADA es
+no asumir por omisión ninguna política de cuenta propia del paciente adulto — esa decisión
+sigue siendo del negocio, no del código, y debe tomarse explícitamente antes de que Fase 2 (o
+una fase posterior) dependa de ella.
 
 ---
 
@@ -1108,3 +1243,56 @@ Doctor ─────── Invitation ─────── Prospect
 ```
 
 La siguiente fase debe poder construirse sobre estas fundaciones sin rediseñar la identidad, el modelo de perfiles ni los límites de las apps.
+
+---
+
+# 31. Contrato Fase 1 → Fase 2
+
+Antes de comenzar Fase 2 (Agenda), deben darse por ciertas estas invariantes — Fase 2 no debe
+reconstruir ni reinterpretar lo siguiente, solo consumirlo:
+
+**Identidad**
+- Existe una única fuente de identidad personal (`Person`).
+- `User` no contiene información clínica ni específica de un perfil.
+- `Person` puede existir sin `User` (paciente menor sin cuenta propia).
+
+**Paciente**
+- `Patient` es la entidad canónica del paciente.
+- La edad se deriva siempre de `birth_date`, nunca de un campo persistente ni de una tarea
+  programada.
+
+**Médico**
+- `Doctor` es la entidad canónica del médico.
+- Su disponibilidad y agenda son de Fase 2 — no existen en el modelo base de Fase 1.
+
+**Responsable**
+- `ResponsiblePatientRelationship.status` distingue `PENDING`, `ACTIVE`, `INACTIVE`.
+- Únicamente `ACTIVE` concede autorización operativa. Esto es exactamente lo que Fase 2 debe
+  consultar para decidir si un responsable puede solicitar/gestionar una cita en nombre de un
+  paciente — no debe inventarse un mecanismo paralelo.
+
+**Relaciones médico-paciente**
+- El acceso depende de una relación explícita y vigente, nunca únicamente del rol global.
+
+**Consultorio**
+- `Clinic` es la entidad canónica; agenda y disponibilidad pertenecen a Fase 2.
+
+**Régimen del paciente** — `requirements.md` §7.2.8, `docs/adr/ADR-007-...md` §3.8 addendum:
+`Patient.regime` (`MINOR`/`ADULT`, implementado) determina si el paciente sigue bajo
+autorización de responsables o ya la tiene sobre sí mismo; es independiente de
+`Person.is_minor` (edad cronológica). La transición (`transition_patient_to_adult`) es
+atómica, la ejecuta un médico con relación activa, es irreversible y desactiva en bloque toda
+`ResponsiblePatientRelationship` `ACTIVE` del paciente. Fase 2 debe tratar `Patient.regime`
+igual que cualquier otro campo de autorización del dominio, sin mecanismo paralelo — en
+particular, "¿tiene el responsable autorización vigente?" sigue respondiéndose únicamente con
+`ResponsiblePatientRelationship.status == ACTIVE` (que la transición ya mantiene consistente),
+no con una consulta directa a `regime`.
+
+**Lo que Fase 2 NO puede asumir todavía** (§11.2.2, `requirements.md` §7.2.9,
+`docs/adr/ADR-007-responsible-initiated-minor-registration.md` §5): cómo/cuándo un paciente
+adulto obtiene cuenta propia (`User`), la verificación de identidad para ese trámite, cómo
+revoca o reautoriza un responsable por su propia cuenta una vez que tenga esa cuenta, y qué
+ocurre cuando una coincidencia por CURP no tiene ningún responsable activo a quien pedir
+aprobación. Si una funcionalidad de Fase 2 depende de resolver alguno de estos puntos, la
+decisión debe tomarse explícitamente primero — documentada en `requirements.md` y, si cambia
+una decisión ya aceptada, en una ADR — no inferirse dentro del código de Fase 2.

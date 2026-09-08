@@ -120,7 +120,12 @@ def accept_invitation(raw_token, *, password, person_data, patient_data=None):
             except IntegrityError as exc:
                 raise EmailAlreadyRegistered() from exc
             person = Person.objects.create(user=user, **person_data)
-            patient = Patient.objects.create(person=person, **patient_data)
+            # A prospect accepting their own invitation is, by definition,
+            # an adult self-registering (ADR-007 §3.1) — regime=ADULT is
+            # never inferred from patient_data, always stated here.
+            patient = Patient.objects.create(
+                person=person, regime=Patient.Regime.ADULT, **patient_data
+            )
             DoctorPatientRelationship.objects.create(
                 doctor=invitation.doctor,
                 patient=patient,

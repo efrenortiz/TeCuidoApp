@@ -338,6 +338,15 @@ confirmación de un solo uso, cuyo nombre y forma exactos quedan pendientes de i
 
 Los nombres definitivos pueden ajustarse durante la implementación.
 
+`patients` también posee la distinción entre régimen de menor y régimen adulto de un paciente
+— un concepto de negocio separado de la edad cronológica (`Person.is_minor`, en `accounts`).
+`Patient` almacena `regime` (`MINOR`/`ADULT`, sin `default` de campo) junto con
+`regime_changed_at`/`regime_changed_by`; `ResponsiblePatientRelationship` almacena
+`deactivated_at`/`deactivation_reason` para poder cerrar en bloque el acceso de los
+responsables cuando el paciente pasa a régimen adulto. El mecanismo completo — quién puede
+ejecutar la transición, sus validaciones y sus efectos — está fijado en
+`docs/adr/ADR-007-responsible-initiated-minor-registration.md` §3.8; no se repite aquí.
+
 ---
 
 ## 7.4 `doctors`

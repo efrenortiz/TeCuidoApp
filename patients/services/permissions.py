@@ -76,3 +76,15 @@ def responsible_has_active_relationship(responsible, patient):
         patient=patient,
         status=ResponsiblePatientRelationship.Status.ACTIVE,
     ).exists()
+
+
+def doctor_has_active_relationship(doctor, patient):
+    """Used to authorize the adult-regime transition (ADR-007 §3.8
+    addendum) — any active DoctorPatientRelationship qualifies, regardless
+    of `relationship_type` (confirmed with the user during design: a
+    substitute or 'otro' doctor counts the same as tratante)."""
+    if doctor is None or not doctor.is_active:
+        return False
+    return DoctorPatientRelationship.objects.filter(
+        doctor=doctor, patient=patient, is_active=True
+    ).exists()

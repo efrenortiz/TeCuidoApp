@@ -3,6 +3,7 @@ from datetime import date
 from django.test import TestCase
 
 from accounts.models import Person, User
+from doctors.models import Doctor
 from patients.models import DoctorPatientRelationship, Patient, Responsible, ResponsiblePatientRelationship
 from patients.services import minors
 
@@ -45,6 +46,7 @@ class RegisterNewMinorTests(TestCase):
         self.assertEqual(outcome, "created")
         self.assertEqual(patient.person.first_name, "Juan")
         self.assertIsNone(patient.person.user)
+        self.assertEqual(patient.regime, Patient.Regime.MINOR)
         self.assertEqual(relationship.status, ResponsiblePatientRelationship.Status.ACTIVE)
         self.assertEqual(relationship.responsible, responsible)
 
@@ -91,7 +93,10 @@ class ExistingPatientMatchTests(TestCase):
             birth_date=date(2015, 6, 1),
         )
         self.existing_patient = Patient.objects.create(
-            person=self.existing_person, sex=Patient.Sex.MALE, curp="PELJ150601HDFRPN01"
+            person=self.existing_person,
+            sex=Patient.Sex.MALE,
+            curp="PELJ150601HDFRPN01",
+            regime=Patient.Regime.MINOR,
         )
 
     def test_curp_match_creates_pending_relationship_not_a_duplicate_patient(self):
@@ -201,6 +206,7 @@ class ApproveRejectTests(TestCase):
         self.patient = Patient.objects.create(
             person=_make_person("minor@example.com", "Menor", birth_date=date(2015, 6, 1)),
             sex=Patient.Sex.FEMALE,
+            regime=Patient.Regime.MINOR,
         )
         ResponsiblePatientRelationship.objects.create(
             responsible=self.approver,
@@ -228,6 +234,11 @@ class ApproveRejectTests(TestCase):
         )
         self.pending.refresh_from_db()
         self.assertEqual(self.pending.status, ResponsiblePatientRelationship.Status.INACTIVE)
+        self.assertIsNotNone(self.pending.deactivated_at)
+        self.assertEqual(
+            self.pending.deactivation_reason,
+            ResponsiblePatientRelationship.DeactivationReason.REQUEST_REJECTED,
+        )
 
     def test_unrelated_responsible_cannot_approve(self):
         stranger = _make_responsible("stranger@example.com", "Stranger")
@@ -245,3 +256,131 @@ class ApproveRejectTests(TestCase):
             minors.approve_relationship_request(
                 relationship=self.pending, approving_responsible=self.approver
             )
+
+
+def _make_doctor(email, first_name="Doc"):
+    return Doctor.objects.create(person=_make_person(email, first_name))
+
+
+class AdultTransitionTests(TestCase):
+    """ADR-007 §3.8 addendum, requirements.md §7.2.8."""
+
+    def setUp(self):
+        self.doctor = _make_doctor("transition-doc@example.com")
+        # Chronologically adult (1990) but still in MINOR regime, and with
+        # no User of their own — exactly the realistic scenario this
+        # transition exists for (registered as a minor, never logged in).
+        self.patient = Patient.objects.create(
+            person=Person.objects.create(
+                first_name="Grown", last_name_paterno="Test", birth_date=date(1990, 1, 1)
+            ),
+            sex=Patient.Sex.FEMALE,
+            regime=Patient.Regime.MINOR,
+        )
+        self.responsible = _make_responsible("transition-resp@example.com")
+        self.relationship = ResponsiblePatientRelationship.objects.create(
+            responsible=self.responsible,
+            patient=self.patient,
+            relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
+            status=ResponsiblePatientRelationship.Status.ACTIVE,
+        )
+
+    def test_successful_transition_effects(self):
+        DoctorPatientRelationship.objects.create(doctor=self.doctor, patient=self.patient)
+
+        result = minors.transition_patient_to_adult(
+            patient=self.patient, performed_by_doctor=self.doctor
+        )
+
+        self.assertEqual(result.regime, Patient.Regime.ADULT)
+        self.assertIsNotNone(result.regime_changed_at)
+        self.assertEqual(result.regime_changed_by, self.doctor)
+
+        self.relationship.refresh_from_db()
+        self.assertEqual(self.relationship.status, ResponsiblePatientRelationship.Status.INACTIVE)
+        self.assertIsNotNone(self.relationship.deactivated_at)
+        self.assertEqual(
+            self.relationship.deactivation_reason,
+            ResponsiblePatientRelationship.DeactivationReason.ADULT_TRANSITION,
+        )
+
+    def test_deactivates_every_active_relationship_in_one_operation(self):
+        DoctorPatientRelationship.objects.create(doctor=self.doctor, patient=self.patient)
+        second_responsible = _make_responsible("transition-resp2@example.com")
+        second_relationship = ResponsiblePatientRelationship.objects.create(
+            responsible=second_responsible,
+            patient=self.patient,
+            relationship_type=ResponsiblePatientRelationship.RelationType.PADRE,
+            status=ResponsiblePatientRelationship.Status.ACTIVE,
+        )
+        # A PENDING request (not yet approved) must not be touched — only
+        # ACTIVE relationships are in scope for this transition.
+        third_responsible = _make_responsible("transition-resp3@example.com")
+        pending_request = ResponsiblePatientRelationship.objects.create(
+            responsible=third_responsible,
+            patient=self.patient,
+            relationship_type=ResponsiblePatientRelationship.RelationType.TUTOR_LEGAL,
+            status=ResponsiblePatientRelationship.Status.PENDING,
+        )
+
+        minors.transition_patient_to_adult(patient=self.patient, performed_by_doctor=self.doctor)
+
+        self.relationship.refresh_from_db()
+        second_relationship.refresh_from_db()
+        pending_request.refresh_from_db()
+        self.assertEqual(self.relationship.status, ResponsiblePatientRelationship.Status.INACTIVE)
+        self.assertEqual(second_relationship.status, ResponsiblePatientRelationship.Status.INACTIVE)
+        self.assertEqual(pending_request.status, ResponsiblePatientRelationship.Status.PENDING)
+
+    def test_does_not_touch_doctor_patient_relationship(self):
+        relation = DoctorPatientRelationship.objects.create(doctor=self.doctor, patient=self.patient)
+        minors.transition_patient_to_adult(patient=self.patient, performed_by_doctor=self.doctor)
+        relation.refresh_from_db()
+        self.assertTrue(relation.is_active)
+        self.assertEqual(
+            relation.relationship_type, DoctorPatientRelationship.RelationType.TRATANTE
+        )
+
+    def test_never_creates_or_requires_a_user(self):
+        DoctorPatientRelationship.objects.create(doctor=self.doctor, patient=self.patient)
+        user_count_before = User.objects.count()
+        minors.transition_patient_to_adult(patient=self.patient, performed_by_doctor=self.doctor)
+        self.assertEqual(User.objects.count(), user_count_before)
+        self.assertIsNone(self.patient.person.user)
+
+    def test_is_irreversible(self):
+        DoctorPatientRelationship.objects.create(doctor=self.doctor, patient=self.patient)
+        minors.transition_patient_to_adult(patient=self.patient, performed_by_doctor=self.doctor)
+
+        with self.assertRaises(minors.PatientAlreadyAdult):
+            minors.transition_patient_to_adult(patient=self.patient, performed_by_doctor=self.doctor)
+
+    def test_legal_lock_rejects_chronologically_minor_patient(self):
+        self.patient.person.birth_date = date(2015, 6, 1)
+        self.patient.person.save(update_fields=["birth_date"])
+        DoctorPatientRelationship.objects.create(doctor=self.doctor, patient=self.patient)
+
+        with self.assertRaises(minors.PatientStillMinor):
+            minors.transition_patient_to_adult(patient=self.patient, performed_by_doctor=self.doctor)
+
+        self.patient.refresh_from_db()
+        self.assertEqual(self.patient.regime, Patient.Regime.MINOR)
+        self.relationship.refresh_from_db()
+        self.assertEqual(self.relationship.status, ResponsiblePatientRelationship.Status.ACTIVE)
+
+    def test_doctor_without_active_relationship_cannot_transition(self):
+        with self.assertRaises(minors.DoctorNotAuthorizedForTransition):
+            minors.transition_patient_to_adult(patient=self.patient, performed_by_doctor=self.doctor)
+        self.patient.refresh_from_db()
+        self.assertEqual(self.patient.regime, Patient.Regime.MINOR)
+
+    def test_any_relationship_type_qualifies_not_only_tratante(self):
+        DoctorPatientRelationship.objects.create(
+            doctor=self.doctor,
+            patient=self.patient,
+            relationship_type=DoctorPatientRelationship.RelationType.SUSTITUTO,
+        )
+        result = minors.transition_patient_to_adult(
+            patient=self.patient, performed_by_doctor=self.doctor
+        )
+        self.assertEqual(result.regime, Patient.Regime.ADULT)

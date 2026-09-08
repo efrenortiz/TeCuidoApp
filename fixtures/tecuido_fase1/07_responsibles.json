@@ -1,0 +1,13 @@
+[
+  {
+    "model": "patients.responsible",
+    "pk": 1,
+    "fields": {
+      "person": 6,
+      "alternative_contact": "",
+      "is_active": true,
+      "created_at": "2026-09-07T12:00:00Z",
+      "updated_at": "2026-09-07T12:00:00Z"
+    }
+  }
+]

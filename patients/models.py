@@ -16,6 +16,10 @@ class Patient(models.Model):
         MALE = "M", "Masculino"
         OTHER = "O", "Otro"
 
+    class Regime(models.TextChoices):
+        MINOR = "MINOR", "Menor"
+        ADULT = "ADULT", "Adulto"
+
     person = models.OneToOneField(
         "accounts.Person",
         on_delete=models.PROTECT,
@@ -42,12 +46,38 @@ class Patient(models.Model):
 
     is_active = models.BooleanField(default=True)
 
+    # Authorization regime, independent of Person.is_minor's chronological
+    # age (ADR-007 §3.8 addendum). Deliberately no default: every creation
+    # path must state it explicitly — register_minor_patient always passes
+    # MINOR, accept_invitation always passes ADULT — same deny-by-default
+    # reasoning as ResponsiblePatientRelationship.status below. The
+    # CheckConstraint is what actually enforces it at the DB level, since
+    # `choices` alone would let a bare create() insert "" silently.
+    regime = models.CharField(max_length=5, choices=Regime.choices)
+    regime_changed_at = models.DateTimeField(null=True, blank=True)
+    regime_changed_by = models.ForeignKey(
+        "doctors.Doctor",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="regime_transitions_performed",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "paciente"
         verbose_name_plural = "pacientes"
+        constraints = [
+            # Nested classes don't see Patient.Regime by name here (class
+            # bodies aren't a closure for other nested blocks) — these two
+            # strings must match Regime's values.
+            models.CheckConstraint(
+                condition=models.Q(regime__in=["MINOR", "ADULT"]),
+                name="patient_regime_valid",
+            ),
+        ]
 
     def __str__(self):
         return str(self.person)
@@ -135,6 +165,11 @@ class ResponsiblePatientRelationship(models.Model):
         ACTIVE = "ACTIVE", "Vigente"
         INACTIVE = "INACTIVE", "Desactivada"
 
+    class DeactivationReason(models.TextChoices):
+        ADULT_TRANSITION = "ADULT_TRANSITION", "Transición a régimen adulto"
+        REQUEST_REJECTED = "REQUEST_REJECTED", "Solicitud rechazada"
+        OTHER = "OTHER", "Otro"
+
     responsible = models.ForeignKey(
         Responsible, on_delete=models.CASCADE, related_name="patient_relationships"
     )
@@ -142,8 +177,22 @@ class ResponsiblePatientRelationship(models.Model):
         Patient, on_delete=models.CASCADE, related_name="responsible_relationships"
     )
     relationship_type = models.CharField(max_length=15, choices=RelationType.choices)
-    status = models.CharField(
-        max_length=10, choices=Status.choices, default=Status.ACTIVE
+    # Deliberately no default: every creation path must choose PENDING vs.
+    # ACTIVE on purpose (deny-by-default, ADR-004) — an omitted status must
+    # fail loudly, not silently become whichever state happened to be the
+    # default. The CheckConstraint below is what actually enforces that: a
+    # bare CharField without a default would otherwise just insert "" and
+    # succeed, since Django's `choices` isn't a DB-level guarantee.
+    status = models.CharField(max_length=10, choices=Status.choices)
+
+    # Deactivation trace (ADR-007 §3.8 addendum): who/what ended the
+    # relationship and when. Deliberately no default on the reason — every
+    # caller that moves a relationship to INACTIVE (the adult-transition
+    # service, reject_relationship_request) must state why explicitly,
+    # same deny-by-default reasoning as `status` above.
+    deactivated_at = models.DateTimeField(null=True, blank=True)
+    deactivation_reason = models.CharField(
+        max_length=20, choices=DeactivationReason.choices, blank=True
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -154,7 +203,23 @@ class ResponsiblePatientRelationship(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["responsible", "patient"], name="unique_responsible_patient"
-            )
+            ),
+            # Nested classes don't see ResponsiblePatientRelationship.Status
+            # by name here (class bodies aren't a closure for other nested
+            # blocks) — these three strings must match Status's values.
+            models.CheckConstraint(
+                condition=models.Q(status__in=["PENDING", "ACTIVE", "INACTIVE"]),
+                name="responsiblepatientrelationship_status_valid",
+            ),
+            # A relationship can't be marked INACTIVE without recording when
+            # and why (mirrors Invitation.used_at_requires_used_status, but
+            # in the direction that matters here: INACTIVE implies both
+            # fields are set, not the other way around).
+            models.CheckConstraint(
+                condition=~models.Q(status="INACTIVE")
+                | (models.Q(deactivated_at__isnull=False) & ~models.Q(deactivation_reason="")),
+                name="responsiblepatientrelationship_inactive_requires_deactivation_info",
+            ),
         ]
 
     def __str__(self):

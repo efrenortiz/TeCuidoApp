@@ -11,7 +11,7 @@ from accounts.roles import DOCTOR, PATIENT, RESPONSIBLE, RoleRequiredMixin
 from patients.forms import MinorPatientForm, MinorRelationshipForm, PatientProfileForm
 from patients.models import Patient, ResponsiblePatientRelationship
 from patients.services import minors
-from patients.services.permissions import can_view_patient
+from patients.services.permissions import can_view_patient, doctor_has_active_relationship
 
 _GENERIC_MATCH_MESSAGE = (
     "Ya existe un registro relacionado con estos datos. Contacta a tu médico o al "
@@ -61,7 +61,18 @@ class PatientDetailView(LoginRequiredMixin, View):
         if not can_view_patient(request.user, patient):
             raise Http404
 
-        return render(request, "patients/patient_detail.html", {"patient": patient})
+        doctor_profile = getattr(getattr(request.user, "person", None), "doctor_profile", None)
+        can_transition_to_adult = (
+            patient.regime == Patient.Regime.MINOR
+            and not patient.person.is_minor
+            and doctor_has_active_relationship(doctor_profile, patient)
+        )
+
+        return render(
+            request,
+            "patients/patient_detail.html",
+            {"patient": patient, "can_transition_to_adult": can_transition_to_adult},
+        )
 
 
 class PatientListView(DoctorRequiredMixin, View):
@@ -287,6 +298,42 @@ class RegisterMinorRelationshipView(ResponsibleRequiredMixin, View):
             "outcome": outcome,
         }
         return redirect("patients:register_minor_step3")
+
+
+class TransitionPatientToAdultView(DoctorRequiredMixin, View):
+    """Marcar como adulto (docs/design/screens.md §6.5, ADR-007 §3.8
+    addendum). POST-only, irreversible — the template confirms via a
+    Modal before submitting. Object authorization + the transition's own
+    rules are both re-validated in the service, not just here: the
+    button/role gate is UX, never the actual authorization boundary."""
+
+    def post(self, request, pk):
+        try:
+            patient = Patient.objects.select_related("person").get(pk=pk)
+        except Patient.DoesNotExist:
+            raise Http404
+
+        if not can_view_patient(request.user, patient):
+            raise Http404
+
+        doctor = request.user.person.doctor_profile
+        try:
+            minors.transition_patient_to_adult(patient=patient, performed_by_doctor=doctor)
+        except minors.PatientAlreadyAdult:
+            messages.info(request, "Este paciente ya está en régimen adulto.")
+        except minors.PatientStillMinor:
+            messages.error(
+                request,
+                "No se puede marcar como adulto: el paciente todavía es menor de edad.",
+            )
+        except minors.DoctorNotAuthorizedForTransition:
+            raise Http404
+        else:
+            messages.success(
+                request,
+                "Paciente marcado como adulto. Se desactivó el acceso de sus responsables.",
+            )
+        return redirect("patients:patient_detail", pk=patient.pk)
 
 
 class RegisterMinorConfirmView(ResponsibleRequiredMixin, View):

@@ -87,12 +87,12 @@ tests. Este documento es el punto de partida para cerrar esa brecha visual.
 | Auth (compartida) | Registro completado | Implementada (visual pendiente) |
 | General | Inicio (landing genérico post-login) | Implementada (visual pendiente) |
 | Médico | Nueva invitación | Implementada (visual pendiente) |
-| Médico | Listado de invitaciones | No implementada — pendiente |
-| Médico | Listado de mis pacientes | No implementada — pendiente |
-| Médico / Responsable | Detalle de paciente | Implementada (visual pendiente) |
-| Paciente | Mi perfil | No implementada — pendiente |
-| Responsable | Mis pacientes a cargo | No implementada — pendiente |
-| Responsable | Registrar paciente menor (3 pasos) | No implementada — pendiente |
+| Médico | Listado de invitaciones | Implementada (visual pendiente) |
+| Médico | Listado de mis pacientes | Implementada (visual pendiente) |
+| Médico / Responsable | Detalle de paciente | Implementada, incluida la acción "Marcar como adulto" |
+| Paciente | Mi perfil | Implementada (visual pendiente) |
+| Responsable | Mis pacientes a cargo | Implementada (visual pendiente) |
+| Responsable | Registrar paciente menor (3 pasos) | Implementada (visual pendiente) |
 | Administrador | (ver §8 — nota específica) | Django Admin, fuera del Design System |
 
 ## 4.2 Fases futuras (referencia de diseño únicamente)
@@ -293,8 +293,8 @@ Estados    — Default, Error de validación, Success (confirmación de envío),
 
 ```text
 Pantalla   — Listado de invitaciones
-Ruta       — (no asignada)
-Fase       — 1 | Rol(es) — Médico | Estado — No implementada — pendiente
+Ruta       — accounts:invitation_list
+Fase       — 1 | Rol(es) — Médico | Estado — Implementada
 Objetivo   — que el médico vea el estado de las invitaciones que ha enviado
 Acción principal — Nueva invitación
 Información clave — correo, estado, fecha de creación/expiración
@@ -304,15 +304,15 @@ Patrones   — UI Guidelines §23 (tabla de invitaciones, ya da el layout de col
              §29 (estado vacío)
 Estados    — Default, Empty ("No hay invitaciones todavía"), Loading
 Notas      — el modelo `Invitation` y sus estados (PENDING/USED/EXPIRED/CANCELLED) ya existen
-             en Fase 1; falta solo la vista de listado. No requiere nueva lógica de negocio.
+             en Fase 1 y respaldan esta vista.
 ```
 
 ## 6.4 Médico — Listado de mis pacientes
 
 ```text
 Pantalla   — Mis pacientes
-Ruta       — (no asignada)
-Fase       — 1 | Rol(es) — Médico | Estado — No implementada — pendiente
+Ruta       — patients:patient_list
+Fase       — 1 | Rol(es) — Médico | Estado — Implementada
 Objetivo   — que el médico ubique rápidamente a sus pacientes autorizados
 Acción principal — (buscar) — no hay acción de "crear paciente" directa en Fase 1
              (el alta ocurre vía invitación, ver notas)
@@ -335,12 +335,14 @@ Notas      — usa `DoctorPatientRelationship` con `is_active=True` (misma regla
 Pantalla   — Detalle de paciente
 Ruta       — patients:patient_detail
 Fase       — 1 | Rol(es) — Médico (relación activa), Responsable (relación activa), Paciente (self) |
-Estado     — Implementada (visual pendiente)
+Estado     — Implementada, incluida la acción "Marcar como adulto" (2026-09-08)
 Objetivo   — consultar la información del paciente autorizada en Fase 1
 Acción principal — (ninguna dominante todavía; ver notas)
 Información clave — datos generales, contacto, domicilio, información médica general
 Componentes — **PatientContextHeader** (dominio, UI Guidelines §48), Card (por bloque),
-              Badge (estado)
+              Badge (estado), **Modal** (confirmación de "Marcar como adulto" — primer uso
+              real de este componente en Fase 1; implementado sobre `<dialog>` nativo en
+              `static/css/components.css`, sin JS externo)
 Patrones   — Design System §28 (bloques del perfil), UI Guidelines §19-20 (detalle y
              contexto de paciente)
 Estados    — Default, Unauthorized (404 uniforme — Design System §39, ADR-004: no distinguir
@@ -352,20 +354,34 @@ Notas      — §19 de UI Guidelines ya anticipa tabs (Resumen/Citas/Consultas/D
              Información médica, Relaciones. Omitir "Información gineco-obstétrica" e
              "Historial" (no modelados en Fase 1).
 
-             Si el paciente fue registrado como menor (§6.8) y ya cumplió 18 años
-             (requirements.md §7.2.8), el bloque "Relaciones" debe mostrar un Alert (info),
-             no un Badge, junto a cada `ResponsiblePatientRelationship` heredada de esa etapa:
-             "Este paciente ya es mayor de edad. Esta relación proviene de su registro como
-             menor." Es solo informativo — no bloquea ni oculta el acceso del responsable
-             (ADR-007 §3.8: la transición se hace visible, no se aplica automáticamente).
+             Si el paciente fue registrado como menor (§6.8), `Person.is_minor` ya es `False`
+             (cumplió 18 años cronológicamente) y `Patient.regime` todavía es `MINOR`, el
+             bloque de encabezado debe mostrar un botón "Marcar como adulto" (secondary),
+             visible solo para un médico con `DoctorPatientRelationship` activa hacia ese
+             paciente (cualquier `relationship_type`) — no para el responsable ni para el
+             propio paciente. Al pulsarlo, un **Modal** de confirmación explica que la acción
+             es irreversible y que desactivará el acceso de todos los responsables actuales;
+             confirmar ejecuta `transition_patient_to_adult` (ADR-007 §3.8, addendum) y
+             refresca la pantalla.
+
+             Si `Patient.regime` ya es `ADULT`, el bloque "Relaciones" no debe listar ninguna
+             `ResponsiblePatientRelationship` como activa (todas quedaron `INACTIVE` por la
+             transición) — no se muestra el botón ni ningún Alert, la pantalla simplemente ya
+             no tiene responsables vigentes que mostrar.
+
+             Estados de la acción — éxito (regime pasa a ADULT, relaciones desactivadas,
+             botón desaparece); error de candado de edad (el backend rechaza si
+             `Person.is_minor` es `True` — no debería poder ocurrir desde esta UI porque el
+             botón no se muestra en ese caso, pero el mensaje de error debe documentarse por
+             si se fuerza la petición); sin relación activa (el médico no ve el botón).
 ```
 
 ## 6.6 Paciente — Mi perfil
 
 ```text
 Pantalla   — Mi perfil
-Ruta       — (no asignada)
-Fase       — 1 | Rol(es) — Paciente | Estado — No implementada — pendiente
+Ruta       — patients:my_profile
+Fase       — 1 | Rol(es) — Paciente | Estado — Implementada
 Objetivo   — que el paciente consulte y actualice la información permitida de su propio perfil
 Acción principal — Guardar cambios
 Información clave — datos personales, contacto, domicilio, información médica general
@@ -404,8 +420,8 @@ Notas — el correo se muestra como dato de solo lectura (no oculto) para que el
 
 ```text
 Pantalla   — Mis pacientes a cargo
-Ruta       — (no asignada)
-Fase       — 1 | Rol(es) — Responsable | Estado — No implementada — pendiente
+Ruta       — patients:my_dependents
+Fase       — 1 | Rol(es) — Responsable | Estado — Implementada
 Objetivo   — que el responsable vea y seleccione entre los pacientes que tiene a su cargo
 Acción principal — Ver (por paciente)
 Información clave — nombre del paciente, tipo de relación, estado
@@ -414,7 +430,11 @@ Patrones   — UI Guidelines §17 (patrón de lista, adaptado), Design System §
              (selector de paciente cuando hay más de uno — se resuelve con **Dropdown**,
              componente ya existente, no requiere uno nuevo)
 Estados    — Default, Empty ("No tienes pacientes a cargo todavía"), Loading
-Notas      — usa `ResponsiblePatientRelationship` con `is_active=True`. Al entrar al detalle
+Notas      — usa `ResponsiblePatientRelationship` con `status=ACTIVE` (ADR-007 §3.7: `status`
+             reemplazó el booleano `is_active` original — PENDING/ACTIVE/INACTIVE, no un
+             solo flag — porque una relación nunca aprobada no debe verse igual que una que
+             sí fue aprobada y luego se desactivó). Las solicitudes de otro responsable
+             pidiendo vincularse (§6.7 más abajo) usan `status=PENDING`. Al entrar al detalle
              de un paciente debe quedar visible en todo momento a cuál corresponde
              (Design System §30: "nunca mezclar información de varios pacientes sin
              indicarlo claramente") — mismo `PatientContextHeader` de §6.5. Su acción
@@ -431,11 +451,20 @@ Notas      — usa `ResponsiblePatientRelationship` con `is_active=True`. Al ent
              rechazar); el estado de tres valores que lo sostiene (nunca-aprobada / vigente /
              desactivada) está definido en ADR-007 §3.7.
 
-             Un paciente que ya cumplió 18 años (requirements.md §7.2.8) sigue apareciendo en
-             esta lista igual que cualquier otro — no se retira ni se bloquea. Se distingue
-             únicamente con un Badge adicional "Adulto" (variante `neutral`, junto al de tipo
-             de relación) para que sea visible sin necesidad de entrar al detalle. No es un
-             estado de alerta (no usa `warning`/`danger`) — es informativo (ADR-007 §3.8).
+             Esta lista solo puede mostrar filas con `status=ACTIVE`, así que un paciente cuya
+             `ResponsiblePatientRelationship` ya fue desactivada por la transición a régimen
+             adulto (ADR-007 §3.8, addendum) **deja de aparecer aquí** — el responsable perdió
+             el acceso, no tiene sentido seguir listándolo como a cargo.
+
+             Distinto es un paciente que ya cumplió 18 años cronológicamente
+             (`Person.is_minor=False`) pero cuyo `Patient.regime` **todavía es `MINOR`**
+             (ningún médico ejecutó la transición todavía): ese paciente sigue apareciendo en
+             esta lista igual que cualquier otro, con acceso vigente, distinguido únicamente
+             con un Badge adicional "Adulto" (variante `neutral`, junto al de tipo de
+             relación) — puramente informativo, para que el responsable sepa que la mayoría
+             de edad ya llegó aunque el sistema todavía no haya cerrado su acceso. No es un
+             estado de alerta (no usa `warning`/`danger`) y no cambia ninguna acción
+             disponible en esta fila.
 ```
 
 ## 6.8 Responsable — Registrar paciente menor
@@ -448,8 +477,8 @@ validar antes de empezar, y cada paso puede depender de una operación de servid
 
 ```text
 Pantalla   — Registrar paciente menor (paso 1 de 3): Datos del menor
-Ruta       — (no asignada)
-Fase       — 1 | Rol(es) — Responsable | Estado — No implementada — pendiente
+Ruta       — patients:register_minor_step1
+Fase       — 1 | Rol(es) — Responsable | Estado — Implementada
 Objetivo   — capturar los datos mínimos del menor (requirements.md §7.2.1)
 Acción principal — Continuar
 Información clave — en qué paso está (1 de 3)
@@ -482,8 +511,8 @@ Notas      — el correo electrónico del menor es opcional (requirements.md §7
 
 ```text
 Pantalla   — Registrar paciente menor (paso 2 de 3): Relación con el menor
-Ruta       — (no asignada)
-Fase       — 1 | Rol(es) — Responsable | Estado — No implementada — pendiente
+Ruta       — patients:register_minor_step2
+Fase       — 1 | Rol(es) — Responsable | Estado — Implementada
 Objetivo   — capturar el tipo de relación (Madre/Padre/Tutor legal/Familiar/Cuidador/Otro)
 Acción principal — Continuar
 Componentes — PageHeader, Stepper, Select o grupo de Radio, Button (primary), Button
@@ -496,8 +525,8 @@ Notas      — mismo catálogo de `ResponsiblePatientRelationship.RelationType` 
 
 ```text
 Pantalla   — Registrar paciente menor (paso 3 de 3): Confirmación
-Ruta       — (no asignada)
-Fase       — 1 | Rol(es) — Responsable | Estado — No implementada — pendiente
+Ruta       — patients:register_minor_step3
+Fase       — 1 | Rol(es) — Responsable | Estado — Implementada
 Objetivo   — confirmar el resultado y explicar el estado de acceso — el resultado no es el
              mismo en los dos casos que puede dejar avanzar el paso 1 (ver notas)
 Acción principal — Continuar (vuelve a "Mis pacientes a cargo")

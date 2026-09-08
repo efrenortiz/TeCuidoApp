@@ -423,47 +423,83 @@ otro responsable, información del paciente, etc.). El mensaje debe ser genéric
 para continuar"), igual que ya se exige para invitaciones (`docs/adr/ADR-003-invitation-security.md`
 §18, "Protección contra enumeración").
 
-### 7.2.8 Transición a paciente adulto
+### 7.2.8 Transición a régimen adulto
 
 Cumplir 18 años **no** desactiva, elimina ni modifica automáticamente ninguna
-`ResponsiblePatientRelationship` existente. Se prioriza continuidad del cuidado sobre
-revocación silenciosa — nadie pierde acceso de golpe el día del cumpleaños.
+`ResponsiblePatientRelationship` existente, ni cambia por sí solo la condición de un paciente.
+La mayoría de edad (`Person.is_minor`, derivada de `birth_date`, evaluada en cada verificación
+— nunca mediante una tarea programada) y el **régimen de autorización del paciente** son dos
+conceptos distintos:
 
-- **La mayoría de edad se deriva siempre de `Person.birth_date`**, evaluada en el momento de
-  cada verificación de acceso — nunca mediante un proceso programado que reescriba el estado
-  exactamente en la fecha del cumpleaños. Fase 1 no incorpora tareas programadas (Celery) para
-  esto ni para ningún otro fin.
-- **La transición debe hacerse visible, no silenciarse.** Cualquier pantalla que muestre esta
-  relación (detalle de paciente, "Mis pacientes a cargo") debe señalar que el paciente ya es
-  adulto y que la relación proviene de una etapa de minoría de edad, para que sea una decisión
-  consciente de quienes la ven — no una alarma automática ni un bloqueo.
-- **Si el paciente, ya adulto, obtiene más adelante su propia cuenta (`User`)** — el mecanismo
-  para autorizar eso sigue pendiente, ver §7.2.9 —, cualquier `ResponsiblePatientRelationship`
-  sobre su expediente, **incluida la heredada de su minoría de edad**, queda sujeta a partir de
-  ese momento a la misma regla de consentimiento ya definida para vincular un responsable a un
-  "usuario paciente" (§7.2.7, último punto). No se crea un mecanismo de consentimiento distinto
-  solo para este caso — es el mismo, aplicado también a relaciones preexistentes.
-- **Mientras el paciente siga siendo solo "paciente clínico"** (sin cuenta propia) después de
-  cumplir 18 años, la relación de responsable sigue funcionando exactamente igual que antes.
-  Fase 1 no introduce una fecha de expiración forzosa. Un límite de tiempo estricto (por
-  ejemplo, "la relación deja de ser válida N días después del cumpleaños si no se confirma")
-  sería una decisión funcional separada, y probablemente requeriría infraestructura de tareas
-  programadas — fuera de alcance de Fase 1.
-- El `relationship_type` original (Madre, Padre, Tutor legal, etc.) no cambia — describe el
-  origen de la relación, no un estado que deba reetiquetarse al cumplir 18 años.
-- No afecta ninguna `DoctorPatientRelationship` (ya independiente de esta relación, §7.2.6).
+```text
+Person.birth_date → edad actual → ¿menor o adulto cronológicamente?
+```
+
+es independiente de:
+
+```text
+Patient.regime → MINOR | ADULT → ¿tiene el paciente autorización propia sobre su expediente?
+```
+
+Un paciente puede ser cronológicamente adulto y seguir en `regime = MINOR` indefinidamente —
+eso es aceptado y deliberado, no un error. El régimen solo cambia mediante una **transición
+explícita**, nunca automáticamente.
+
+**Quién la ejecuta y cuándo:**
+
+- La ejecuta **un médico con `DoctorPatientRelationship` activa** hacia ese paciente
+  (cualquier `relationship_type` — tratante, sustituto u otro; no se restringe a uno solo).
+  Ningún médico sin relación activa con el paciente puede hacerlo.
+- El médico la ejecuta cuando el paciente manifiesta su voluntad de ser tratado como adulto
+  (en consulta, por teléfono o de viva voz). El sistema no exige ni valida un artefacto de
+  consentimiento separado — la acción del médico, bajo su responsabilidad profesional, **es**
+  la constancia de esa manifestación. Mientras el médico no la ejecute en el sistema, el
+  paciente se sigue tratando como menor, sin importar su edad cronológica.
+- **Candado legal obligatorio:** el sistema debe impedir la transición si `Person.is_minor` es
+  `True` en el momento de intentarla — no se puede reconocer como adulto, ni siquiera
+  administrativamente, a alguien que todavía no cumple 18 años. Este candado se aplica tanto en
+  la interfaz (la acción no debe estar disponible) como en el servidor (debe rechazarse aunque
+  se intente forzar la operación).
+
+**Qué hace la transición, en una sola operación atómica:**
+
+1. `Patient.regime` pasa de `MINOR` a `ADULT`, y se registra cuándo y qué médico la ejecutó.
+2. **Todas** las `ResponsiblePatientRelationship` `ACTIVE` de ese paciente pasan a `INACTIVE`
+   en el mismo paso — no una por una, no quedan algunas vigentes y otras no. Ningún
+   responsable conserva acceso operativo después de la transición.
+3. **No crea, exige ni modifica ningún `User`.** Obtener una cuenta propia es una decisión
+   distinta e independiente (ver §7.2.9) — un paciente puede quedar en `regime = ADULT` sin
+   tener credenciales propias todavía; mientras eso no se resuelva, nadie tiene acceso
+   operativo a su expediente hasta que él mismo autorice a alguien como adulto.
+
+**Es irreversible:** una vez `ADULT`, el régimen no vuelve a `MINOR`. No existe una acción para
+deshacer la transición dentro de este flujo.
+
+**No se pierde el historial.** Las relaciones desactivadas no se eliminan — permanecen como
+registro de que ese responsable tuvo autorización vigente desde su creación hasta la fecha en
+que la transición las desactivó.
+
+El `relationship_type` original de cada relación (Madre, Padre, Tutor legal, etc.) no cambia al
+desactivarse — sigue describiendo qué relación tuvo con el paciente, no un estado vigente.
+
+No afecta ninguna `DoctorPatientRelationship` (ya independiente de esta relación, §7.2.6).
 
 ### 7.2.9 Decisiones explícitamente pendientes
 
 Lo siguiente **no** debe asumirse ni implementarse sin una decisión funcional adicional:
 
 - Bajo qué condiciones (si alguna) un paciente menor puede tener correo electrónico propio.
-- Bajo qué condiciones y quién autoriza que un paciente menor (ya adulto o no) obtenga
-  credenciales propias (`User`) más adelante — de esto depende poder aplicar el
-  consentimiento descrito en §7.2.8.
+- Bajo qué condiciones y quién autoriza que un paciente (en `regime = ADULT` o no) obtenga
+  credenciales propias (`User`) más adelante. Esto es independiente de la transición de
+  régimen descrita en §7.2.8 — un paciente puede quedar en `regime = ADULT` sin cuenta propia,
+  y esta decisión no bloquea ni condiciona esa transición.
 - Mecanismo de consentimiento para vincular un responsable a un paciente que ya gestiona su
-  propia cuenta (§7.2.7, último punto) — el mismo mecanismo que aplicará también a relaciones
-  heredadas de la minoría de edad (§7.2.8).
+  propia cuenta (§7.2.7, último punto) — aplica una vez que el paciente adulto tenga cuenta
+  propia (decisión anterior); no aplica a la transición de régimen en sí, que no depende de
+  que exista ningún `User`.
+- Si un paciente ya en `regime = ADULT` puede, más adelante y por su propia cuenta, revocar o
+  volver a autorizar el acceso de un responsable. La transición de §7.2.8 solo cubre el cierre
+  inicial en bloque ejecutado por el médico — no la gestión posterior por el propio paciente.
 - Qué ocurre cuando una coincidencia por CURP no tiene ningún responsable activo a quien
   pedirle autorización (por ejemplo, si esa relación fue desactivada) — probablemente requiera
   intervención del Administrador, pero su alcance exacto sobre invitaciones/vinculaciones ya
@@ -1221,22 +1257,29 @@ Las modificaciones de información relevante deben mantener trazabilidad.
    propia; la minoría de edad se determina desde la fecha de nacimiento, nunca desde un
    campo introducido manualmente (§7.2).
 9. Registrar a un menor no crea automáticamente una relación médico-paciente.
-10. Una cita debe identificar al paciente que será atendido.
-11. Cuando aplique, una cita debe identificar al responsable que la solicitó o gestionó.
-12. Una cita pertenece a un médico y consultorio.
-13. No deben existir citas superpuestas para el mismo médico/consultorio.
-14. El sistema debe impedir dobles reservas del mismo horario.
-15. Una reserva iniciada puede bloquear el horario durante 15 minutos.
-16. Una cita no confirmada no significa que el paciente haya faltado.
-17. `NO_SHOW` debe representar una inasistencia real.
-18. La consulta médica es independiente de la cita.
-19. Las consultas concluidas deben conservar su historial.
-20. Las recetas y solicitudes emitidas deben conservar su trazabilidad.
-21. Los documentos médicos deben tener acceso privado y autorizado.
-22. Las acciones sensibles deben auditarse.
-23. Los registros clínicos no deben eliminarse físicamente de manera rutinaria.
-24. TeCuidoApp no diagnostica ni decide tratamientos de forma autónoma.
-25. Las decisiones clínicas pertenecen al médico.
+10. El régimen de autorización de un paciente (menor/adulto) es independiente de su edad
+    cronológica; solo cambia mediante una transición explícita, nunca automáticamente al
+    cumplir 18 años (§7.2.8).
+11. La transición a régimen adulto solo puede ejecutarla un médico con relación activa hacia
+    ese paciente, y es irreversible.
+12. La transición a régimen adulto desactiva, en la misma operación, todas las relaciones
+    responsable-paciente vigentes de ese paciente — nunca deja algunas activas y otras no.
+13. Una cita debe identificar al paciente que será atendido.
+14. Cuando aplique, una cita debe identificar al responsable que la solicitó o gestionó.
+15. Una cita pertenece a un médico y consultorio.
+16. No deben existir citas superpuestas para el mismo médico/consultorio.
+17. El sistema debe impedir dobles reservas del mismo horario.
+18. Una reserva iniciada puede bloquear el horario durante 15 minutos.
+19. Una cita no confirmada no significa que el paciente haya faltado.
+20. `NO_SHOW` debe representar una inasistencia real.
+21. La consulta médica es independiente de la cita.
+22. Las consultas concluidas deben conservar su historial.
+23. Las recetas y solicitudes emitidas deben conservar su trazabilidad.
+24. Los documentos médicos deben tener acceso privado y autorizado.
+25. Las acciones sensibles deben auditarse.
+26. Los registros clínicos no deben eliminarse físicamente de manera rutinaria.
+27. TeCuidoApp no diagnostica ni decide tratamientos de forma autónoma.
+28. Las decisiones clínicas pertenecen al médico.
 
 ---
 

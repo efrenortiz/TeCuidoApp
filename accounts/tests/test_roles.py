@@ -35,7 +35,7 @@ class RoleDerivationTests(TestCase):
 
     def test_patient_profile_grants_patient_role(self):
         person = _make_person("pat@example.com", "Pat")
-        Patient.objects.create(person=person, sex=Patient.Sex.FEMALE)
+        Patient.objects.create(person=person, sex=Patient.Sex.FEMALE, regime=Patient.Regime.ADULT)
         self.assertTrue(has_role(person.user, PATIENT))
 
     def test_responsible_profile_grants_responsible_role(self):
@@ -45,7 +45,7 @@ class RoleDerivationTests(TestCase):
 
     def test_person_can_hold_patient_and_responsible_roles_simultaneously(self):
         person = _make_person("both@example.com", "Both")
-        Patient.objects.create(person=person, sex=Patient.Sex.FEMALE)
+        Patient.objects.create(person=person, sex=Patient.Sex.FEMALE, regime=Patient.Regime.ADULT)
         Responsible.objects.create(person=person)
 
         roles = user_roles(person.user)
