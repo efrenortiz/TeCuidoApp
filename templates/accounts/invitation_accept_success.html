@@ -1,0 +1,7 @@
+{% extends "layouts/auth_base.html" %}
+{% block title %}Registro completado — TeCuidoApp{% endblock %}
+{% block auth_content %}
+<h1>Registro completado</h1>
+{% include "components/_alert.html" with type="success" text="Te enviamos un correo para verificar tu dirección de email." %}
+<a href="{% url 'accounts:login' %}" class="btn btn--primary btn--block">Iniciar sesión</a>
+{% endblock %}

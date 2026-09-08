@@ -1,0 +1,13 @@
+{% comment %}
+EmptyState component (design-system.md §20). Params: title, description (optional),
+action_url (optional), action_label (optional).
+{% endcomment %}
+<div class="empty-state">
+  <p class="empty-state__title"><strong>{{ title }}</strong></p>
+  {% if description %}<p>{{ description }}</p>{% endif %}
+  {% if action_url %}
+  <div class="empty-state__action">
+    <a href="{{ action_url }}" class="btn btn--primary">{{ action_label }}</a>
+  </div>
+  {% endif %}
+</div>

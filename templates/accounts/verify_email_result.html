@@ -1,0 +1,19 @@
+{% extends "layouts/auth_base.html" %}
+{% block title %}Verificación de correo — TeCuidoApp{% endblock %}
+{% block auth_content %}
+{% if ok %}
+<h1>Correo verificado</h1>
+{% include "components/_alert.html" with type="success" text="Tu correo fue verificado correctamente." %}
+<a href="{% url 'accounts:login' %}" class="btn btn--primary btn--block">Iniciar sesión</a>
+{% else %}
+<h1>No se pudo verificar tu correo</h1>
+{% if reason == "expired" %}
+  {% include "components/_alert.html" with type="warning" text="El enlace de verificación expiró." %}
+{% elif reason == "already_verified" %}
+  {% include "components/_alert.html" with type="info" text="Este correo ya estaba verificado." %}
+{% else %}
+  {% include "components/_alert.html" with type="danger" text="El enlace de verificación no es válido." %}
+{% endif %}
+<a href="{% url 'accounts:login' %}" class="btn btn--secondary btn--block">Ir a iniciar sesión</a>
+{% endif %}
+{% endblock %}

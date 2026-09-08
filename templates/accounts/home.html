@@ -1,0 +1,55 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Inicio — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Inicio" description="Sesión iniciada correctamente." %}
+<div class="card card--narrow">
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Correo</dt>
+      <dd class="data-list__value">{{ user.email }}</dd>
+    </div>
+    {% if roles %}
+    <div>
+      <dt class="data-list__label">Roles</dt>
+      <dd class="data-list__value">
+        {% for role in roles %}{% include "components/_badge.html" with text=role variant="neutral" %}{% endfor %}
+      </dd>
+    </div>
+    {% endif %}
+  </dl>
+</div>
+
+{% if "DOCTOR" in roles or "PATIENT" in roles or "RESPONSIBLE" in roles %}
+<div class="card card--narrow">
+  <h2 class="card__title">Accesos rápidos</h2>
+  <dl class="data-list">
+    {% if "DOCTOR" in roles %}
+    <div>
+      <dt class="data-list__label">Médico</dt>
+      <dd class="data-list__value">
+        <a href="{% url 'accounts:invitation_create' %}">Nueva invitación</a> ·
+        <a href="{% url 'accounts:invitation_list' %}">Listado de invitaciones</a> ·
+        <a href="{% url 'patients:patient_list' %}">Mis pacientes</a>
+      </dd>
+    </div>
+    {% endif %}
+    {% if "RESPONSIBLE" in roles %}
+    <div>
+      <dt class="data-list__label">Responsable</dt>
+      <dd class="data-list__value">
+        <a href="{% url 'patients:my_dependents' %}">Mis pacientes a cargo</a>
+      </dd>
+    </div>
+    {% endif %}
+    {% if "PATIENT" in roles %}
+    <div>
+      <dt class="data-list__label">Paciente</dt>
+      <dd class="data-list__value">
+        <a href="{% url 'patients:my_profile' %}">Mi perfil</a>
+      </dd>
+    </div>
+    {% endif %}
+  </dl>
+</div>
+{% endif %}
+{% endblock %}

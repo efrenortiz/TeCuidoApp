@@ -1,0 +1,122 @@
+/*
+ * Design Tokens — TeCuidoApp
+ * Fuente: docs/design/design-system.md §4, §6-8, §41.
+ *
+ * Los roles semánticos (primary/secondary/success/warning/danger/info/neutral)
+ * son obligatorios; los valores hexadecimales concretos son la primera
+ * definición visual formal del sistema y pueden refinarse sin romper el
+ * contrato de nombres usado en components.css y en las plantillas.
+ *
+ * Breakpoints (no se pueden expresar como custom property dentro de una
+ * media query — se documentan aquí y se usan de forma literal y consistente
+ * en base.css/components.css):
+ *   mobile:  < 640px
+ *   tablet:  640px - 1024px
+ *   desktop: > 1024px
+ */
+
+:root {
+  /* Color — primario (acciones principales, identidad) */
+  --color-primary-50: #eaf2fb;
+  --color-primary-100: #cfe2f5;
+  --color-primary-500: #0f5fa6;
+  --color-primary-600: #0b4a82;
+  --color-primary-700: #083861;
+  --color-primary-contrast: #ffffff;
+
+  /* Color — secundario (acciones alternativas, no compite con primario) */
+  --color-secondary-50: #eef1f4;
+  --color-secondary-100: #dde3e8;
+  --color-secondary-500: #52606d;
+  --color-secondary-600: #3c4750;
+  --color-secondary-contrast: #ffffff;
+
+  /* Color — success */
+  --color-success-50: #e7f6ec;
+  --color-success-200: #bee8cc;
+  --color-success-600: #157f3c;
+  --color-success-700: #0f5f2c;
+
+  /* Color — warning */
+  --color-warning-50: #fff7e6;
+  --color-warning-200: #f6d999;
+  --color-warning-600: #8a5b00;
+  --color-warning-700: #6c4700;
+
+  /* Color — danger / error */
+  --color-danger-50: #fdecea;
+  --color-danger-200: #f3b4ae;
+  --color-danger-600: #b3261e;
+  --color-danger-700: #8c1d17;
+
+  /* Color — info */
+  --color-info-50: #eaf4fc;
+  --color-info-200: #a9d3ee;
+  --color-info-600: #0369a1;
+  --color-info-700: #035179;
+
+  /* Color — neutral (texto, bordes, superficies) */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f5f7f9;
+  --color-neutral-100: #eef1f3;
+  --color-neutral-200: #d7dee3;
+  --color-neutral-300: #c7cfd4;
+  --color-neutral-400: #9aa6ad;
+  --color-neutral-500: #6b767d;
+  --color-neutral-600: #4e5960;
+  --color-neutral-700: #35404a;
+  --color-neutral-800: #232b31;
+  --color-neutral-900: #1a2226;
+
+  /* Superficie / texto por defecto */
+  --color-surface: var(--color-neutral-0);
+  --color-background: var(--color-neutral-50);
+  --color-border: var(--color-neutral-200);
+  --color-text: var(--color-neutral-900);
+  --color-text-secondary: var(--color-neutral-500);
+
+  /* Tipografía */
+  --font-family-base: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+
+  --font-size-display: 2.5rem;
+  --font-size-h1: 2rem;
+  --font-size-h2: 1.5rem;
+  --font-size-h3: 1.25rem;
+  --font-size-body: 1rem;
+  --font-size-small: 0.875rem;
+  --font-size-caption: 0.75rem;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-heading: 1.25;
+  --line-height-body: 1.5;
+
+  /* Espaciado — escala de docs/design/design-system.md §8 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 48px;
+  --space-9: 64px;
+
+  /* Radios */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+
+  /* Sombras — sutiles (Design System §3) */
+  --shadow-sm: 0 1px 2px rgba(26, 34, 38, 0.06);
+  --shadow-md: 0 4px 12px rgba(26, 34, 38, 0.08);
+
+  /* Transiciones — mínimas y funcionales (Design System §44) */
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+}

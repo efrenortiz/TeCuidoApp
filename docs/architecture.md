@@ -298,6 +298,12 @@ Invitation
 
 Las entidades de dominio como `Doctor`, `Patient` y `Responsible` no deben convertirse en mecanismos independientes de autenticación.
 
+`Invitation` es específicamente el flujo médico → prospecto adulto (`requirements.md` §7.1).
+No se reutiliza (ni se relaja su FK obligatoria a `Doctor`) para el flujo de registro de
+paciente menor por responsable — ese flujo necesita su propia entidad de confirmación, vive
+en `patients` (ver §7.3), y su justificación completa está en
+`docs/adr/ADR-007-responsible-initiated-minor-registration.md`.
+
 ---
 
 ## 7.3 `patients`
@@ -313,9 +319,22 @@ Modelos previstos:
 
 ```text
 Patient
+Responsible
 DoctorPatientRelationship
 ResponsiblePatientRelationship
 ```
+
+`Responsible` no estaba listado explícitamente en una versión previa de este documento
+aunque `ResponsiblePatientRelationship` sí lo estaba aquí — se documenta ahora que vive
+en `patients`, junto a `Patient` y ambas relaciones, siguiendo el mismo patrón (perfil +
+sus relaciones en la misma app). Esto llena un vacío de listado, no cambia ninguna
+decisión arquitectónica previa.
+
+`patients` también es responsable del flujo de registro de paciente menor por responsable
+(`requirements.md` §7.2, `docs/adr/ADR-007-responsible-initiated-minor-registration.md`):
+crea `Patient` directamente (no vía `accounts.Invitation`) y su propia entidad de
+confirmación de un solo uso, cuyo nombre y forma exactos quedan pendientes de implementación
+(esa ADR fija las restricciones que debe cumplir, no el modelo concreto).
 
 Los nombres definitivos pueden ajustarse durante la implementación.
 
@@ -691,6 +710,11 @@ CANCELLED
 ```
 
 El token debe ser seguro y de un solo uso.
+
+Este modelo cubre exclusivamente el flujo médico → prospecto adulto (`requirements.md` §7.1).
+El registro de un paciente menor por su responsable (§7.2) es un flujo distinto, con su
+propia entidad de confirmación — no una variante de `Invitation` con `doctor` opcional (ver
+`docs/adr/ADR-007-responsible-initiated-minor-registration.md`).
 
 ---
 

@@ -108,7 +108,8 @@ Puede:
 Puede realizar las operaciones permitidas para un paciente y además:
 
 - Gestionar uno o más pacientes a su cargo.
-- Registrar pacientes menores de edad o personas que requieran responsable.
+- Registrar pacientes menores de edad o personas que requieran responsable (flujo detallado
+  en §7.2).
 - Solicitar citas para un paciente a su cargo.
 - Consultar citas por paciente.
 - Consultar y descargar documentos de los pacientes que tenga autorizados.
@@ -142,6 +143,9 @@ Debe implementarse:
 - Activación/desactivación de cuentas.
 - Control de permisos por rol.
 - Registro de fecha y hora de último acceso cuando resulte conveniente.
+
+Un usuario cuyo correo electrónico no ha sido verificado no debe poder iniciar sesión. La
+verificación de correo no es solo informativa: es una condición para autenticarse.
 
 ---
 
@@ -254,6 +258,12 @@ Cuando un prospecto se registra utilizando la liga de invitación enviada por un
 
 # 7. Prospectos e invitaciones
 
+Existen dos flujos de invitación distintos en Fase 1. No deben confundirse ni implementarse
+como si fueran variantes del mismo formulario: representan dos casos de negocio diferentes
+("quien se registra" vs. "quien está siendo registrado por otra persona").
+
+## 7.1 Registro de prospecto adulto (invitación del médico)
+
 Los prospectos no son considerados pacientes hasta que completen correctamente su registro.
 
 El médico debe poder enviar a un prospecto una liga de registro al correo electrónico proporcionado.
@@ -269,6 +279,201 @@ La invitación debe:
 - Permitir identificar el estado de la invitación.
 
 El correo electrónico debe verificarse mediante liga o código antes de concluir el proceso de registro.
+
+Este es el flujo donde el propio prospecto adulto crea su identidad y acepta la invitación
+directamente. No aplica a menores de edad — ver §7.2.
+
+---
+
+## 7.2 Registro de paciente menor por responsable
+
+Un responsable con perfil `Responsible` ya existente puede incorporar a un paciente menor de
+edad sin que el menor cree una cuenta de adulto ni acepte una invitación como si fuera un
+prospecto. Este flujo es iniciado por el responsable, no por un médico ni por el menor.
+
+### 7.2.1 Datos capturados
+
+Como mínimo, el responsable proporciona:
+
+- Nombre(s) del menor.
+- Apellido paterno.
+- Apellido materno.
+- Fecha de nacimiento.
+- Sexo.
+- Correo electrónico del menor — **opcional**, sujeto a la política de la fase (ver §7.2.5);
+  no debe exigirse si no aplica.
+- Datos de contacto necesarios para el servicio, evitando pedir al menor datos que en
+  realidad pertenecen al responsable (por ejemplo, no duplicar el teléfono del responsable
+  como si fuera del menor).
+
+La minoría de edad se determina siempre a partir de la fecha de nacimiento capturada, nunca
+mediante un campo separado tipo "es menor" introducido por el usuario.
+
+### 7.2.2 Qué crea el sistema
+
+1. Un registro `Patient` para el menor (identidad clínica), sin exigir que tenga una cuenta
+   de usuario propia en este paso.
+2. Una relación `ResponsiblePatientRelationship` explícita: `responsible` = el responsable
+   autenticado, `patient` = el menor recién creado, `relation_type` seleccionado por el
+   responsable (Madre, Padre, Tutor legal, Familiar, Cuidador, Otro — mismo catálogo que el
+   resto del sistema).
+3. Un mecanismo de confirmación de un solo uso, con expiración, cuyo destinatario es el
+   **responsable** (no el menor) — ver §7.2.4.
+
+Que el responsable haya sido quien registró al menor no sustituye ni reemplaza la necesidad
+de esta relación explícita: el acceso del responsable al expediente del menor se deriva
+siempre de `ResponsiblePatientRelationship`, nunca de "ambos registros los creó el mismo
+usuario".
+
+### 7.2.3 Paciente clínico vs. usuario paciente
+
+Deben distinguirse dos conceptos:
+
+- **Paciente clínico** (`Patient`/`Person`): puede existir en TeCuido sin tener credenciales
+  propias de acceso.
+- **Usuario paciente** (`User` asociado): solo debe crearse/habilitarse cuando la persona
+  vaya a usar el sistema directamente.
+
+Para un menor registrado por su responsable, el registro inicial **no** debe obligar a crear
+credenciales propias (`User`). El paciente puede quedar registrado clínicamente sin cuenta
+propia hasta que exista una razón y una regla explícita para habilitarle acceso directo.
+
+### 7.2.4 Confirmación por el responsable
+
+Se genera un mecanismo de confirmación de un solo uso (token seguro, expiración, estado),
+siguiendo los mismos principios de seguridad que ya aplican a las invitaciones (ver ADR-003 y
+ADR-007): token impredecible, solo se persiste su hash, sin datos sensibles legibles en el
+token, sin registrar el token completo en logs.
+
+El destinatario/beneficiario de esta confirmación es el **responsable**, no el menor —
+evitando diseñar un flujo donde el menor deba actuar como si fuera un adulto aceptando una
+invitación.
+
+Al completarse correctamente la confirmación, el sistema puede fijar `email_verified=True` e
+`is_active=True` **únicamente si** se determinó que el menor tendrá una cuenta de usuario
+propia (§7.2.3) — si no la tiene, estos campos no aplican todavía.
+
+### 7.2.5 Casos que debe contemplar el flujo
+
+- **Menor nuevo**: no existe un registro previo → se crea el paciente, la relación y la
+  confirmación.
+- **Menor ya existente**: el sistema no debe duplicar el registro; debe tratarse como una
+  vinculación, no como un alta nueva. Regla definida en §7.2.7.
+- **El responsable intenta registrarse a sí mismo como el menor**: debe rechazarse; el flujo
+  es exclusivamente para incorporar a un tercero.
+- **El paciente cumple 18 años**: el vínculo responsable-paciente no desaparece
+  automáticamente. Regla definida en §7.2.8.
+- **Confirmación expirada, usada o cancelada**: no permite completar el flujo; sigue las
+  mismas reglas de invalidez que ya existen para invitaciones (§7.1).
+- **Múltiples responsables para el mismo menor**: debe permitirse mediante múltiples
+  registros de `ResponsiblePatientRelationship`, sujeto a las reglas de autorización
+  correspondientes (ver `docs/adr/ADR-004-role-and-object-permissions.md`).
+
+### 7.2.6 Qué NO hace este flujo
+
+- No crea ni modifica ninguna `DoctorPatientRelationship`. Registrar al menor no otorga
+  acceso automático a ningún médico — esa relación se establece por separado, cuando
+  corresponda.
+- No exige al menor crear ni aceptar nada como si fuera un prospecto adulto (§7.1 y §7.2 son
+  flujos distintos, no variantes de un mismo formulario).
+
+### 7.2.7 Detección y vinculación de un paciente ya existente
+
+Antes de crear un `Patient` nuevo, el sistema debe buscar coincidencias entre los datos
+capturados y los pacientes ya existentes. La búsqueda usa dos niveles de confianza, nunca
+coincidencia difusa ("similar"):
+
+1. **CURP (alta confianza).** Si el responsable capturó CURP, se busca un `Patient` existente
+   con el mismo CURP (normalizado: mayúsculas, sin espacios). El CURP es un identificador
+   único de persona en México — una coincidencia aquí significa, por definición, que es la
+   misma persona.
+2. **Nombre completo + fecha de nacimiento (confianza baja, solo si no hay CURP).** Si no se
+   capturó CURP, se busca por coincidencia **exacta** (tras normalizar mayúsculas/espacios) de
+   nombre(s) + apellido paterno + apellido materno + fecha de nacimiento. Esto no confirma
+   identidad de forma confiable (dos personas distintas podrían compartir estos datos, y un
+   error de captura evita que coincidan aunque sea la misma persona) — es una señal, no una
+   confirmación.
+
+Ninguna coincidencia debe manejarse igual. Reglas según lo que se encuentre:
+
+- **Coincidencia por CURP, y el paciente encontrado no tiene `User` propio** (es únicamente
+  paciente clínico, §7.2.3): no se crea un `Patient` nuevo. Se crea una
+  `ResponsiblePatientRelationship` para el responsable actual, pero **no queda vigente de
+  inmediato** — requiere que un responsable ya autorizado sobre ese paciente la apruebe. Esto
+  es obligatorio incluso con coincidencia de CURP: conocer el CURP de alguien no debe bastar
+  por sí solo para obtener acceso a su expediente.
+- **Coincidencia por nombre + fecha de nacimiento (sin CURP), confianza baja**: el sistema
+  **no** crea un `Patient` nuevo automáticamente ni vincula automáticamente. Se le informa al
+  responsable, en lenguaje genérico y sin revelar ningún dato del registro existente (ver
+  regla de privacidad más abajo), que ya existe un posible registro con datos similares y que
+  debe continuar el trámite con el consultorio/médico para resolverlo manualmente. No es un
+  flujo de autoservicio.
+- **Coincidencia (por cualquiera de los dos criterios) contra un paciente que ya tiene `User`
+  propio** (ya es "usuario paciente", §7.2.3, es decir, gestiona su propia cuenta): vincular a
+  un responsable requiere el consentimiento de esa persona, no solo la afirmación de un
+  tercero de ser su responsable. Este consentimiento **no está diseñado todavía** — queda
+  pendiente (ver más abajo). Mientras no exista, el sistema no debe crear la relación ni
+  aunque haya coincidencia de CURP.
+- **Sin coincidencia**: se procede normalmente — se crea el `Patient`.
+
+**Regla de privacidad (obligatoria en cualquiera de los casos anteriores):** el sistema nunca
+debe revelar al responsable que está registrando datos de otro registro existente (nombre del
+otro responsable, información del paciente, etc.). El mensaje debe ser genérico
+("ya existe un registro relacionado con estos datos; contacta a tu médico o al consultorio
+para continuar"), igual que ya se exige para invitaciones (`docs/adr/ADR-003-invitation-security.md`
+§18, "Protección contra enumeración").
+
+### 7.2.8 Transición a paciente adulto
+
+Cumplir 18 años **no** desactiva, elimina ni modifica automáticamente ninguna
+`ResponsiblePatientRelationship` existente. Se prioriza continuidad del cuidado sobre
+revocación silenciosa — nadie pierde acceso de golpe el día del cumpleaños.
+
+- **La mayoría de edad se deriva siempre de `Person.birth_date`**, evaluada en el momento de
+  cada verificación de acceso — nunca mediante un proceso programado que reescriba el estado
+  exactamente en la fecha del cumpleaños. Fase 1 no incorpora tareas programadas (Celery) para
+  esto ni para ningún otro fin.
+- **La transición debe hacerse visible, no silenciarse.** Cualquier pantalla que muestre esta
+  relación (detalle de paciente, "Mis pacientes a cargo") debe señalar que el paciente ya es
+  adulto y que la relación proviene de una etapa de minoría de edad, para que sea una decisión
+  consciente de quienes la ven — no una alarma automática ni un bloqueo.
+- **Si el paciente, ya adulto, obtiene más adelante su propia cuenta (`User`)** — el mecanismo
+  para autorizar eso sigue pendiente, ver §7.2.9 —, cualquier `ResponsiblePatientRelationship`
+  sobre su expediente, **incluida la heredada de su minoría de edad**, queda sujeta a partir de
+  ese momento a la misma regla de consentimiento ya definida para vincular un responsable a un
+  "usuario paciente" (§7.2.7, último punto). No se crea un mecanismo de consentimiento distinto
+  solo para este caso — es el mismo, aplicado también a relaciones preexistentes.
+- **Mientras el paciente siga siendo solo "paciente clínico"** (sin cuenta propia) después de
+  cumplir 18 años, la relación de responsable sigue funcionando exactamente igual que antes.
+  Fase 1 no introduce una fecha de expiración forzosa. Un límite de tiempo estricto (por
+  ejemplo, "la relación deja de ser válida N días después del cumpleaños si no se confirma")
+  sería una decisión funcional separada, y probablemente requeriría infraestructura de tareas
+  programadas — fuera de alcance de Fase 1.
+- El `relationship_type` original (Madre, Padre, Tutor legal, etc.) no cambia — describe el
+  origen de la relación, no un estado que deba reetiquetarse al cumplir 18 años.
+- No afecta ninguna `DoctorPatientRelationship` (ya independiente de esta relación, §7.2.6).
+
+### 7.2.9 Decisiones explícitamente pendientes
+
+Lo siguiente **no** debe asumirse ni implementarse sin una decisión funcional adicional:
+
+- Bajo qué condiciones (si alguna) un paciente menor puede tener correo electrónico propio.
+- Bajo qué condiciones y quién autoriza que un paciente menor (ya adulto o no) obtenga
+  credenciales propias (`User`) más adelante — de esto depende poder aplicar el
+  consentimiento descrito en §7.2.8.
+- Mecanismo de consentimiento para vincular un responsable a un paciente que ya gestiona su
+  propia cuenta (§7.2.7, último punto) — el mismo mecanismo que aplicará también a relaciones
+  heredadas de la minoría de edad (§7.2.8).
+- Qué ocurre cuando una coincidencia por CURP no tiene ningún responsable activo a quien
+  pedirle autorización (por ejemplo, si esa relación fue desactivada) — probablemente requiera
+  intervención del Administrador, pero su alcance exacto sobre invitaciones/vinculaciones ya
+  está marcado como no definido en `docs/adr/ADR-004-role-and-object-permissions.md` §36, y
+  esta decisión hereda esa misma indefinición.
+
+Ver `docs/adr/ADR-007-responsible-initiated-minor-registration.md` para las implicaciones
+arquitectónicas de este flujo (en particular, por qué no reutiliza el modelo `Invitation`
+existente sin modificarlo, y qué implica la "aprobación pendiente" de §7.2.7 sobre
+`ResponsiblePatientRelationship`).
 
 ---
 
@@ -1007,26 +1212,31 @@ Las modificaciones de información relevante deben mantener trazabilidad.
 
 1. La cuenta de correo del usuario debe ser única.
 2. El correo debe verificarse para completar el registro.
-3. Los prospectos no son pacientes hasta concluir el registro.
-4. Una invitación de médico asociará automáticamente al paciente con ese médico.
-5. Un paciente puede estar relacionado con uno o más médicos.
-6. Un responsable puede estar relacionado con uno o más pacientes.
-7. Una cita debe identificar al paciente que será atendido.
-8. Cuando aplique, una cita debe identificar al responsable que la solicitó o gestionó.
-9. Una cita pertenece a un médico y consultorio.
-10. No deben existir citas superpuestas para el mismo médico/consultorio.
-11. El sistema debe impedir dobles reservas del mismo horario.
-12. Una reserva iniciada puede bloquear el horario durante 15 minutos.
-13. Una cita no confirmada no significa que el paciente haya faltado.
-14. `NO_SHOW` debe representar una inasistencia real.
-15. La consulta médica es independiente de la cita.
-16. Las consultas concluidas deben conservar su historial.
-17. Las recetas y solicitudes emitidas deben conservar su trazabilidad.
-18. Los documentos médicos deben tener acceso privado y autorizado.
-19. Las acciones sensibles deben auditarse.
-20. Los registros clínicos no deben eliminarse físicamente de manera rutinaria.
-21. TeCuidoApp no diagnostica ni decide tratamientos de forma autónoma.
-22. Las decisiones clínicas pertenecen al médico.
+3. Un usuario cuyo correo no ha sido verificado no debe poder iniciar sesión.
+4. Los prospectos no son pacientes hasta concluir el registro.
+5. Una invitación de médico asociará automáticamente al paciente con ese médico.
+6. Un paciente puede estar relacionado con uno o más médicos.
+7. Un responsable puede estar relacionado con uno o más pacientes.
+8. Un responsable puede registrar a un paciente menor de edad sin que este cree una cuenta
+   propia; la minoría de edad se determina desde la fecha de nacimiento, nunca desde un
+   campo introducido manualmente (§7.2).
+9. Registrar a un menor no crea automáticamente una relación médico-paciente.
+10. Una cita debe identificar al paciente que será atendido.
+11. Cuando aplique, una cita debe identificar al responsable que la solicitó o gestionó.
+12. Una cita pertenece a un médico y consultorio.
+13. No deben existir citas superpuestas para el mismo médico/consultorio.
+14. El sistema debe impedir dobles reservas del mismo horario.
+15. Una reserva iniciada puede bloquear el horario durante 15 minutos.
+16. Una cita no confirmada no significa que el paciente haya faltado.
+17. `NO_SHOW` debe representar una inasistencia real.
+18. La consulta médica es independiente de la cita.
+19. Las consultas concluidas deben conservar su historial.
+20. Las recetas y solicitudes emitidas deben conservar su trazabilidad.
+21. Los documentos médicos deben tener acceso privado y autorizado.
+22. Las acciones sensibles deben auditarse.
+23. Los registros clínicos no deben eliminarse físicamente de manera rutinaria.
+24. TeCuidoApp no diagnostica ni decide tratamientos de forma autónoma.
+25. Las decisiones clínicas pertenecen al médico.
 
 ---
 

@@ -1,0 +1,12 @@
+{% comment %}
+PatientContextHeader — componente de dominio (ui-guidelines.md §48).
+Mantiene siempre visible a qué paciente corresponde la pantalla
+(design-system.md §20, §30). Params: patient.
+{% endcomment %}
+<div class="patient-context">
+  <div>
+    <p class="patient-context__label">Paciente</p>
+    <p class="patient-context__name">{{ patient.person }}</p>
+  </div>
+  {% include "components/_badge.html" with text=patient.is_active|yesno:"Activo,Inactivo" variant=patient.is_active|yesno:"success,neutral" %}
+</div>

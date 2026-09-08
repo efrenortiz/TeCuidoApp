@@ -1,0 +1,9 @@
+{% comment %}
+Alert component (design-system.md §21). Params: type (success|warning|danger|info), text.
+{% endcomment %}
+<div class="alert alert--{{ type|default:"info" }}" role="status">
+  <span class="alert__icon" aria-hidden="true">
+    {% if type == "success" %}✓{% elif type == "danger" %}✕{% elif type == "warning" %}!{% else %}i{% endif %}
+  </span>
+  <span>{{ text }}</span>
+</div>

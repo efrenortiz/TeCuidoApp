@@ -1,0 +1,166 @@
+/*
+ * Base — reset, tipografía base, layout de página.
+ * Fuente: docs/design/design-system.md §3, §9, §11, §35, §37;
+ *         docs/design/ui-guidelines.md §3-5.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0 0 var(--space-2);
+  line-height: var(--line-height-heading);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+}
+
+h3 {
+  font-size: var(--font-size-h3);
+}
+
+p {
+  margin: 0 0 var(--space-4);
+}
+
+a {
+  color: var(--color-primary-500);
+}
+
+/* Focus visible — nunca se elimina el outline sin una alternativa
+   equivalente (Design System §35). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-primary-500);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Layout de autenticación (Design System §37) — tarjeta centrada,   */
+/* usado por login, recuperación/cambio de contraseña, verificación  */
+/* de correo y registro por invitación.                              */
+/* ---------------------------------------------------------------- */
+
+.auth-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4);
+  gap: var(--space-6);
+}
+
+.auth-layout__brand {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-600);
+}
+
+.auth-layout__card {
+  width: 100%;
+  max-width: 440px;
+}
+
+.auth-layout__footer {
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.auth-layout__link-row {
+  margin-top: var(--space-5);
+  text-align: center;
+  font-size: var(--font-size-small);
+}
+
+/* Formularios de invitación (más campos) usan una tarjeta más ancha. */
+.auth-layout__card--wide {
+  max-width: 640px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Layout autenticado (ui-guidelines.md §3-4) — header simple +      */
+/* contenido. Sin sidebar todavía: Fase 1 solo tiene 3 pantallas      */
+/* autenticadas por rol, no hay necesidad real de navegación lateral  */
+/* (docs/design/design-system.md §55).                                */
+/* ---------------------------------------------------------------- */
+
+.app-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-header__brand {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-600);
+  text-decoration: none;
+}
+
+.app-header__user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--font-size-small);
+  color: var(--color-text-secondary);
+}
+
+.app-main {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5);
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .app-main {
+    padding: var(--space-5) var(--space-4);
+  }
+}

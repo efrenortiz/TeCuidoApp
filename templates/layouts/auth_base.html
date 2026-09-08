@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% comment %}
+Layout de autenticación (design-system.md §37): tarjeta centrada, wordmark de
+texto (no existe/no se inventa un logo). Usado por login, recuperación/cambio
+de contraseña, verificación de correo y registro por invitación.
+{% endcomment %}
+{% block content %}
+<div class="auth-layout">
+  <div class="auth-layout__brand">TeCuidoApp</div>
+  <div class="auth-layout__card {% block auth_card_class %}{% endblock %} card">
+    {% include "components/_messages.html" %}
+    {% block auth_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

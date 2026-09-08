@@ -1,0 +1,17 @@
+{% comment %}
+Markup de un solo campo de formulario (design-system.md §16-18). Params:
+field (un BoundField de Django), label (opcional — sobreescribe field.label;
+útil para forms nativos de Django cuyo texto no podemos editar en Python,
+p. ej. AuthenticationForm.username). Usado por _form_fields.html (loop
+genérico) y por formularios con secciones propias (p. ej.
+accounts/invitation_accept.html).
+{% endcomment %}
+{% load ds_forms %}
+<div class="field{% if field.errors %} field--error{% endif %}">
+  <label class="field__label" for="{{ field.id_for_label }}">
+    {{ label|default:field.label }}{% if field.field.required %} <span class="field__required">*</span>{% endif %}
+  </label>
+  {{ field|add_class:"field-input" }}
+  {% if field.help_text %}<p class="field__help">{{ field.help_text }}</p>{% endif %}
+  {% for error in field.errors %}<p class="field__error">{{ error }}</p>{% endfor %}
+</div>

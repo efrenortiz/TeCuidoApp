@@ -1,0 +1,16 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Registrar paciente menor — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Registrar paciente menor" description="Paso 3 de 3: confirmación." %}
+{% include "components/_stepper.html" with steps=steps current=current %}
+
+<div class="card card--narrow">
+  {% if outcome == "created" %}
+    {% include "components/_alert.html" with type="success" text="Paciente registrado correctamente." %}
+    <p>Acceso del paciente: no activado.</p>
+  {% else %}
+    {% include "components/_alert.html" with type="info" text="Encontramos un registro existente. Se envió una solicitud de acceso al responsable actual; podrás ver a este paciente cuando la apruebe." %}
+  {% endif %}
+  <a href="{% url 'patients:my_dependents' %}" class="btn btn--primary">Continuar</a>
+</div>
+{% endblock %}

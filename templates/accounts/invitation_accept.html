@@ -1,0 +1,83 @@
+{% extends "layouts/auth_base.html" %}
+{% block title %}Completar registro — TeCuidoApp{% endblock %}
+{% block auth_card_class %}auth-layout__card--wide{% endblock %}
+{% block auth_content %}
+<h1>Completar registro</h1>
+<p class="page-header__description">
+  Tu médico te invitó a registrarte en TeCuidoApp. Completa tus datos para continuar.
+</p>
+
+{% comment %}
+No se usa components/_stepper.html vía `with steps=...` porque necesitaría que
+la vista pase esa lista en el contexto (esta implementación es solo frontend,
+sin tocar accounts/views.py). Se reutiliza el mismo marcado/clases del
+componente Stepper directamente, con las 4 secciones fijas de este formulario.
+{% endcomment %}
+<ol class="stepper">
+  <li class="stepper__step">
+    <a class="stepper__step-link" href="#cuenta">
+      <span class="stepper__step-index">1</span> Cuenta
+    </a>
+  </li>
+  <li class="stepper__step">
+    <a class="stepper__step-link" href="#datos-personales">
+      <span class="stepper__step-index">2</span> Datos personales
+    </a>
+  </li>
+  <li class="stepper__step">
+    <a class="stepper__step-link" href="#domicilio">
+      <span class="stepper__step-index">3</span> Domicilio
+    </a>
+  </li>
+  <li class="stepper__step">
+    <a class="stepper__step-link" href="#datos-paciente">
+      <span class="stepper__step-index">4</span> Paciente
+    </a>
+  </li>
+</ol>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    {% include "components/_alert.html" with type="danger" text=form.non_field_errors|join:" " %}
+  {% endif %}
+
+  <div class="field-section" id="cuenta">
+    <h2 class="field-section__title">Datos de cuenta</h2>
+    {% include "components/_field.html" with field=form.password %}
+    {% include "components/_field.html" with field=form.password_confirm %}
+  </div>
+
+  <div class="field-section" id="datos-personales">
+    <h2 class="field-section__title">Datos personales</h2>
+    {% include "components/_field.html" with field=form.first_name %}
+    {% include "components/_field.html" with field=form.last_name_paterno %}
+    {% include "components/_field.html" with field=form.last_name_materno %}
+    {% include "components/_field.html" with field=form.birth_date %}
+    {% include "components/_field.html" with field=form.phone %}
+    {% include "components/_field.html" with field=form.alternative_phone %}
+  </div>
+
+  <div class="field-section" id="domicilio">
+    <h2 class="field-section__title">Domicilio</h2>
+    {% include "components/_field.html" with field=form.street %}
+    {% include "components/_field.html" with field=form.exterior_number %}
+    {% include "components/_field.html" with field=form.neighborhood %}
+    {% include "components/_field.html" with field=form.postal_code %}
+    {% include "components/_field.html" with field=form.municipality %}
+    {% include "components/_field.html" with field=form.state %}
+    {% include "components/_field.html" with field=form.country %}
+  </div>
+
+  <div class="field-section" id="datos-paciente">
+    <h2 class="field-section__title">Datos de paciente</h2>
+    {% include "components/_field.html" with field=form.sex %}
+    {% include "components/_field.html" with field=form.curp %}
+    {% include "components/_field.html" with field=form.nationality %}
+    {% include "components/_field.html" with field=form.emergency_contact_name %}
+    {% include "components/_field.html" with field=form.emergency_contact_phone %}
+  </div>
+
+  <button type="submit" class="btn btn--primary btn--block">Registrarme</button>
+</form>
+{% endblock %}

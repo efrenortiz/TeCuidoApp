@@ -1,0 +1,26 @@
+{% comment %}
+Stepper component (design-system.md §40). Params: steps — list of
+{"label": ...} and, for a same-page index, "anchor": "<section id>"
+(rendered as an anchor link); current (opcional) — 1-based index of the
+active step when there IS real navigation between pages (each step its own
+view/URL), e.g. docs/design/screens.md §6.8. Omit `current` for a
+same-page index like accounts/invitation_accept.html (§5.9), where every
+step is just a link into the same form.
+{% endcomment %}
+<ol class="stepper">
+  {% for step in steps %}
+  <li class="stepper__step{% if current == forloop.counter %} stepper__step--current{% endif %}">
+    {% if step.anchor %}
+    <a class="stepper__step-link" href="#{{ step.anchor }}">
+      <span class="stepper__step-index">{{ forloop.counter }}</span>
+      {{ step.label }}
+    </a>
+    {% else %}
+    <span class="stepper__step-link">
+      <span class="stepper__step-index">{{ forloop.counter }}</span>
+      {{ step.label }}
+    </span>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>

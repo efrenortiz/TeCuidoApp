@@ -1,0 +1,148 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}{{ patient.person }} — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+
+{% comment %}
+Bloques de design-system.md §28. "Información gineco-obstétrica" e "Historial"
+no se incluyen — no existen en Fase 1 (docs/design/screens.md §6.5).
+{% endcomment %}
+
+<div class="card">
+  <h2 class="card__title">Datos generales</h2>
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Nombre</dt>
+      <dd class="data-list__value">{{ patient.person }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Fecha de nacimiento</dt>
+      <dd class="data-list__value">{{ patient.person.birth_date }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Sexo</dt>
+      <dd class="data-list__value">{{ patient.get_sex_display }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">CURP</dt>
+      <dd class="data-list__value">{{ patient.curp|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Nacionalidad</dt>
+      <dd class="data-list__value">{{ patient.nationality|default:"—" }}</dd>
+    </div>
+  </dl>
+</div>
+
+<div class="card">
+  <h2 class="card__title">Contacto</h2>
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Teléfono</dt>
+      <dd class="data-list__value">{{ patient.person.phone|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Teléfono alternativo</dt>
+      <dd class="data-list__value">{{ patient.person.alternative_phone|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Contacto de emergencia</dt>
+      <dd class="data-list__value">{{ patient.emergency_contact_name|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Teléfono de emergencia</dt>
+      <dd class="data-list__value">{{ patient.emergency_contact_phone|default:"—" }}</dd>
+    </div>
+  </dl>
+</div>
+
+<div class="card">
+  <h2 class="card__title">Domicilio</h2>
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Calle y número</dt>
+      <dd class="data-list__value">{{ patient.person.street|default:"—" }} {{ patient.person.exterior_number }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Colonia</dt>
+      <dd class="data-list__value">{{ patient.person.neighborhood|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Código postal</dt>
+      <dd class="data-list__value">{{ patient.person.postal_code|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Municipio/alcaldía</dt>
+      <dd class="data-list__value">{{ patient.person.municipality|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Estado</dt>
+      <dd class="data-list__value">{{ patient.person.state|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">País</dt>
+      <dd class="data-list__value">{{ patient.person.country|default:"—" }}</dd>
+    </div>
+  </dl>
+</div>
+
+<div class="card">
+  <h2 class="card__title">Información médica</h2>
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Tipo sanguíneo</dt>
+      <dd class="data-list__value">{{ patient.blood_type|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Alergias</dt>
+      <dd class="data-list__value">{{ patient.allergies|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Enfermedades crónicas</dt>
+      <dd class="data-list__value">{{ patient.chronic_conditions|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Medicamentos actuales</dt>
+      <dd class="data-list__value">{{ patient.current_medications|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Antecedentes quirúrgicos</dt>
+      <dd class="data-list__value">{{ patient.surgical_history|default:"—" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Hospitalizaciones relevantes</dt>
+      <dd class="data-list__value">{{ patient.relevant_hospitalizations|default:"—" }}</dd>
+    </div>
+  </dl>
+</div>
+
+<div class="card">
+  <h2 class="card__title">Relaciones</h2>
+  {% with doctor_relationships=patient.doctor_relationships.all responsible_relationships=patient.responsible_relationships.all %}
+  {% if doctor_relationships or responsible_relationships %}
+  <dl class="data-list">
+    {% for relationship in doctor_relationships %}
+    <div>
+      <dt class="data-list__label">{{ relationship.get_relationship_type_display }}</dt>
+      <dd class="data-list__value">
+        {{ relationship.doctor }}
+        {% include "components/_badge.html" with text=relationship.is_active|yesno:"Activa,Inactiva" variant=relationship.is_active|yesno:"success,neutral" %}
+      </dd>
+    </div>
+    {% endfor %}
+    {% for relationship in responsible_relationships %}
+    <div>
+      <dt class="data-list__label">{{ relationship.get_relationship_type_display }}</dt>
+      <dd class="data-list__value">
+        {{ relationship.responsible }}
+        {% include "components/_badge.html" with text=relationship.is_active|yesno:"Activa,Inactiva" variant=relationship.is_active|yesno:"success,neutral" %}
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+  {% else %}
+  {% include "components/_empty_state.html" with title="Sin relaciones registradas todavía." %}
+  {% endif %}
+  {% endwith %}
+</div>
+{% endblock %}

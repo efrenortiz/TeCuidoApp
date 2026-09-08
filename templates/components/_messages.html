@@ -1,0 +1,4 @@
+{% load ds_forms %}
+{% for message in messages %}
+  {% include "components/_alert.html" with type=message.tags|alert_type text=message %}
+{% endfor %}

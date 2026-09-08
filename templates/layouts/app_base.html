@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% comment %}
+Layout autenticado (ui-guidelines.md §3-4): header simple + contenido. Sin
+sidebar todavía — Fase 1 solo tiene 3 pantallas autenticadas por rol
+(design-system.md §55: no construir infraestructura sin necesidad real).
+{% endcomment %}
+{% block content %}
+<div class="app-layout">
+  <header class="app-header">
+    <a class="app-header__brand" href="{% url 'home' %}">TeCuidoApp</a>
+    {% if user.is_authenticated %}
+    <div class="app-header__user">
+      <span>{{ user.email }}</span>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn--link">Cerrar sesión</button>
+      </form>
+    </div>
+    {% endif %}
+  </header>
+  <main class="app-main">
+    {% include "components/_messages.html" %}
+    {% block app_content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Mis pacientes a cargo — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% url 'patients:register_minor_step1' as register_minor_url %}
+{% include "components/_page_header.html" with title="Mis pacientes a cargo" description="Pacientes que gestionas como responsable." action_url=register_minor_url action_label="Registrar paciente menor" %}
+
+{% if pending_requests %}
+<div class="card">
+  <h2 class="card__title">Solicitudes pendientes</h2>
+  <dl class="data-list">
+    {% for request in pending_requests %}
+    <div>
+      <dt class="data-list__label">
+        {{ request.patient.person }}
+        {% include "components/_badge.html" with text="Solicitud pendiente" variant="warning" %}
+      </dt>
+      <dd class="data-list__value">
+        {{ request.responsible.person }} pide vincularse como {{ request.get_relationship_type_display }}.
+        <form method="post" action="{% url 'patients:approve_relationship_request' request.pk %}" class="inline-form">
+          {% csrf_token %}
+          <button type="submit" class="btn btn--primary">Aprobar</button>
+        </form>
+        <form method="post" action="{% url 'patients:reject_relationship_request' request.pk %}" class="inline-form">
+          {% csrf_token %}
+          <button type="submit" class="btn btn--secondary">Rechazar</button>
+        </form>
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2 class="card__title">Pacientes</h2>
+  {% if relationships %}
+  <dl class="data-list">
+    {% for relationship in relationships %}
+    <div>
+      <dt class="data-list__label">{{ relationship.get_relationship_type_display }}</dt>
+      <dd class="data-list__value">
+        <a href="{% url 'patients:patient_detail' relationship.patient.pk %}">{{ relationship.patient.person }}</a>
+        {% if not relationship.patient.person.is_minor %}
+          {% include "components/_badge.html" with text="Adulto" variant="neutral" %}
+        {% endif %}
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+  {% else %}
+    {% include "components/_empty_state.html" with title="No tienes pacientes a cargo todavía." action_url=register_minor_url action_label="Registrar paciente menor" %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Invitaciones — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% url 'accounts:invitation_create' as new_invitation_url %}
+{% include "components/_page_header.html" with title="Invitaciones" description="Invitaciones de registro enviadas a prospectos." action_url=new_invitation_url action_label="Nueva invitación" %}
+
+{% if invitations %}
+<div class="card">
+  <dl class="data-list">
+    {% for invitation in invitations %}
+    <div>
+      <dt class="data-list__label">{{ invitation.email }}</dt>
+      <dd class="data-list__value">
+        {% if invitation.status == "PENDING" %}
+          {% include "components/_badge.html" with text="Pendiente" variant="warning" %}
+        {% elif invitation.status == "USED" %}
+          {% include "components/_badge.html" with text="Utilizada" variant="success" %}
+        {% elif invitation.status == "EXPIRED" %}
+          {% include "components/_badge.html" with text="Expirada" variant="neutral" %}
+        {% else %}
+          {% include "components/_badge.html" with text="Cancelada" variant="neutral" %}
+        {% endif %}
+        · {{ invitation.created_at }}
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+</div>
+{% else %}
+{% include "components/_empty_state.html" with title="No hay invitaciones todavía." description="Envía una invitación para comenzar el registro de un nuevo paciente." action_url=new_invitation_url action_label="Enviar invitación" %}
+{% endif %}
+{% endblock %}

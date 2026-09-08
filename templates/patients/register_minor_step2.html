@@ -1,0 +1,14 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Registrar paciente menor — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Registrar paciente menor" description="Paso 2 de 3: relación con el menor." %}
+{% include "components/_stepper.html" with steps=steps current=current %}
+<div class="card card--narrow">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "components/_form_fields.html" %}
+    <button type="submit" class="btn btn--primary">Continuar</button>
+    <a href="{% url 'patients:register_minor_step1' %}" class="btn btn--secondary">Atrás</a>
+  </form>
+</div>
+{% endblock %}

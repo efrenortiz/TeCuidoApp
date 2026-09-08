@@ -417,6 +417,14 @@ Debe permitir:
 - tipo de relación;
 - crecimiento futuro de reglas de autorización.
 
+El camino de creación real de esta relación para un paciente menor de edad — un responsable
+registrando directamente a un menor, sin que este acepte una invitación como si fuera un
+prospecto adulto — quedó definido en `requirements.md` §7.2 y
+`docs/adr/ADR-007-responsible-initiated-minor-registration.md`. No estaba detallado cuando se
+escribió esta sección originalmente; la implementación de ese flujo (servicio, vista, entidad
+de confirmación) sigue pendiente y es trabajo de Fase 1 todavía por hacer, no de una fase
+posterior.
+
 ---
 
 ## 11.3 Doctor ↔ Clinic

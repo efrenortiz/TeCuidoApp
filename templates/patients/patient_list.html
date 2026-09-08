@@ -1,0 +1,30 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Mis pacientes — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Mis pacientes" description="Consulta y administra los pacientes autorizados." %}
+
+<form method="get" class="card">
+  <div class="field">
+    <label class="field__label" for="id_q">Buscar por nombre, teléfono o correo</label>
+    <input type="text" id="id_q" name="q" value="{{ query }}" class="field-input">
+  </div>
+  <button type="submit" class="btn btn--secondary">Buscar</button>
+</form>
+
+{% if patients %}
+<div class="card">
+  <dl class="data-list">
+    {% for patient in patients %}
+    <div>
+      <dt class="data-list__label">{{ patient.person }}</dt>
+      <dd class="data-list__value">
+        <a href="{% url 'patients:patient_detail' patient.pk %}">Ver</a>
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+</div>
+{% else %}
+{% include "components/_empty_state.html" with title="No hay pacientes registrados." description="Los pacientes aparecerán aquí cuando sean registrados o cuando acepten una invitación." %}
+{% endif %}
+{% endblock %}

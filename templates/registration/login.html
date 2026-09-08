@@ -1,0 +1,18 @@
+{% extends "layouts/auth_base.html" %}
+{% block title %}Iniciar sesión — TeCuidoApp{% endblock %}
+{% block auth_content %}
+<h1>Iniciar sesión</h1>
+<p class="page-header__description">Bienvenido a TeCuidoApp.</p>
+{% if form.non_field_errors %}
+  {% include "components/_alert.html" with type="danger" text=form.non_field_errors|join:" " %}
+{% endif %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% include "components/_field.html" with field=form.username label="Correo electrónico" %}
+  {% include "components/_field.html" with field=form.password %}
+  <button type="submit" class="btn btn--primary btn--block">Iniciar sesión</button>
+</form>
+<p class="auth-layout__link-row">
+  <a href="{% url 'accounts:password_reset' %}">¿Olvidaste tu contraseña?</a>
+</p>
+{% endblock %}

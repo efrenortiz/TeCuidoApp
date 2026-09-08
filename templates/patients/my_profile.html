@@ -1,0 +1,69 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Mi perfil — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Mi perfil" description="Consulta y actualiza tu información." %}
+
+<div class="card">
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Correo</dt>
+      <dd class="data-list__value">{{ user.email }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Contraseña</dt>
+      <dd class="data-list__value"><a href="{% url 'accounts:password_change' %}">Cambiar contraseña</a></dd>
+    </div>
+  </dl>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    {% include "components/_alert.html" with type="danger" text=form.non_field_errors|join:" " %}
+  {% endif %}
+
+  <div class="card">
+    <div class="field-section">
+      <h2 class="field-section__title">Datos personales</h2>
+      {% include "components/_field.html" with field=form.first_name %}
+      {% include "components/_field.html" with field=form.last_name_paterno %}
+      {% include "components/_field.html" with field=form.last_name_materno %}
+      {% include "components/_field.html" with field=form.birth_date %}
+      {% include "components/_field.html" with field=form.sex %}
+      {% include "components/_field.html" with field=form.curp %}
+      {% include "components/_field.html" with field=form.nationality %}
+    </div>
+
+    <div class="field-section">
+      <h2 class="field-section__title">Contacto</h2>
+      {% include "components/_field.html" with field=form.phone %}
+      {% include "components/_field.html" with field=form.alternative_phone %}
+      {% include "components/_field.html" with field=form.emergency_contact_name %}
+      {% include "components/_field.html" with field=form.emergency_contact_phone %}
+    </div>
+
+    <div class="field-section">
+      <h2 class="field-section__title">Domicilio</h2>
+      {% include "components/_field.html" with field=form.street %}
+      {% include "components/_field.html" with field=form.exterior_number %}
+      {% include "components/_field.html" with field=form.neighborhood %}
+      {% include "components/_field.html" with field=form.postal_code %}
+      {% include "components/_field.html" with field=form.municipality %}
+      {% include "components/_field.html" with field=form.state %}
+      {% include "components/_field.html" with field=form.country %}
+    </div>
+
+    <div class="field-section">
+      <h2 class="field-section__title">Información médica</h2>
+      {% include "components/_field.html" with field=form.blood_type %}
+      {% include "components/_field.html" with field=form.allergies %}
+      {% include "components/_field.html" with field=form.chronic_conditions %}
+      {% include "components/_field.html" with field=form.current_medications %}
+      {% include "components/_field.html" with field=form.surgical_history %}
+      {% include "components/_field.html" with field=form.relevant_hospitalizations %}
+    </div>
+
+    <button type="submit" class="btn btn--primary">Guardar cambios</button>
+  </div>
+</form>
+{% endblock %}

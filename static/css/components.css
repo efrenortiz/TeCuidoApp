@@ -1,0 +1,439 @@
+/*
+ * Componentes — solo los que usan las 13 pantallas de Fase 1
+ * (docs/design/screens.md §5-6). Table/Modal/Pagination/Tabs/Breadcrumb/
+ * Dropdown/Tooltip/Sidebar/Navbar no se implementan aquí porque ninguna
+ * pantalla de Fase 1 los necesita todavía (design-system.md §55).
+ */
+
+/* ---------------------------------------------------------------- */
+/* Card — contenedor de contenido relacionado (§37, §28).            */
+/* No tiene partial de template: es un contenedor de contenido        */
+/* arbitrario, se aplica la clase directamente.                       */
+/* ---------------------------------------------------------------- */
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-6);
+}
+
+.card + .card {
+  margin-top: var(--space-5);
+}
+
+.card__title {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--space-4);
+}
+
+.card--narrow {
+  max-width: 480px;
+}
+
+/* ---------------------------------------------------------------- */
+/* Button — Design System §14-15: una acción primaria dominante por  */
+/* pantalla; secondary/link/danger nunca deben verse igual a primary. */
+/* ---------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: inherit;
+  font-size: var(--font-size-body);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn--primary {
+  background: var(--color-primary-500);
+  color: var(--color-primary-contrast);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-600);
+}
+
+.btn--secondary {
+  background: var(--color-surface);
+  color: var(--color-secondary-600);
+  border-color: var(--color-border);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--color-secondary-50);
+}
+
+.btn--link {
+  background: transparent;
+  color: var(--color-primary-500);
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.btn--link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.btn--danger {
+  background: var(--color-danger-600);
+  color: var(--color-neutral-0);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background: var(--color-danger-700);
+}
+
+.btn--block {
+  width: 100%;
+}
+
+/* ---------------------------------------------------------------- */
+/* Campos de formulario — Design System §16-18: label visible,       */
+/* asterisco de obligatorio, ayuda y error junto al campo.            */
+/* ---------------------------------------------------------------- */
+
+.field {
+  margin-bottom: var(--space-5);
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field__label {
+  display: block;
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.field__required {
+  color: var(--color-danger-600);
+}
+
+.field-input {
+  display: block;
+  width: 100%;
+  font-family: inherit;
+  font-size: var(--font-size-body);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  transition: border-color var(--transition-fast);
+}
+
+.field-input:focus {
+  border-color: var(--color-primary-500);
+}
+
+.field__help {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-secondary);
+}
+
+.field--error .field-input {
+  border-color: var(--color-danger-600);
+}
+
+.field__error {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-caption);
+  color: var(--color-danger-700);
+}
+
+.field-section {
+  margin-bottom: var(--space-6);
+}
+
+.field-section__title {
+  font-size: var(--font-size-small);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+/* ---------------------------------------------------------------- */
+/* Alert — Design System §21: success/warning/danger/info; el texto  */
+/* siempre acompaña al color, nunca solo el color.                    */
+/* ---------------------------------------------------------------- */
+
+.alert {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font-size: var(--font-size-small);
+  margin-bottom: var(--space-5);
+}
+
+.alert:last-child {
+  margin-bottom: 0;
+}
+
+.alert__icon {
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-body);
+}
+
+.alert--success {
+  background: var(--color-success-50);
+  border-color: var(--color-success-200);
+  color: var(--color-success-700);
+}
+
+.alert--warning {
+  background: var(--color-warning-50);
+  border-color: var(--color-warning-200);
+  color: var(--color-warning-700);
+}
+
+.alert--danger {
+  background: var(--color-danger-50);
+  border-color: var(--color-danger-200);
+  color: var(--color-danger-700);
+}
+
+.alert--info {
+  background: var(--color-info-50);
+  border-color: var(--color-info-200);
+  color: var(--color-info-700);
+}
+
+/* ---------------------------------------------------------------- */
+/* Badge — Design System §25: el texto del estado siempre visible,   */
+/* el color nunca es el único portador de significado.                */
+/* ---------------------------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+}
+
+.badge--neutral {
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+}
+
+.badge--success {
+  background: var(--color-success-50);
+  color: var(--color-success-700);
+}
+
+.badge--warning {
+  background: var(--color-warning-50);
+  color: var(--color-warning-700);
+}
+
+.badge--danger {
+  background: var(--color-danger-50);
+  color: var(--color-danger-700);
+}
+
+.badge--info {
+  background: var(--color-info-50);
+  color: var(--color-info-700);
+}
+
+/* ---------------------------------------------------------------- */
+/* PageHeader — Design System §13, UI Guidelines §6: título +        */
+/* descripción + una sola acción principal.                           */
+/* ---------------------------------------------------------------- */
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+}
+
+.page-header__title {
+  margin: 0 0 var(--space-1);
+}
+
+.page-header__description {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* ---------------------------------------------------------------- */
+/* EmptyState — Design System §20: explicar qué ocurre y, cuando      */
+/* corresponda, ofrecer una acción.                                   */
+/* ---------------------------------------------------------------- */
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-8) var(--space-5);
+  color: var(--color-text-secondary);
+}
+
+.empty-state__title {
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.empty-state__action {
+  margin-top: var(--space-5);
+}
+
+/* ---------------------------------------------------------------- */
+/* Stepper — nuevo componente (design-system.md §40). Indica avance   */
+/* dentro de un flujo guiado de varios pasos/secciones.                */
+/* ---------------------------------------------------------------- */
+
+.stepper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0 0 var(--space-6);
+  padding: 0;
+}
+
+.stepper__step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-caption);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.stepper__step-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: inherit;
+  text-decoration: none;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+}
+
+.stepper__step-link:hover {
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-600);
+}
+
+.stepper__step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-neutral-100);
+  color: var(--color-neutral-700);
+  font-size: var(--font-size-caption);
+}
+
+.stepper__step--current .stepper__step-link {
+  border-color: var(--color-primary-500);
+  color: var(--color-primary-600);
+}
+
+.stepper__step--current .stepper__step-index {
+  background: var(--color-primary-500);
+  color: var(--color-primary-contrast);
+}
+
+.stepper__separator {
+  color: var(--color-neutral-300);
+}
+
+/* ---------------------------------------------------------------- */
+/* PatientContextHeader — componente de dominio (ui-guidelines.md     */
+/* §48). Mantiene siempre visible a qué paciente corresponde la       */
+/* pantalla (design-system.md §20, §30).                              */
+/* ---------------------------------------------------------------- */
+
+.patient-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-100);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+}
+
+.patient-context__label {
+  font-size: var(--font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-primary-700);
+}
+
+.patient-context__name {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary-700);
+}
+
+/* ---------------------------------------------------------------- */
+/* Definition list — para bloques de datos (Datos generales, Contacto, */
+/* Domicilio, Información médica) dentro de un Card.                   */
+/* ---------------------------------------------------------------- */
+
+.data-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-4) var(--space-6);
+  margin: 0;
+}
+
+.data-list__label {
+  font-size: var(--font-size-caption);
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-1);
+}
+
+.data-list__value {
+  font-size: var(--font-size-body);
+  margin: 0;
+  margin-left: 0;
+}
+
+.data-list .badge + .badge {
+  margin-left: var(--space-2);
+}
+
+/* Utility: form that must sit inline next to text/other forms (e.g. two
+   Aprobar/Rechazar buttons in a list row). */
+.inline-form {
+  display: inline-block;
+  margin-left: var(--space-2);
+}

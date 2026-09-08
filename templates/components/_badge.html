@@ -1,0 +1,4 @@
+{% comment %}
+Badge component (design-system.md §25). Params: text, variant (neutral|success|warning|danger|info).
+{% endcomment %}
+<span class="badge badge--{{ variant|default:"neutral" }}">{{ text }}</span>

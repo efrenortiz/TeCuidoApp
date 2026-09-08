@@ -1,0 +1,13 @@
+{% comment %}
+PageHeader component (design-system.md §13, ui-guidelines.md §6).
+Params: title, description (optional), action_url (optional), action_label (optional).
+{% endcomment %}
+<div class="page-header">
+  <div>
+    <h1 class="page-header__title">{{ title }}</h1>
+    {% if description %}<p class="page-header__description">{{ description }}</p>{% endif %}
+  </div>
+  {% if action_url %}
+  <a href="{{ action_url }}" class="btn btn--primary">{{ action_label }}</a>
+  {% endif %}
+</div>

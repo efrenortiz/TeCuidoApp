@@ -1,0 +1,12 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Nueva invitación — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Nueva invitación" description="Invita a un prospecto a registrarse como paciente." %}
+<div class="card card--narrow">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "components/_form_fields.html" %}
+    <button type="submit" class="btn btn--primary">Enviar invitación</button>
+  </form>
+</div>
+{% endblock %}
