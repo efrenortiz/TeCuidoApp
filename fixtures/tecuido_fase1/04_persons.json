@@ -152,5 +152,27 @@
       "created_at": "2026-09-07T12:06:00Z",
       "updated_at": "2026-09-07T12:06:00Z"
     }
+  },
+  {
+    "model": "accounts.person",
+    "pk": 8,
+    "fields": {
+      "user": null,
+      "first_name": "Paciente",
+      "last_name_paterno": "Mayor",
+      "last_name_materno": "Pendiente",
+      "birth_date": "2007-01-15",
+      "phone": "",
+      "alternative_phone": "",
+      "street": "",
+      "exterior_number": "",
+      "neighborhood": "",
+      "postal_code": "",
+      "municipality": "Zapopan",
+      "state": "Jalisco",
+      "country": "México",
+      "created_at": "2026-09-07T12:07:00Z",
+      "updated_at": "2026-09-07T12:07:00Z"
+    }
   }
 ]

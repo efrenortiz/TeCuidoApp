@@ -65,7 +65,7 @@ La aplicación debe mantenerse como **un único proyecto Django** con múltiples
 - Redis
 - Celery
 
-Redis y Celery se utilizarán cuando exista una necesidad real de procesamiento asíncrono o tareas programadas.
+Redis y Celery se utilizarán cuando exista una necesidad real de procesamiento asíncrono o tareas programadas. Fase 2 (Agenda) no la tiene: ninguna transición de estado de `Appointment` ocurre por paso del tiempo — todas requieren la acción humana autorizada correspondiente (`docs/phases/phase-2-agenda.md` §14) — así que Fase 2 no introduce Redis/Celery.
 
 ## Archivos
 
@@ -386,33 +386,48 @@ DoctorClinic
 
 ## 7.6 `appointments`
 
-Responsabilidad futura:
+Contrato funcional completo en `docs/phases/phase-2-agenda.md` (aprobado 2026-09-09) — esta
+sección resume el alcance, ese documento manda en caso de duda.
 
-- disponibilidad;
-- citas;
-- conflictos;
-- confirmaciones;
-- cancelaciones;
-- reprogramaciones;
-- check-in;
-- sala de espera.
+Responsabilidad:
 
-**No forma parte de la Fase 1.**
+- disponibilidad por fecha concreta (`Availability`), sin reglas recurrentes ni excepciones;
+- hold temporal de reserva (`Hold`, 15 minutos, no es un estado de `Appointment`);
+- citas (`Appointment`), creadas **directamente** — sin solicitud previa ni confirmación
+  posterior;
+- conflictos y concurrencia de reserva;
+- cancelaciones y reprogramaciones (con historial y motivo obligatorio);
+- inicio de consulta (`SCHEDULED → IN_CONSULTATION`) e inasistencias (`NO_SHOW`).
+
+No incluye check-in ni sala de espera — no existen en el modelo de Fase 2 (no hay un estado
+`WAITING`). No depende de `care_requests`: `appointments` es una app completa y funcional en
+Fase 2 sin que `care_requests` exista todavía.
+
+Reglas adicionales de cierre (2026-09-09): un médico no puede tener dos disponibilidades
+activas que se solapen aunque correspondan a consultorios distintos; la agenda usa la zona
+horaria del `Clinic`; toda operación administrativa exige `DoctorClinic` válida además del
+ámbito sobre la clínica; y un médico puede crear la primera cita de un paciente sin
+`DoctorPatientRelationship` previa — esa creación **no** crea, activa ni modifica dicha
+relación (`crear Appointment` y `crear DoctorPatientRelationship` son operaciones
+independientes).
+
+**No forma parte de la Fase 1; es el contenido de Fase 2.**
 
 ---
 
 ## 7.7 `care_requests`
 
-Responsabilidad futura:
+Responsabilidad futura (Fase 5):
 
 - solicitudes de atención;
 - archivos relacionados;
 - estados;
-- conversión a cita.
+- conversión a cita — cuando se construya, será un origen **alternativo y opcional** de
+  `Appointment`, no un requisito previo. `appointments` (Fase 2) no depende de esta app.
 
 Debe permanecer como Django app dentro del mismo proyecto.
 
-**No forma parte de la Fase 1.**
+**No forma parte de la Fase 1 ni de la Fase 2.**
 
 ---
 
@@ -1082,21 +1097,29 @@ La dependencia de terceros debe mantenerse controlada.
 
 # 35. Evolución hacia Fase 2
 
-La arquitectura de Fase 1 debe dejar preparado el sistema para:
+La arquitectura de Fase 1 debe dejar preparado el sistema para (contrato completo en
+`docs/phases/phase-2-agenda.md`):
 
 ```text
-Doctor
-   │
-   ├── Clinic
-   │
-   ├── AvailabilityRule
-   │
-   ├── AvailabilityException
-   │
-   └── Appointment
+Doctor + Clinic
+       │
+       └── Availability (por fecha concreta — sin AvailabilityRule/AvailabilityException)
+               │
+               └── Slots derivados
+                       │
+                       ├── Hold (bloqueo temporal, no es un estado de Appointment)
+                       │
+                       └── Appointment (SCHEDULED/IN_CONSULTATION/COMPLETED/
+                                         CANCELLED/NO_SHOW — creación directa,
+                                         sin CareRequest ni confirmación)
 ```
 
-Posteriormente las citas deberán depender de relaciones existentes de médico, paciente y consultorio.
+Las citas se autorizan a partir de las relaciones ya existentes de Fase 1
+(`ResponsiblePatientRelationship.status == ACTIVE` para responsable, `DoctorClinic` para
+médico/administrador) — Fase 2 las consume, no las reinterpreta. `DoctorPatientRelationship`
+**no** es una condición para crear una cita: un médico con `DoctorClinic` válida puede crear la
+primera cita de un paciente sin que esa relación exista todavía, y crear la cita no la crea ni
+la modifica (decisión de cierre, 2026-09-09).
 
 La Fase 1 no implementa estas entidades.
 
@@ -1119,6 +1142,10 @@ Patient
 Las consultas y registros clínicos deberán conservar historial.
 
 No se debe construir un expediente como un único registro mutable que sobrescriba toda la información anterior.
+
+`Appointment.IN_CONSULTATION` (Fase 2) es la frontera hacia este dominio — `appointments` no
+debe absorber `MedicalEncounter` ni decisiones clínicas; la existencia o el estado de una cita
+nunca constituye por sí solo un diagnóstico o tratamiento.
 
 ---
 
@@ -1333,7 +1360,7 @@ Cuando sea necesario cambiarla debe:
 ### Fases futuras
 
 ```text
-Fase 2 — Agenda
+Fase 2 — Agenda (especificación funcional aprobada 2026-09-09, ver docs/phases/phase-2-agenda.md)
 Fase 3 — Gestión clínica
 Fase 4 — Documentos
 Fase 5 — CareRequest y operación

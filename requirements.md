@@ -70,8 +70,10 @@ Puede:
 - Consultar y administrar su agenda.
 - Enviar invitaciones de registro a prospectos.
 - Registrar y actualizar pacientes y responsables.
-- Programar citas en nombre del paciente/responsable.
-- Registrar la llegada del paciente o gestionar el estado de atención.
+- Crear citas directamente, en nombre propio o del paciente/responsable (§13, §14 — sin
+  solicitud previa ni confirmación posterior).
+- Iniciar la consulta cuando el paciente esté físicamente presente (§16); marcar `NO_SHOW`
+  cuando corresponda (§15).
 - Consultar el contexto clínico del paciente.
 - Crear y actualizar historia clínica.
 - Registrar consultas médicas.
@@ -94,8 +96,9 @@ Puede:
 - Iniciar sesión.
 - Consultar y actualizar la información permitida de su perfil.
 - Consultar sus citas.
-- Solicitar citas.
-- Confirmar citas.
+- Crear citas directamente (§13, §14 — no existe flujo de solicitud ni confirmación
+  posterior; la cita queda reservada al completar la operación).
+- Cancelar y reprogramar las citas que gestiona.
 - Consultar el historial de citas.
 - Consultar y descargar recetas.
 - Consultar y descargar indicaciones de tratamiento.
@@ -110,7 +113,8 @@ Puede realizar las operaciones permitidas para un paciente y además:
 - Gestionar uno o más pacientes a su cargo.
 - Registrar pacientes menores de edad o personas que requieran responsable (flujo detallado
   en §7.2).
-- Solicitar citas para un paciente a su cargo.
+- Crear citas directamente para un paciente a su cargo, mientras la relación esté `ACTIVE`
+  (§13, §14).
 - Consultar citas por paciente.
 - Consultar y descargar documentos de los pacientes que tenga autorizados.
 - Actualizar la información permitida de los pacientes a su cargo.
@@ -489,17 +493,24 @@ No afecta ninguna `DoctorPatientRelationship` (ya independiente de esta relació
 Lo siguiente **no** debe asumirse ni implementarse sin una decisión funcional adicional:
 
 - Bajo qué condiciones (si alguna) un paciente menor puede tener correo electrónico propio.
-- Bajo qué condiciones y quién autoriza que un paciente (en `regime = ADULT` o no) obtenga
-  credenciales propias (`User`) más adelante. Esto es independiente de la transición de
-  régimen descrita en §7.2.8 — un paciente puede quedar en `regime = ADULT` sin cuenta propia,
-  y esta decisión no bloquea ni condiciona esa transición.
+- **Fuera de alcance de Fase 1 — diferido explícitamente a una fase posterior (decisión de
+  cierre de Fase 1, 2026-09-09):** bajo qué condiciones y quién autoriza que un paciente (en
+  `regime = ADULT` o no) obtenga credenciales propias (`User`), y qué verificación de
+  identidad requiere ese trámite. No es un vacío accidental ni algo que deba inferirse en
+  código — es una decisión de alcance tomada deliberadamente para poder cerrar Fase 1 sin
+  resolverla (ver `docs/phases/phase-1-foundations.md` §27/§31 y
+  `docs/adr/ADR-007-responsible-initiated-minor-registration.md` §5). Es independiente de la
+  transición de régimen descrita en §7.2.8 — un paciente puede quedar en `regime = ADULT` sin
+  cuenta propia indefinidamente, y esta decisión no bloquea ni condiciona esa transición.
 - Mecanismo de consentimiento para vincular un responsable a un paciente que ya gestiona su
-  propia cuenta (§7.2.7, último punto) — aplica una vez que el paciente adulto tenga cuenta
-  propia (decisión anterior); no aplica a la transición de régimen en sí, que no depende de
-  que exista ningún `User`.
+  propia cuenta (§7.2.7, último punto) — solo puede resolverse una vez que exista la política
+  de cuenta propia anterior, así que queda diferido junto con ella a esa misma fase posterior;
+  no aplica a la transición de régimen en sí, que no depende de que exista ningún `User`.
 - Si un paciente ya en `regime = ADULT` puede, más adelante y por su propia cuenta, revocar o
-  volver a autorizar el acceso de un responsable. La transición de §7.2.8 solo cubre el cierre
-  inicial en bloque ejecutado por el médico — no la gestión posterior por el propio paciente.
+  volver a autorizar el acceso de un responsable — depende igualmente de que el paciente tenga
+  cuenta propia, así que queda diferido junto con esa decisión. La transición de §7.2.8 solo
+  cubre el cierre inicial en bloque ejecutado por el médico, no la gestión posterior por el
+  propio paciente.
 - Qué ocurre cuando una coincidencia por CURP no tiene ningún responsable activo a quien
   pedirle autorización (por ejemplo, si esa relación fue desactivada) — probablemente requiera
   intervención del Administrador, pero su alcance exacto sobre invitaciones/vinculaciones ya
@@ -556,56 +567,84 @@ Los documentos generados deben utilizar esta configuración y no valores codific
 
 # 10. Agenda y disponibilidad
 
-El médico debe poder:
+**Política decidida para Fase 2 (2026-09-09) — ver `docs/phases/phase-2-agenda.md` para el
+contrato funcional completo, que es la fuente detallada; este capítulo resume solo lo que no
+debe contradecirse.**
+
+El médico (y el administrador, en apoyo operativo) puede:
 
 - Crear disponibilidad.
 - Modificar disponibilidad.
-- Eliminar/desactivar disponibilidad.
 - Consultar disponibilidad.
 
-Debe poder establecer la duración de las citas.
+La disponibilidad se define **por fecha concreta**, nunca como regla semanal recurrente:
 
-La duración por defecto será de **1 hora**, pero debe ser configurable.
+```text
+15/09/2026 09:00–13:00
+18/09/2026 10:00–14:00
+```
 
-La disponibilidad debe diseñarse en dos niveles:
+**No existen en Fase 2** reglas de disponibilidad recurrentes (`AvailabilityRule`) ni
+excepciones (`AvailabilityException`) sobre una regla recurrente — esa idea, presente en
+versiones anteriores de este documento, quedó descartada para Fase 2 y no está planeada para
+ninguna fase posterior conocida; si en el futuro se decide agregar recurrencia, requiere una
+decisión funcional explícita nueva, no debe inferirse de este texto.
 
-### Reglas de disponibilidad
+La disponibilidad pertenece a la combinación **médico + consultorio + fecha**; no se permiten
+disponibilidades solapadas dentro de esa misma combinación. Además, **un médico no puede tener
+dos disponibilidades activas que se solapen temporalmente aunque correspondan a consultorios
+distintos** (decisión de cierre, 2026-09-09) — el médico no puede estar disponible
+simultáneamente en dos lugares.
 
-Ejemplo:
+La agenda utiliza la **zona horaria del `Clinic`** (decisión de cierre, 2026-09-09): la
+fecha/hora de negocio de una disponibilidad o una cita pertenece al consultorio, no al usuario
+que consulta ni al servidor.
 
-- Lunes: 09:00–13:00.
-- Martes: 09:00–13:00 y 16:00–19:00.
+La duración de las citas se configura por la combinación **médico + consultorio**, con
+**60 minutos** como valor por defecto. Una cita ocupa simultáneamente al médico y al
+consultorio durante toda su duración — no puede haber otra cita incompatible para ninguno de
+los dos en ese lapso, y el sistema debe impedir dobles reservas del mismo horario mediante
+control de concurrencia a nivel de base de datos, no solo validación de aplicación.
 
-### Excepciones
-
-Ejemplo:
-
-- Día no disponible.
-- Horario especial.
-- Horario extraordinario.
-
-Debe impedirse la generación de conflictos entre citas y disponibilidades incompatibles.
-
-La disponibilidad de una combinación de **médico + consultorio** no debe empalmarse con otra asignación incompatible.
-
-El sistema debe evitar que dos pacientes puedan reservar simultáneamente el mismo espacio.
+Modificar o eliminar una disponibilidad no puede invalidar citas ya existentes; el sistema no
+las cancela automáticamente — el médico debe conciliar con los pacientes y usar reprogramación
+antes de un cambio incompatible.
 
 ---
 
-# 11. Bloqueo temporal durante la reserva
+# 11. Bloqueo temporal durante la reserva (hold)
 
-Cuando un paciente/responsable seleccione un horario disponible para iniciar una reserva, el horario podrá quedar **bloqueado temporalmente durante 15 minutos**.
+Cuando un usuario autorizado (paciente, responsable con relación `ACTIVE`, médico o
+administrador) selecciona un horario disponible para iniciar una reserva, el sistema crea un
+**hold** que protege ese horario durante **15 minutos como máximo**. El hold es un mecanismo
+técnico de protección del slot, **no un estado de aprobación de la cita** — no existe ningún
+flujo de confirmación posterior a la reserva (ver §14).
 
-Si la solicitud no concluye correctamente dentro del periodo de bloqueo:
+Reglas del hold:
 
-- La reserva temporal expira.
-- El horario vuelve a estar disponible.
+- No se crea un hold solo por visualizar la agenda.
+- Un usuario solo puede mantener **un hold activo a la vez**.
+- El hold no puede renovarse ni extenderse.
+- No se puede cambiar de horario mientras el hold esté activo — primero debe liberarse.
+- El usuario puede liberarlo voluntariamente antes de que expire.
+- Si la reserva no concluye dentro del periodo de bloqueo, el hold expira y el horario vuelve
+  a estar disponible.
+- Cuando la cita se crea correctamente, el hold se marca como consumido.
+- Los holds expirados, liberados y consumidos se conservan como historial técnico.
 
-La implementación debe utilizar mecanismos apropiados de concurrencia y transacciones de base de datos para evitar dobles reservaciones.
+La implementación debe utilizar mecanismos apropiados de concurrencia y transacciones de base
+de datos para evitar dobles reservaciones — la reserva definitiva siempre revalida el slot
+dentro de la transacción que la confirma; el hold no sustituye esa protección.
 
 ---
 
 # 12. Solicitudes de atención — CareRequest
+
+**Nota de alcance (2026-09-09):** `CareRequest` es funcionalidad de **Fase 5** (§41). No se
+implementa en Fase 2, y **no es un requisito previo para crear una cita** en ninguna fase —
+Fase 2 crea `Appointment` de forma directa, sin solicitud ni confirmación posterior (§13, §14,
+`docs/phases/phase-2-agenda.md` §6). Esta sección describe el módulo tal como se construirá
+cuando le toque su fase; no debe leerse como una dependencia de la agenda de Fase 2.
 
 TeCuidoApp debe incluir un módulo funcional denominado **CareRequest**.
 
@@ -630,7 +669,9 @@ Ejemplos de archivos:
 - Fotografía.
 - Documento clínico.
 
-La solicitud puede posteriormente convertirse en una cita.
+Cuando se implemente (Fase 5), la solicitud podrá convertirse posteriormente en una cita —
+como un **origen alternativo y opcional** de creación de `Appointment`, coexistiendo con la
+reserva directa de Fase 2, nunca reemplazándola ni condicionándola.
 
 ## 12.1 Estados de CareRequest
 
@@ -651,7 +692,10 @@ El médico debe decidir clínicamente la atención apropiada.
 
 # 13. Citas
 
-Una cita debe ser una entidad independiente de la consulta médica.
+**Política decidida para Fase 2 (2026-09-09) — ver `docs/phases/phase-2-agenda.md` para el
+contrato funcional completo.**
+
+Una cita (`Appointment`) debe ser una entidad independiente de la consulta médica.
 
 Debe asociarse como mínimo con:
 
@@ -662,11 +706,12 @@ Debe asociarse como mínimo con:
 - Fecha/hora final.
 - Duración.
 - Usuario que la creó.
-- Motivo/origen de la cita.
-- Solicitud CareRequest relacionada, cuando aplique.
-- Responsable solicitante, cuando aplique.
+- Responsable que gestionó la cita, cuando aplique.
 - Estado.
 - Fechas de creación y modificación.
+
+`CareRequest` **no** es un campo obligatorio ni un requisito previo de `Appointment` en Fase
+2 — cuando `CareRequest` se implemente (Fase 5), la relación entre ambos será opcional (§12).
 
 Debe distinguirse claramente:
 
@@ -675,84 +720,120 @@ Debe distinguirse claramente:
 
 ## 13.1 Estados de una cita
 
-Se deberán contemplar como mínimo:
+Los únicos estados de `Appointment` son:
 
-- Pendiente de confirmación.
-- Confirmada.
-- En espera.
-- En consulta / en realización.
-- Concluida / atendida.
-- Cancelada por paciente.
-- Cancelada por médico/consultorio.
-- Reprogramada.
-- No se presentó (`NO_SHOW`).
-- Liberada.
+- `SCHEDULED` — estado inicial de toda cita creada correctamente; reservada y vigente, la
+  consulta todavía no inició. La reprogramación no cambia este estado.
+- `IN_CONSULTATION` — el paciente está físicamente presente y el médico asignado inició la
+  atención. Solo el médico asignado ejecuta `SCHEDULED → IN_CONSULTATION`.
+- `COMPLETED` — la atención terminó. Solo el médico asignado ejecuta
+  `IN_CONSULTATION → COMPLETED`.
+- `CANCELLED` — cita cancelada antes de iniciar la consulta. Terminal.
+- `NO_SHOW` — inasistencia real determinada por el médico asignado, desde `SCHEDULED`.
+  Terminal.
 
-La falta de confirmación no equivale automáticamente a que el paciente haya faltado.
+**No existen** como estados de `Appointment`: pendiente de confirmación, confirmada, en
+espera, reprogramada, ni liberada — ninguno de estos representa un estado real del modelo. La
+reprogramación y la liberación de un hold son *eventos* con su propio historial, no estados de
+la cita (§14, §11).
 
-El estado `NO_SHOW` solamente debe utilizarse cuando se determine que el paciente efectivamente no se presentó.
+El paso del tiempo nunca cambia por sí solo el estado de una cita; todo cambio de estado
+requiere la acción humana autorizada correspondiente (ningún cron, signal ni tarea programada
+transiciona una cita automáticamente).
 
 ---
 
-# 14. Confirmación, cancelación y reprogramación
+# 14. Creación directa, cancelación y reprogramación
 
-El sistema debe permitir:
+**Política decidida para Fase 2 (2026-09-09):** las citas se crean **directamente** — no
+existe flujo de solicitud previa ni confirmación posterior. Al completarse correctamente una
+reserva, la cita queda en `SCHEDULED`; no hay un paso adicional que "confirmarla". Pueden
+crear una cita directamente: paciente, responsable con relación `ACTIVE`, médico (con acceso
+legítimo al paciente — ver regla de primera cita más abajo) y administrador autorizado (con
+`DoctorClinic` válida para el médico y consultorio involucrados, además del ámbito sobre la
+clínica).
 
-- Confirmar una cita.
+**Regla de primera cita por médico (decisión de cierre, 2026-09-09):** un médico puede crear
+la primera cita de un paciente **sin que exista todavía una `DoctorPatientRelationship`
+activa** entre ambos, siempre que tenga acceso legítimo — es decir, que opere dentro de una
+combinación médico + consultorio para la que tiene una relación `DoctorClinic` válida; no se
+exige ninguna condición adicional sobre el paciente. Crear la cita **no crea, activa ni
+modifica** ninguna `DoctorPatientRelationship` ni ningún otro mecanismo de autorización de
+Fase 1: `crear Appointment` y `crear DoctorPatientRelationship` son operaciones
+conceptualmente separadas. Si la relación médico-paciente llega a establecerse, ocurre
+mediante su propio flujo de autorización/alta, ajeno a Agenda.
+
+El sistema debe permitir, además de la creación directa:
+
 - Cancelar una cita.
 - Reprogramar una cita.
-- Registrar quién realizó la acción.
-- Registrar fecha/hora de la acción.
+- Registrar quién realizó cada acción y cuándo.
 - Mantener trazabilidad de cambios.
 
-La cancelación debe distinguir su origen:
+Pueden cancelar o reprogramar: el paciente titular, el responsable con relación `ACTIVE`, el
+médico correspondiente y el administrador autorizado. Una cita ya iniciada (`IN_CONSULTATION`
+o posterior) no puede cancelarse ni reprogramarse.
 
-- Paciente/responsable.
-- Médico.
-- Administrador.
-- Consultorio.
+La cancelación requiere registrar un motivo (`cancellation_reason`) — como mínimo: solicitud
+del paciente, solicitud del responsable, solicitud del médico, solicitud del consultorio, u
+otro. El horario se libera inmediatamente después de cancelar.
 
-Cuando una cita se reprograma, debe conservarse el historial del cambio.
+La reprogramación conserva el mismo `Appointment` lógico (no crea una cita nueva), mantiene el
+mismo médico y la misma duración, puede cambiar fecha/hora/consultorio, requiere motivo
+obligatorio, y el nuevo horario debe cumplir las mismas reglas que una reserva nueva. Cuando
+una cita se reprograma, debe conservarse el historial completo del cambio (horario anterior,
+horario nuevo, quién, cuándo, motivo) — puede reprogramarse varias veces mientras siga
+`SCHEDULED`.
 
 ---
 
 # 15. Pacientes que no se presentan
 
-Cuando un paciente no se presenta, la cita debe poder marcarse como:
-
-**NO_SHOW / No se presentó**.
+Cuando un paciente no se presenta, solo el **médico asignado** puede marcar la cita como
+`NO_SHOW`, y únicamente mientras esté en `SCHEDULED`. Puede marcarse desde el minuto 1
+posterior a la hora programada — Fase 2 no exige una espera mínima de 15 minutos. Si el
+paciente llega antes de que se marque `NO_SHOW`, el médico puede iniciar la consulta
+normalmente aunque ya haya pasado la hora programada.
 
 Debe registrarse:
 
-- Fecha y hora.
-- Usuario que marcó la inasistencia.
-- Observaciones opcionales.
+- Fecha y hora (`no_show_at`).
+- Usuario que marcó la inasistencia (`no_show_by`).
 
-La aplicación no debe convertir automáticamente una falta de confirmación en una inasistencia.
+`NO_SHOW` es terminal — no puede volver a ningún otro estado; si el paciente requiere
+atención, debe crearse una nueva cita.
 
-El sistema puede posteriormente permitir reglas configurables relacionadas con pacientes que acumulan inasistencias, pero esta funcionalidad no constituye una restricción automática inicial.
+La aplicación no debe convertir automáticamente el solo paso del tiempo en una inasistencia —
+siempre requiere la acción explícita del médico asignado.
+
+Penalizaciones o bloqueos automáticos por acumulación de `NO_SHOW` están **fuera de alcance de
+Fase 2** y de cualquier fase actualmente planeada; no deben implementarse ni inferirse.
 
 ---
 
-# 16. Check-in y sala de espera
+# 16. Inicio de consulta
 
-Debe existir un mecanismo de **check-in** para registrar que el paciente llegó al consultorio.
+**Política decidida para Fase 2 (2026-09-09) — reemplaza el check-in/sala de espera de
+versiones anteriores de este documento.** No existe check-in realizado por paciente,
+responsable ni administrador, ni un estado `WAITING`/"en espera" en `Appointment`. La
+operación visible es **"Iniciar consulta"**:
 
-El check-in debe almacenar:
+```text
+Paciente llega físicamente al consultorio
+        ↓
+Médico asignado verifica su presencia
+        ↓
+Médico selecciona "Iniciar consulta"
+        ↓
+SCHEDULED → IN_CONSULTATION
+```
 
-- Fecha y hora de llegada.
-- Usuario que registró la llegada.
+Solo el médico asignado puede iniciar la consulta. El paso del tiempo por sí solo nunca inicia
+una consulta.
 
-La agenda del médico debe permitir visualizar los pacientes del día y distinguir:
-
-- Pendiente.
-- Confirmada.
-- Llegó.
-- En consulta.
-- Atendida.
-- No se presentó.
-
-El sistema debe poder mostrar una lista de pacientes en espera.
+La agenda del médico debe permitir visualizar las citas del día y distinguir únicamente los
+estados reales de `Appointment` (§13.1): `SCHEDULED`, `IN_CONSULTATION`, `COMPLETED`,
+`CANCELLED`, `NO_SHOW` — sin inventar estados intermedios de presentación en la interfaz.
 
 ---
 
@@ -760,7 +841,10 @@ El sistema debe poder mostrar una lista de pacientes en espera.
 
 La **Consulta / MedicalEncounter** debe ser independiente de la cita.
 
-Una cita puede generar una consulta médica.
+Una cita puede generar una consulta médica. El estado `IN_CONSULTATION` de la cita (§13.1,
+Fase 2) es la frontera hacia la atención clínica — la existencia de una cita o su estado
+nunca debe interpretarse por sí solo como diagnóstico, tratamiento o decisión médica alguna;
+eso pertenece exclusivamente al dominio clínico de Fase 3.
 
 La consulta debe conservar un historial permanente y no debe sobrescribirse como si fuera un simple registro actual.
 
@@ -993,22 +1077,21 @@ El sistema debe poder identificar cuál es la versión vigente.
 
 # 25. Dashboard del médico
 
+Funcionalidad de Fase 5 (§41). Los estados que se listan aquí deben ser exactamente los
+definidos en §13.1 — no deben inventarse estados de presentación adicionales.
+
 El médico debe disponer de un panel principal con:
 
 ### Agenda del día
 
-- Citas programadas.
-- Citas confirmadas.
-- Pacientes que llegaron.
-- Pacientes en espera.
-- Pacientes en consulta.
-- Citas atendidas.
-- Inasistencias.
+- Citas en `SCHEDULED`.
+- Citas en `IN_CONSULTATION`.
+- Citas en `COMPLETED`.
+- Inasistencias (`NO_SHOW`).
 
 ### Alertas operativas
 
-- Citas sin confirmar.
-- Nuevas solicitudes CareRequest.
+- Nuevas solicitudes CareRequest (cuando esa app exista, Fase 5).
 - Documentos nuevos.
 - Otras alertas relevantes.
 
@@ -1055,10 +1138,11 @@ El sistema debe enviar correos electrónicos para:
 - Invitación de registro.
 - Verificación de correo.
 - Recuperación de contraseña.
-- Cita creada.
-- Cita modificada.
+- Cita creada (nota: es la notificación de que la reserva se completó — Fase 2 no tiene un
+  paso de "confirmación" separado; no debe existir un correo de "confirmación de cita" como
+  si fuera otra etapa).
+- Cita modificada (reprogramación).
 - Cita cancelada.
-- Confirmación de cita.
 - Recordatorios.
 - Otras notificaciones operativas definidas por la aplicación.
 
@@ -1073,9 +1157,9 @@ Inicialmente deben contemplarse recordatorios:
 
 Las reglas deben diseñarse de forma configurable para poder modificarse sin cambiar código.
 
-La falta de confirmación no debe cancelar automáticamente la cita.
-
-La cita debe permanecer reservada hasta que una regla explícita la libere.
+Ninguna regla de recordatorio o notificación cancela ni cambia el estado de una cita por sí
+sola — el paso del tiempo nunca cambia automáticamente el estado de un `Appointment` (§13.1);
+un recordatorio es solo una comunicación, nunca un mecanismo de transición de estado.
 
 ---
 
@@ -1265,21 +1349,40 @@ Las modificaciones de información relevante deben mantener trazabilidad.
 12. La transición a régimen adulto desactiva, en la misma operación, todas las relaciones
     responsable-paciente vigentes de ese paciente — nunca deja algunas activas y otras no.
 13. Una cita debe identificar al paciente que será atendido.
-14. Cuando aplique, una cita debe identificar al responsable que la solicitó o gestionó.
-15. Una cita pertenece a un médico y consultorio.
+14. Cuando aplique, una cita debe identificar al responsable que la gestionó.
+15. Una cita pertenece a un médico y un consultorio, y ocupa a ambos durante toda su duración.
 16. No deben existir citas superpuestas para el mismo médico/consultorio.
-17. El sistema debe impedir dobles reservas del mismo horario.
-18. Una reserva iniciada puede bloquear el horario durante 15 minutos.
-19. Una cita no confirmada no significa que el paciente haya faltado.
-20. `NO_SHOW` debe representar una inasistencia real.
-21. La consulta médica es independiente de la cita.
-22. Las consultas concluidas deben conservar su historial.
-23. Las recetas y solicitudes emitidas deben conservar su trazabilidad.
-24. Los documentos médicos deben tener acceso privado y autorizado.
-25. Las acciones sensibles deben auditarse.
-26. Los registros clínicos no deben eliminarse físicamente de manera rutinaria.
-27. TeCuidoApp no diagnostica ni decide tratamientos de forma autónoma.
-28. Las decisiones clínicas pertenecen al médico.
+17. Un médico no puede tener dos disponibilidades activas que se solapen temporalmente,
+    aunque correspondan a consultorios distintos (§10).
+18. La agenda utiliza la zona horaria del consultorio (`Clinic`) como referencia de negocio
+    para disponibilidad y citas (§10).
+19. El sistema debe impedir dobles reservas del mismo horario mediante control de
+    concurrencia a nivel de base de datos, no solo validación de aplicación.
+20. Una reserva en curso protege el horario mediante un hold temporal de 15 minutos como
+    máximo; el hold no es un estado de aprobación de la cita (§11).
+21. Las citas se crean directamente al completar la reserva — Fase 2 no exige solicitud
+    previa (`CareRequest`) ni confirmación posterior (§12, §14).
+22. Un médico puede crear la primera cita de un paciente sin que exista una
+    `DoctorPatientRelationship` activa previa, siempre que tenga acceso legítimo
+    (`DoctorClinic` válida); crear la cita no crea, activa ni modifica esa relación ni ningún
+    otro mecanismo de autorización de Fase 1 (§14).
+23. Toda operación administrativa de agenda exige, además del ámbito sobre la clínica, una
+    relación `DoctorClinic` válida entre el médico y el consultorio involucrados (§10, §14).
+24. El paso del tiempo nunca cambia por sí solo el estado de una cita; todo cambio de estado
+    requiere la acción humana autorizada correspondiente — nunca un cron, signal o tarea
+    programada (§13.1).
+25. `NO_SHOW` solo puede marcarlo el médico asignado, desde `SCHEDULED`, y representa una
+    inasistencia real que él determina — nunca una inferencia automática por falta de
+    confirmación (que no existe) ni por el solo transcurso del tiempo (§15).
+26. La consulta médica es independiente de la cita; `IN_CONSULTATION` es la frontera hacia el
+    dominio clínico de Fase 3 (§17).
+27. Las consultas concluidas deben conservar su historial.
+28. Las recetas y solicitudes emitidas deben conservar su trazabilidad.
+29. Los documentos médicos deben tener acceso privado y autorizado.
+30. Las acciones sensibles deben auditarse.
+31. Los registros clínicos no deben eliminarse físicamente de manera rutinaria.
+32. TeCuidoApp no diagnostica ni decide tratamientos de forma autónoma.
+33. Las decisiones clínicas pertenecen al médico.
 
 ---
 
@@ -1360,7 +1463,10 @@ Los nombres son una propuesta y pueden ajustarse durante el diseño técnico.
 
 ## 38.1 CareRequest
 
-`CareRequest` debe ser una **Django app dentro del mismo proyecto**, no un proyecto independiente.
+`CareRequest` debe ser una **Django app dentro del mismo proyecto**, no un proyecto
+independiente, y separada de `appointments` (ver `docs/adr/ADR-005-django-app-boundaries.md`)
+— `appointments` no depende de `care_requests` para funcionar; es Fase 2 completa sin que
+`care_requests` exista todavía.
 
 No necesita su propio `requirements.md`.
 
@@ -1427,15 +1533,20 @@ El desarrollo debe realizarse por fases.
 
 ## Fase 2 — Agenda
 
-- Disponibilidad.
-- Citas.
-- Estados.
-- Confirmaciones.
+Contrato funcional completo y detallado en `docs/phases/phase-2-agenda.md` (aprobado
+2026-09-09) — lo que sigue es un resumen, ese documento manda en caso de duda.
+
+- Disponibilidad por fecha concreta (sin reglas recurrentes ni excepciones).
+- Creación directa de citas (sin solicitud previa ni confirmación posterior).
+- Estados de `Appointment`: `SCHEDULED`, `IN_CONSULTATION`, `COMPLETED`, `CANCELLED`,
+  `NO_SHOW` — únicamente estos cinco.
 - Cancelaciones.
 - Reprogramaciones.
-- Bloqueo de 15 minutos.
-- Prevención de conflictos.
-- Check-in.
+- Hold temporal de 15 minutos.
+- Prevención de conflictos y de doble reserva concurrente.
+- Inicio de consulta por el médico asignado (reemplaza el check-in de versiones anteriores de
+  este documento — no hay check-in ni sala de espera en Fase 2).
+- `NO_SHOW` desde el minuto 1, marcado por el médico asignado.
 
 ## Fase 3 — Gestión clínica
 
@@ -1461,10 +1572,14 @@ El desarrollo debe realizarse por fases.
 ## Fase 5 — CareRequest y operación
 
 - Solicitudes de atención.
-- Conversión de CareRequest a cita.
+- Conversión de CareRequest a cita (origen alternativo y opcional, no reemplaza ni condiciona
+  la reserva directa de Fase 2 — §12).
 - Dashboard médico.
 - Dashboard paciente/responsable.
-- Sala de espera.
+- Sala de espera — **pendiente de diseño**: Fase 2 no introdujo check-in ni un estado
+  `WAITING` (§16), así que esta funcionalidad no puede asumir que esos mecanismos ya existen;
+  requiere su propia decisión funcional explícita cuando le toque su fase, no debe inferirse
+  del modelo de Fase 2.
 - Búsqueda.
 
 ## Fase 6 — Notificaciones y auditoría
@@ -1539,8 +1654,8 @@ ResponsiblePatientRelationship
 Clinic
 DoctorClinic
 Invitation
-AvailabilityRule
-AvailabilityException
+Availability
+Hold
 Appointment
 CareRequest
 MedicalRecord
@@ -1556,6 +1671,9 @@ Consent
 ```
 
 Los nombres definitivos de modelos Django pueden cambiar durante el diseño técnico, pero las responsabilidades funcionales deben conservarse.
+
+`Availability` es por fecha concreta (§10) — no un `AvailabilityRule` recurrente. `Hold` es el
+bloqueo temporal de 15 minutos (§11), no un estado de `Appointment`.
 
 ---
 

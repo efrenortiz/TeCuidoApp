@@ -32,7 +32,10 @@ Carmen Hernandez Vega:
 - perfil: Doctor
 
 Los valores Sex, RelationType y Invitation.Status están implementados como TextChoices en
-los modelos revisados, por lo que `02_catalogs.json` queda vacío intencionalmente.
+los modelos revisados, por lo que `02_catalogs.json` queda vacío intencionalmente (`[]`,
+JSON válido). `loaddata` emite `RuntimeWarning: No fixture data found for '02_catalogs'.
+Installed 0 object(s)` al cargarlo — es el comportamiento esperado de Django ante un fixture
+vacío a propósito, no un error; no requiere corrección.
 
 No se incluye Invitation: `token_hash` debe proceder de un token seguro generado por el flujo
 de invitación, no de un valor estático de fixture.
@@ -56,3 +59,22 @@ corregidos:
 
 Verificado cargando las 9 fixtures en orden contra una base de pruebas limpia (migraciones
 actuales aplicadas) y revirtiendo la transacción — carga sin errores.
+
+## Corrección de contradicción: backfill de `regime` por edad (Caso 7, 2026-09-09)
+`patients/migrations/0004_patient_regime_and_relationship_deactivation.py` calculaba
+originalmente `Patient.regime` a partir de `Person.birth_date` para las filas ya existentes
+(`backfill_patient_regime`, vía `RunPython`). Eso contradecía la política ya decidida
+(`Person.birth_date` determina solo la edad cronológica; `Patient.regime` cambia únicamente
+por transición explícita de un médico) — con edad como criterio, un paciente cronológicamente
+adulto pero todavía `MINOR` se habría "graduado" a `ADULT` sin que ningún médico ejecutara la
+transición, y sin desactivar sus `ResponsiblePatientRelationship` activas.
+
+Se eliminó el backfill por completo: `regime` es obligatorio, sin `default` de campo, y la
+migración no calcula ningún valor — cada `Patient` debe declarar `regime` explícitamente al
+crearse (`register_minor_patient` pasa `MINOR`; `accept_invitation` pasa `ADULT`). Fase 1 no
+tiene datos de producción que preservar, así que esto es seguro: la migración solo corre
+contra un esquema recién creado, antes de cargar cualquier fixture.
+
+Se agregó además el escenario canónico que demuestra la política (Patient PK 5 / Person PK 8):
+19 años cronológicos, `regime = MINOR`, responsable `ACTIVE`, médico tratante `ACTIVE` — ver
+`00_MANIFEST.json` → `scenario_details`.

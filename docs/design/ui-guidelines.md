@@ -347,11 +347,13 @@ El dashboard debe estar orientado a operación diaria.
 Prioridad:
 
 ```text
-1. Agenda del día
-2. Pacientes en espera
-3. Alertas operativas
-4. Próximas citas
+1. Agenda del día (estados reales de Appointment — §33)
+2. Alertas operativas
+3. Próximas citas
 ```
+
+"Pacientes en espera" queda pendiente de diseño — Fase 2 no dejó check-in ni un estado
+`WAITING` de los que depender (§33); no debe construirse hasta que exista esa decisión.
 
 No convertirlo en una colección de métricas sin utilidad operacional.
 
@@ -661,40 +663,53 @@ Evitar exponer:
 
 ---
 
-## 33. Estados de citas futuras
+## 33. Estados de citas (Fase 2 — Agenda)
 
-Cuando se implemente Agenda, la UI deberá distinguir claramente:
+Especificación aprobada en `docs/phases/phase-2-agenda.md` §8 (2026-09-09). La UI debe
+distinguir únicamente estos cinco estados reales de `Appointment`:
 
 ```text
-Pendiente de confirmación
-Confirmada
-En espera
-En consulta
-Atendida
-Cancelada
-Reprogramada
-NO_SHOW
-Liberada
+Programada       (SCHEDULED)
+En consulta      (IN_CONSULTATION)
+Atendida         (COMPLETED)
+Cancelada        (CANCELLED)
+No se presentó   (NO_SHOW)
 ```
 
-Nunca representar `NO_SHOW` como simple falta de confirmación.
+No existen como estados de `Appointment` — no deben aparecer en la UI como si lo fueran:
+"Pendiente de confirmación", "Confirmada", "En espera", "Reprogramada" ni "Liberada". La
+reprogramación es un evento con su propio historial (fecha/hora anterior, nueva, quién,
+cuándo, motivo), no un estado de la cita; el hold liberado/expirado/consumido es historial
+técnico, no algo que se muestre como estado de la cita.
+
+Nunca representar `NO_SHOW` como simple falta de confirmación — solo lo marca el médico
+asignado, desde `SCHEDULED`, desde el minuto 1 posterior al horario programado.
 
 ---
 
-## 34. Sala de espera futura
+## 34. Sala de espera — pendiente de diseño
 
-Cuando se implemente, el médico debe poder identificar rápidamente:
+Fase 2 no introdujo check-in ni un estado `WAITING`: nadie registra que el paciente "llegó",
+así que no existe una lista de pacientes en espera que la UI pueda construir todavía. Lo que
+sí existe es **"Iniciar consulta"** (§14, §33): el médico verifica la presencia del paciente
+de forma presencial y ejecuta `SCHEDULED → IN_CONSULTATION` directamente, sin un paso
+intermedio de "llegó"/"en espera".
 
-```text
-Pendiente
-Confirmada
-Llegó
-En consulta
-Atendida
-No se presentó
-```
+Una sala de espera real requiere su propia decisión funcional explícita (candidata a Fase 5,
+`requirements.md` §41) — no debe construirse infiriendo un mecanismo de check-in que no fue
+decidido.
 
-La lista de espera debe tener alta visibilidad.
+---
+
+## 35. Reglas de cierre de Agenda (2026-09-09)
+
+- Las horas de Agenda se muestran siempre en la zona horaria del `Clinic`, nunca en la del
+  dispositivo del usuario.
+- Un médico no puede tener disponibilidad simultánea en dos consultorios distintos, aunque el
+  horario visualmente no se solape en la agenda de cada consultorio por separado.
+- Un médico puede reservar la primera cita de un paciente sin que exista `DoctorPatientRelationship`
+  previa; la UI no debe exigir ni sugerir que primero debe "agregarse" al paciente. Esa
+  reserva no crea ni modifica ninguna relación médico-paciente.
 
 ---
 

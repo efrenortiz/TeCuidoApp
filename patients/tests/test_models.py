@@ -142,6 +142,62 @@ class PatientRegimeTests(TestCase):
                 Patient.objects.create(person=person, sex=Patient.Sex.FEMALE)
 
 
+class RegimeIndependentOfChronologicalAgeTests(TestCase):
+    """ADR-007 §3.8 addendum: `Patient.regime` and `Person.is_minor` are
+    independent fields. Nothing in the codebase — not the model, not any
+    migration — may derive one from the other. `regime` only ever changes
+    via the explicit `transition_patient_to_adult` service."""
+
+    def _make_minor_regime_patient(self, email, birth_date):
+        person = Person.objects.create(
+            first_name="Test",
+            last_name_paterno="Regime",
+            birth_date=birth_date,
+        )
+        return Patient.objects.create(person=person, sex=Patient.Sex.FEMALE, regime=Patient.Regime.MINOR)
+
+    def test_scenario_a_chronologically_minor_stays_minor_with_active_responsible(self):
+        # age < 18, regime = MINOR, responsable ACTIVE — the ordinary case.
+        patient = self._make_minor_regime_patient("regime-a@example.com", date(2015, 6, 1))
+        responsible = _make_responsible("regime-a-resp@example.com")
+        relationship = ResponsiblePatientRelationship.objects.create(
+            responsible=responsible,
+            patient=patient,
+            relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
+            status=ResponsiblePatientRelationship.Status.ACTIVE,
+        )
+
+        self.assertTrue(patient.person.is_minor)
+        self.assertEqual(patient.regime, Patient.Regime.MINOR)
+        self.assertEqual(relationship.status, ResponsiblePatientRelationship.Status.ACTIVE)
+
+    def test_scenario_b_chronologically_adult_can_stay_minor_with_active_responsible(self):
+        # age >= 18, regime = MINOR, responsable ACTIVE — demonstrates that
+        # turning 18 does NOT change `regime` by itself: no signal, no
+        # scheduled job, no migration touches this. It only changes via an
+        # explicit transition_patient_to_adult call (tested elsewhere).
+        patient = self._make_minor_regime_patient("regime-b@example.com", date(1990, 1, 1))
+        responsible = _make_responsible("regime-b-resp@example.com")
+        relationship = ResponsiblePatientRelationship.objects.create(
+            responsible=responsible,
+            patient=patient,
+            relationship_type=ResponsiblePatientRelationship.RelationType.MADRE,
+            status=ResponsiblePatientRelationship.Status.ACTIVE,
+        )
+
+        self.assertFalse(patient.person.is_minor)
+        self.assertEqual(patient.regime, Patient.Regime.MINOR)
+        self.assertEqual(relationship.status, ResponsiblePatientRelationship.Status.ACTIVE)
+
+        # Persisted, not just an in-memory artifact of this test — re-fetch
+        # from the database to rule out any save()/signal silently
+        # rewriting `regime` based on age.
+        patient.refresh_from_db()
+        relationship.refresh_from_db()
+        self.assertEqual(patient.regime, Patient.Regime.MINOR)
+        self.assertEqual(relationship.status, ResponsiblePatientRelationship.Status.ACTIVE)
+
+
 class RelationshipUniquenessTests(TestCase):
     def test_doctor_patient_pair_is_unique(self):
         doctor = _make_doctor("doc-unique@example.com")

@@ -55,12 +55,13 @@ DoctorPatientRelationship
 Invitation
 ```
 
-y posteriormente existirán operaciones aún más sensibles, como:
+y posteriormente existirán operaciones aún más sensibles, como (Fase 2, `docs/phases/phase-2-agenda.md`):
 
 ```text
-crear una cita
-bloquear un horario
-confirmar una reserva
+crear un hold temporal sobre un horario
+crear una cita directamente (sin confirmación posterior — la reserva se cierra en la misma
+  operación que la crea)
+reprogramar o cancelar una cita
 ```
 
 La especificación establece explícitamente que el sistema debe utilizar mecanismos apropiados de concurrencia y transacciones de base de datos para evitar dobles reservaciones.
@@ -550,18 +551,23 @@ No se implementará una capa genérica de idempotencia para todo el sistema sin 
 
 Cuando una entidad tenga estados, las transiciones importantes deben protegerse.
 
-Ejemplo futuro:
+Ejemplo (Fase 2, `docs/phases/phase-2-agenda.md` §8/§15 — estado real, no un placeholder):
 
 ```text
 Appointment
-    PENDING
+   SCHEDULED
        ↓
-   CONFIRMED
-       ↓
-   IN_PROGRESS
+  IN_CONSULTATION
        ↓
    COMPLETED
+
+  SCHEDULED → CANCELLED   (terminal)
+  SCHEDULED → NO_SHOW     (terminal)
 ```
+
+Estos son los únicos cinco estados de `Appointment` — no existen `PENDING`, `CONFIRMED` ni
+`IN_PROGRESS`; ninguna transición ocurre por el solo paso del tiempo, siempre requiere la
+acción humana autorizada correspondiente.
 
 No debe permitirse que dos requests realicen simultáneamente transiciones incompatibles.
 
@@ -903,31 +909,40 @@ La especificación exige explícitamente proteger la reserva contra dobles reser
 
 ---
 
-# 38. Caso futuro: bloqueo de 15 minutos
+# 38. Bloqueo temporal de 15 minutos (Hold) — decidido en Fase 2
 
-La Fase 2 requerirá que un horario pueda quedar bloqueado temporalmente durante 15 minutos.
+Política funcional completa en `docs/phases/phase-2-agenda.md` §7 (aprobada 2026-09-09); este
+ADR fija solo el principio de integridad, no repite la política.
 
-La implementación futura deberá proteger el siguiente escenario:
+`Hold` protege `Doctor + Clinic + Slot` durante 15 minutos como máximo, no se renueva, y un
+usuario solo puede tener un hold activo a la vez. El escenario a proteger:
 
 ```text
 User A selects slot
         ↓
-temporary lock
+temporary lock (Hold)
 
 User B selects same slot
         ↓
 DENIED
 ```
 
-La solución deberá apoyarse en PostgreSQL y transacciones, no exclusivamente en memoria o lógica del frontend.
+El hold es un mecanismo técnico, no un estado de `Appointment` (§21) — no sustituye la
+protección de concurrencia de la base de datos: la creación definitiva de la cita siempre
+revalida el slot dentro de la misma transacción que la confirma.
 
-Este ADR establece el principio; el diseño detallado se definirá al implementar Agenda.
+La solución debe apoyarse en PostgreSQL y transacciones, no exclusivamente en memoria o
+lógica del frontend. El diseño detallado de la implementación (tabla, constraint o mecanismo
+de expiración) se define al construir `appointments`, no aquí.
 
 ---
 
-# 39. Caso futuro: doble reserva
+# 39. Doble reserva y exclusión de horarios — decidido en Fase 2
 
-El sistema deberá impedir:
+Política funcional completa en `docs/phases/phase-2-agenda.md` §5.7, §6, §21 (aprobada
+2026-09-09).
+
+El sistema debe impedir:
 
 ```text
 Appointment A
@@ -941,17 +956,20 @@ Doctor X
 Clinic Y
 ```
 
-cuando la regla de negocio determine que ambas reservas son incompatibles.
+Una cita ocupa simultáneamente al médico y al consultorio durante toda su duración; no puede
+existir otra cita incompatible para ninguno de los dos en ese lapso. La implementación
+concreta debe considerar:
 
-La implementación concreta deberá considerar:
-
-- constraints aplicables;
+- constraints aplicables (p. ej. `ExclusionConstraint` de PostgreSQL sobre médico/consultorio
+  y rango de tiempo, si el diseño técnico lo determina así);
 - transacciones;
-- locking;
+- locking (`select_for_update` u equivalente);
 - consultas concurrentes;
 - estrategia de intervalos de tiempo.
 
-Esta decisión no implementa todavía la agenda.
+Si dos operaciones concurrentes compiten por el mismo horario, solo una puede resultar
+exitosa; la otra debe recibir un error de negocio de horario no disponible, nunca un estado
+inconsistente.
 
 ---
 
@@ -1192,14 +1210,17 @@ porque los límites de las apps no deben impedir relaciones transaccionales entr
 
 Cuando se implementen nuevas fases, este ADR deberá complementarse con decisiones específicas cuando exista complejidad significativa.
 
-Posibles ADR futuros:
+Posibles ADR futuros (renumerados 2026-09-09: `ADR-007` ya está en uso — Responsible-Initiated
+Minor Patient Registration — por lo que la numeración disponible empieza en `ADR-008`):
 
 ```text
-ADR-007 — Appointment Concurrency
-ADR-008 — Clinical Record Immutability / Versioning
-ADR-009 — Private Clinical File Storage
-ADR-010 — Notification Delivery Architecture
-ADR-011 — Audit Log Architecture
+ADR-008 — Appointment Concurrency (si la implementación de Fase 2 requiere una decisión
+          propia más allá de lo ya fijado en docs/phases/phase-2-agenda.md y en §38-39 de
+          este documento — no es automático que se necesite un ADR nuevo)
+ADR-009 — Clinical Record Immutability / Versioning
+ADR-010 — Private Clinical File Storage
+ADR-011 — Notification Delivery Architecture
+ADR-012 — Audit Log Architecture
 ```
 
 Estos ADR deberán profundizar en problemas específicos sin duplicar las reglas generales establecidas aquí.

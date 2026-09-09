@@ -321,27 +321,32 @@ Debe encargarse de:
 
 # 11. `appointments`
 
-## Responsabilidad futura
+## Responsabilidad (Fase 2 — contrato completo en `docs/phases/phase-2-agenda.md`, aprobado
+2026-09-09)
 
 Agenda y citas.
 
 Incluye:
 
 ```text
-AvailabilityRule
-AvailabilityException
-Appointment
+Availability   -- por fecha concreta; sin AvailabilityRule ni AvailabilityException recurrentes
+Hold           -- bloqueo temporal de 15 minutos; no es un estado de Appointment
+Appointment    -- SCHEDULED / IN_CONSULTATION / COMPLETED / CANCELLED / NO_SHOW
 ```
 
-y posteriormente:
+y:
 
-- confirmación;
+- creación **directa** de citas (sin solicitud previa ni confirmación posterior);
 - cancelación;
 - reprogramación;
-- check-in;
+- inicio de consulta;
 - estados;
 - prevención de conflictos;
 - bloqueo temporal.
+
+`appointments` **no incluye** check-in ni sala de espera — no existen en el modelo de Fase 2
+(no hay un estado `WAITING`), y **no depende de `care_requests`** (§12): es una app completa y
+funcional sin que `care_requests` exista todavía.
 
 La agenda se construirá utilizando las relaciones existentes entre:
 
@@ -375,9 +380,13 @@ La app será responsable de:
 - estados;
 - archivos asociados;
 - actualización;
-- conversión a cita.
+- conversión a cita — un origen **alternativo y opcional** de `Appointment`, nunca un
+  requisito previo (`requirements.md` §12).
 
 La creación de una cita no debe convertir `appointments` en propietario del modelo `CareRequest`.
+Tampoco a la inversa: `appointments` (Fase 2) queda completa y funcional sin que `care_requests`
+exista — la dependencia, cuando exista, corre en un solo sentido: `care_requests` (Fase 5)
+podrá invocar un caso de uso de `appointments` para crear una cita, nunca al revés.
 
 ---
 

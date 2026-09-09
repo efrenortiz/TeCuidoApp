@@ -1,6 +1,6 @@
 {
   "fixture_set": "TeCuido Fase 1 - datos de prueba",
-  "intended_command": "python manage.py loaddata 01_groups.json 02_catalogs.json 03_users_and_profiles.json 04_relationships.json",
+  "intended_command": "python manage.py loaddata 01_groups.json 02_catalogs.json 03_users.json 04_persons.json 05_doctors.json 06_patients.json 07_responsibles.json 08_clinics.json 09_relationships.json",
   "required_primary_doctor": {
     "name": "Carmen Hernandez Vega",
     "email": "dra.carmen.hernandez@gmail.com",
@@ -40,5 +40,16 @@
       "CANCELLED"
     ]
   },
-  "note": "Los documentos de arquitectura describen entidades y algunos campos mínimos, pero no contienen el esquema exacto del repositorio implementado (nombres reales de campos, PKs, choices, campos obligatorios, relaciones y app labels). Por seguridad no se inventan fixtures de dominio que podrían fallar al ejecutar loaddata o introducir datos incompatibles."
+  "note": "Los documentos de arquitectura describen entidades y algunos campos mínimos, pero no contienen el esquema exacto del repositorio implementado (nombres reales de campos, PKs, choices, campos obligatorios, relaciones y app labels). Por seguridad no se inventan fixtures de dominio que podrían fallar al ejecutar loaddata o introducir datos incompatibles.",
+  "scenario_added": "Paciente con 18+ años cronológicos, régimen MINOR, responsable ACTIVE y médico tratante ACTIVE, listo para probar transición explícita a ADULT.",
+  "scenario_details": {
+    "patient_pk": 5,
+    "person_pk": 8,
+    "birth_date": "2007-01-15",
+    "expected_age_on_2026_09_08": 19,
+    "regime": "MINOR",
+    "doctor_pk": 1,
+    "responsible_pk": 1,
+    "responsible_relationship_status": "ACTIVE"
+  }
 }

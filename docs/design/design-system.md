@@ -639,15 +639,18 @@ Expirado
 Cancelado
 ```
 
-En futuras fases también:
+Fase 2 (Agenda) — estados reales de `Appointment`, ver `docs/phases/phase-2-agenda.md` §8:
 
 ```text
-Confirmada
-En espera
-En consulta
-Atendida
-NO_SHOW
+Programada       (SCHEDULED)
+En consulta      (IN_CONSULTATION)
+Atendida         (COMPLETED)
+Cancelada        (CANCELLED)
+No se presentó   (NO_SHOW)
 ```
+
+Son los únicos cinco. No existen "Confirmada" ni "En espera" — Fase 2 no tiene paso de
+confirmación posterior a la reserva ni check-in/sala de espera (no hay estado `WAITING`).
 
 El texto del estado debe aparecer siempre; el color por sí solo no es suficiente.
 
@@ -709,14 +712,16 @@ No mostrar todos los campos simultáneamente si la pantalla se vuelve difícil d
 En futuras fases, el dashboard médico deberá priorizar:
 
 ```text
-Agenda del día
-       ↓
-Pacientes en espera
+Agenda del día (estados reales de Appointment — §25)
        ↓
 Alertas operativas
        ↓
 Próximas citas
 ```
+
+"Pacientes en espera" queda **pendiente de diseño**: Fase 2 no introdujo check-in ni un
+estado `WAITING` de `Appointment` (`docs/phases/phase-2-agenda.md` §9) — no debe asumirse ni
+construirse hasta que exista una decisión funcional explícita para esa vista.
 
 La información que requiere una acción inmediata debe tener mayor jerarquía.
 
@@ -788,7 +793,10 @@ Ejemplo:
 10:30 a. m.
 ```
 
-Cuando sea importante, indicar claramente zona horaria.
+Cuando sea importante, indicar claramente zona horaria. En Agenda (Fase 2), la referencia de
+negocio es siempre la zona horaria del `Clinic` (decisión de cierre, 2026-09-09) — la interfaz
+no debe mostrar la hora en la zona horaria del dispositivo del usuario como si fuera la hora
+oficial de la cita.
 
 ---
 
@@ -1099,17 +1107,18 @@ Debe existir una identidad visual compartida.
 
 En fases posteriores, los estados clínicos y operativos deben tener una semántica consistente.
 
-Por ejemplo:
+Para `Appointment` (Fase 2 — únicos cinco estados reales, `docs/phases/phase-2-agenda.md` §8):
 
 ```text
-Pendiente  → Neutral / atención moderada
-Confirmada → información positiva
-En espera  → atención operacional
-En consulta → estado activo
-Atendida   → Success
-Cancelada  → Neutral / Warning
-NO_SHOW    → Danger
+Programada (SCHEDULED)      → Neutral / información
+En consulta (IN_CONSULTATION) → estado activo
+Atendida (COMPLETED)        → Success
+Cancelada (CANCELLED)       → Neutral / Warning
+No se presentó (NO_SHOW)    → Danger
 ```
+
+No existen "Pendiente", "Confirmada" ni "En espera" como estados de `Appointment` — no hay
+paso de confirmación ni check-in/sala de espera en Fase 2.
 
 Los colores exactos se definirán mediante tokens.
 

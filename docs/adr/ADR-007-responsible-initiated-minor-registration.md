@@ -220,10 +220,8 @@ sobre este paciente, desde cuándo y hasta cuándo, y por qué terminó":
   `OTHER`), **sin `default` de campo** — cada servicio que desactive una relación declara su
   motivo explícitamente. Un `CheckConstraint` exige que, cuando `status = INACTIVE`,
   `deactivated_at` y `deactivation_reason` no sean nulos — mismo patrón ya usado en
-  `Invitation.used_at` (requiere `status = USED`). `reject_relationship_request` (ya
-  implementado, ADR-007 §3.7) queda pendiente de actualizarse para pasar
-  `deactivation_reason=REQUEST_REJECTED` — no se hace en este addendum, queda registrado como
-  trabajo de implementación pendiente.
+  `Invitation.used_at` (requiere `status = USED`). `reject_relationship_request` (ADR-007 §3.7)
+  pasa `deactivation_reason=REQUEST_REJECTED` al desactivar.
 
 **Quién puede ejecutar la transición y cuándo.** Cualquier médico con `DoctorPatientRelationship`
 **activa** hacia el paciente — sin restringir por `relationship_type` (tratante, sustituto u
@@ -366,16 +364,23 @@ debe asumirse ni implementarse sin una decisión funcional adicional (ver `requi
 §7.2.9):
 
 - Si un paciente menor puede tener correo electrónico propio, y bajo qué condiciones.
-- Bajo qué condiciones y quién autoriza que un paciente (menor o ya adulto) obtenga
-  credenciales propias (`User`) más adelante, y qué verificación de identidad requiere ese
-  trámite. Esta decisión es independiente de la transición de régimen (§3.8, addendum): un
-  paciente puede quedar en `regime = ADULT` sin tener nunca un `User` propio.
+- **Fuera de alcance de Fase 1 — diferido explícitamente a una fase posterior** (decisión de
+  cierre de Fase 1, 2026-09-09, ver `docs/phases/phase-1-foundations.md` §27/§31): bajo qué
+  condiciones y quién autoriza que un paciente (menor o ya adulto) obtenga credenciales
+  propias (`User`) más adelante, y qué verificación de identidad requiere ese trámite. No
+  quedó sin resolver por omisión — se decidió deliberadamente sacarla del alcance de Fase 1
+  para poder cerrarla, precisamente porque es independiente de la transición de régimen (§3.8,
+  addendum): un paciente puede quedar en `regime = ADULT` sin tener nunca un `User` propio, sin
+  que eso bloquee ni condicione la transición.
 - Mecanismo de consentimiento para vincular un responsable a un paciente que ya gestiona su
-  propia cuenta (§3.7) — aplica cuando ese paciente exista con `User` propio, sea cual sea su
-  `regime`. No aplica a la transición de régimen en sí (§3.8), que no crea ni requiere `User`.
+  propia cuenta (§3.7) — solo puede resolverse una vez que exista la política de cuenta propia
+  anterior, así que queda diferido junto con ella a esa misma fase posterior. No aplica a la
+  transición de régimen en sí (§3.8), que no crea ni requiere `User`.
 - Si un paciente ya en `regime = ADULT` puede, más adelante y por su propia cuenta, revocar o
-  volver a autorizar el acceso de un responsable — la transición de §3.8 solo cubre el cierre
-  inicial en bloque ejecutado por el médico, no la gestión posterior por el propio paciente.
+  volver a autorizar el acceso de un responsable — depende igualmente de que el paciente tenga
+  cuenta propia, así que queda diferido junto con esa decisión. La transición de §3.8 solo
+  cubre el cierre inicial en bloque ejecutado por el médico, no la gestión posterior por el
+  propio paciente.
 - Qué ocurre cuando una coincidencia por CURP no tiene ningún responsable activo a quien
   pedirle aprobación — hereda la indefinición ya marcada en ADR-004 §36 sobre el alcance del
   Administrador.
@@ -401,11 +406,8 @@ requiere actualizar esta ADR o crear una nueva, siguiendo CLAUDE.md §7.
 - No hubo impacto en el esquema de `accounts.Invitation`, `Person`, `Doctor`, `Clinic`:
   `Person.user` nullable ya cubría el caso (§3.3); se agregaron las propiedades computadas
   `Person.age`/`Person.is_minor` (sin migración).
-- El addendum de §3.8 (2026-09-08) agregó `Patient.regime`/`regime_changed_at`/
-  `regime_changed_by` y `ResponsiblePatientRelationship.deactivated_at`/`deactivation_reason`
-  (migración `patients.0004`, con backfill de `regime` para filas ya existentes a partir de la
-  edad cronológica de cada `Person` en el momento de migrar) y el servicio
-  `transition_patient_to_adult` — ver checklist §8.
+- La migración patients.0004 incorpora el campo Patient.regime como campo obligatorio y sin valor por defecto. La migración no realiza inferencia automática del régimen a partir de la edad cronológica. El régimen representa el estado de autorización vigente y debe establecerse explícitamente durante la creación del paciente o mediante el flujo autorizado de transición de menor a adulto.
+- Person.birth_date continúa siendo la fuente para determinar la edad cronológica. Cumplir 18 años no modifica automáticamente Patient.regime.
 
 ---
 
@@ -524,6 +526,12 @@ están ambos implementados para Fase 1 (`patients/services/minors.py`, `patients
 `patients/forms.py`, `patients/models.py`, migración `patients.0004`,
 `docs/design/screens.md` §6.5/§6.7/§6.8). Los puntos de §5 siguen explícitamente no resueltos,
 tal como se documentaron ahí — no se asumieron ni se implementaron por omisión.
+
+**Cierre de Fase 1 (2026-09-09):** la política de cuenta propia (`User`) del paciente adulto
+(§5, segundo punto) queda formalmente fuera de alcance de Fase 1 y diferida a una fase
+posterior — decisión de alcance, no un olvido. Esto despeja el último punto que mantenía
+`docs/phases/phase-1-foundations.md` en `PARTIALLY COMPLETED`; ver ese documento §27/§31 para
+el registro completo de la decisión.
 
 Cualquier modificación significativa deberá documentarse mediante una actualización de esta
 ADR o una nueva ADR relacionada.

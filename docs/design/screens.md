@@ -99,11 +99,11 @@ tests. Este documento es el punto de partida para cerrar esa brecha visual.
 
 | Fase | Área | Pantallas de referencia |
 |---|---|---|
-| 2 — Agenda | Médico | Agenda, Disponibilidad, Check-in, Sala de espera |
-| 2 — Agenda | Paciente/Responsable | Solicitar cita, Mis citas |
+| 2 — Agenda | Médico | Agenda, Disponibilidad (por fecha), Iniciar consulta |
+| 2 — Agenda | Paciente/Responsable | Reservar cita (directa), Mis citas |
 | 3 — Gestión clínica | Médico | Historia clínica, Consulta, Alertas clínicas |
 | 4 — Documentos | Médico/Paciente/Responsable | Recetas, Solicitudes de estudio, Documentos |
-| 5 — CareRequest y operación | Médico | Dashboard médico, Sala de espera operativa |
+| 5 — CareRequest y operación | Médico | Dashboard médico, Solicitudes de atención |
 | 5 — CareRequest y operación | Paciente/Responsable | Dashboard paciente/responsable, Solicitud de atención |
 | 6 — Notificaciones y auditoría | Administrador | Auditoría |
 
@@ -612,13 +612,33 @@ consistente desde ahora. **No implementar ninguna de estas hasta la fase corresp
 
 ## 9.1 Fase 2 — Agenda
 
-- Agenda del médico (Design System §29, UI Guidelines §14)
-- Disponibilidad del médico
-- Solicitar cita (Paciente/Responsable)
-- Mis citas (Paciente/Responsable) (UI Guidelines §15-16)
-- Check-in / Sala de espera (UI Guidelines §34) — estados: Pendiente, Confirmada, En espera,
-  En consulta, Atendida, Cancelada, Reprogramada, NO_SHOW, Liberada (UI Guidelines §33;
-  Design System §47: semántica de color por estado)
+Especificación funcional completa y aprobada en `docs/phases/phase-2-agenda.md`
+(2026-09-09) — ese documento manda sobre cualquier detalle de terminología o estados que
+aparezca aquí; esta lista sigue siendo solo inventario de pantallas, no especificación visual.
+
+- Agenda del médico (Design System §29, UI Guidelines §14) — disponibilidad **por fecha
+  concreta**, sin vista de reglas semanales recurrentes. Las horas se muestran en la zona
+  horaria del `Clinic`, nunca en la del dispositivo del usuario (decisión de cierre,
+  2026-09-09).
+- Disponibilidad del médico (crear/modificar por fecha; el administrador también puede
+  apoyar esta operación, siempre que exista `DoctorClinic` válida para el médico y consultorio
+  involucrados). Un médico no puede tener disponibilidad simultánea en dos consultorios
+  distintos — la UI debe rechazar/advertir ese solapamiento igual que el del mismo
+  consultorio.
+- Reservar cita — **directa**, sin paso de solicitud ni confirmación posterior (Paciente/
+  Responsable/Médico/Administrador, según autorización). Un médico puede reservar la primera
+  cita de un paciente sin `DoctorPatientRelationship` previa, siempre que tenga acceso
+  legítimo (`DoctorClinic` válida); esa reserva no crea ni modifica la relación (decisión de
+  cierre, 2026-09-09).
+- Mis citas (Paciente/Responsable) (UI Guidelines §15-16).
+- Iniciar consulta (Médico) — reemplaza cualquier concepto de "check-in" o "sala de espera"
+  de versiones anteriores de este documento: no hay check-in realizado por paciente,
+  responsable ni administrador.
+- Estados de `Appointment` a representar en UI — únicamente estos cinco: `SCHEDULED`,
+  `IN_CONSULTATION`, `COMPLETED`, `CANCELLED`, `NO_SHOW` (UI Guidelines §33; Design System
+  §47: semántica de color por estado). No existen como estados: Pendiente, Confirmada, En
+  espera, Reprogramada ni Liberada — la reprogramación es un evento con historial, no un
+  estado (§12 de `phase-2-agenda.md`).
 
 ## 9.2 Fase 3 — Gestión clínica
 
@@ -634,10 +654,15 @@ consistente desde ahora. **No implementar ninguna de estas hasta la fase corresp
 
 ## 9.4 Fase 5 — CareRequest y operación
 
-- Dashboard médico real (Design System §29, UI Guidelines §14): agenda del día → pacientes en
-  espera → alertas operativas → próximas citas
+- Dashboard médico real (Design System §29, UI Guidelines §14): agenda del día (estados reales
+  de `Appointment`, §9.1) → alertas operativas → próximas citas. "Pacientes en espera" queda
+  **pendiente de diseño** — Fase 2 no dejó check-in ni un estado `WAITING` de los que depender
+  (`requirements.md` §41, Fase 5); no debe asumirse resuelto.
 - Dashboard paciente/responsable real (Design System §30, UI Guidelines §15-16): próxima
   cita → mis citas → mis documentos
+- CareRequest: solicitud de atención, con conversión opcional a cita — un origen alternativo
+  que coexiste con la reserva directa de Fase 2, nunca la reemplaza ni la condiciona
+  (`requirements.md` §12).
 - Búsqueda global
 
 ## 9.5 Fase 6 — Notificaciones y auditoría

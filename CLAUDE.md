@@ -142,17 +142,28 @@ Incluye:
 
 ## Fase 2 — Agenda
 
+Contrato funcional completo y aprobado en `docs/phases/phase-2-agenda.md` (2026-09-09) — ese
+documento manda en caso de duda.
+
 Incluye:
 
-- disponibilidad;
-- citas;
-- estados;
-- confirmaciones;
+- disponibilidad por fecha concreta (sin reglas recurrentes ni excepciones);
+- creación directa de citas (sin solicitud previa ni confirmación posterior);
+- estados de `Appointment`: `SCHEDULED`, `IN_CONSULTATION`, `COMPLETED`, `CANCELLED`,
+  `NO_SHOW` — únicamente estos cinco;
 - cancelaciones;
 - reprogramaciones;
-- bloqueo temporal;
-- prevención de conflictos;
-- check-in.
+- hold temporal (bloqueo de 15 minutos; no es un estado de `Appointment`);
+- prevención de conflictos y de doble reserva concurrente;
+- inicio de consulta por el médico asignado.
+
+No incluye confirmaciones ni check-in/sala de espera — no existen en esta fase.
+
+Decisiones de cierre (2026-09-09): un médico puede crear la primera cita de un paciente sin
+`DoctorPatientRelationship` previa (esa creación no crea ni modifica la relación — son
+operaciones independientes); un médico no puede tener disponibilidad simultánea en dos
+consultorios distintos; la agenda usa la zona horaria del `Clinic`; toda operación
+administrativa exige `DoctorClinic` válida además del ámbito sobre la clínica.
 
 ## Fase 3 — Gestión clínica
 

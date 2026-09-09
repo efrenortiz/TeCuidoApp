@@ -1,6 +1,6 @@
 # TeCuidoApp — Phase 1 Foundations
 
-**Estado:** PARTIALLY COMPLETED (actualizado 2026-09-08 — ver §26-27)
+**Estado:** COMPLETADA (actualizado 2026-09-09 — ver §26-27)
 **Fase:** 1 — Fundaciones
 **Stack:** Python + Django + PostgreSQL
 **Fuente funcional:** `requirements.md`
@@ -8,11 +8,12 @@
 **ADRs aplicables:** `docs/adr/ADR-001-custom-user-model.md` a `docs/adr/ADR-007-responsible-initiated-minor-registration.md`
 
 La arquitectura base y el alcance funcional de Fase 1 están implementados, incluida la
-transición a régimen adulto (ADR-007 §3.8 addendum, 144 tests en verde). Queda **PARTIALLY
-COMPLETED**, no COMPLETADA, porque persisten decisiones funcionales explícitamente pendientes
-sobre la cuenta propia (`User`) del paciente adulto (§7.2.9 de `requirements.md`, §5 de
-ADR-007) — ver §26-27 para el detalle exacto de qué falta y por qué no se resuelve por
-omisión.
+transición a régimen adulto (ADR-007 §3.8 addendum, 146 tests en verde). El único punto que
+mantenía el estado en `PARTIALLY COMPLETED` — la política de cuenta propia (`User`) del
+paciente adulto — se resolvió el 2026-09-09 como una **decisión de alcance**: queda
+formalmente fuera de Fase 1 y diferida a una fase posterior (§7.2.9 de `requirements.md`, §5
+de ADR-007). No es una laguna sin resolver; es un límite de alcance decidido explícitamente
+para poder cerrar Fase 1 — ver §26-27 para el detalle completo.
 
 ---
 
@@ -484,8 +485,10 @@ mecanismo de transición a régimen adulto está diseñado, documentado y constr
   bloque, en la misma operación (`ResponsiblePatientRelationship.status → INACTIVE`);
 - reversibilidad: no la hay — una vez `regime = ADULT`, no vuelve a `MINOR`.
 
-Lo que **sigue explícitamente pendiente** (no debe inferirse en código ni asumirse por
-omisión) es un subconjunto más pequeño que el original:
+**Fuera de alcance de Fase 1 — diferido explícitamente a una fase posterior (decisión de
+cierre de Fase 1, 2026-09-09):** lo siguiente, subconjunto más pequeño que el original, no se
+resuelve en Fase 1 ni debe inferirse en código o asumirse por omisión — es una decisión de
+alcance, no una laguna:
 
 1. cómo obtiene el paciente adulto una cuenta propia (`User`), cuando corresponda;
 2. cómo se verifica su identidad para ese trámite;
@@ -496,8 +499,12 @@ omisión) es un subconjunto más pequeño que el original:
    `User`, sin que nadie tenga acceso operativo a su expediente hasta que él mismo autorice
    a alguien.
 
+Mientras esta política no se defina en una fase posterior, un paciente en `regime = ADULT`
+sin `User` permanece sin acceso operativo propio a su expediente — un estado válido y estable,
+no un caso de error ni algo que deba resolverse por omisión en el código.
+
 Ver `requirements.md` §7.2.9 y `docs/adr/ADR-007-responsible-initiated-minor-registration.md`
-§5 para el registro formal de estos pendientes.
+§5 para el registro formal de esta decisión de alcance.
 
 ---
 
@@ -934,9 +941,10 @@ No duplicar información funcional completa de `requirements.md` dentro de este 
 # 26. Definition of Done
 
 La Fase 1 se considera **COMPLETADA** únicamente cuando se cumplen todos los puntos aplicables.
-Estado actual (2026-09-08): marcados `[x]` los ya verificados por código/tests; `[ ]` los que
-siguen genuinamente pendientes — ver §27 para por qué el estado global sigue siendo
-**PARTIALLY COMPLETED** y no COMPLETADA pese a que la mayoría de los puntos ya está resuelta.
+Estado actual (2026-09-09): todos los puntos aplicables están marcados `[x]` — verificados por
+código/tests, o resueltos como decisión de alcance explícita cuando no correspondía
+implementarlos en Fase 1 (ver §27 para el detalle de esa distinción y por qué el estado global
+ya es **COMPLETADA**).
 
 ## Proyecto
 
@@ -1017,10 +1025,17 @@ siguen genuinamente pendientes — ver §27 para por qué el estado global sigue
       `Patient.regime`/`regime_changed_at`/`regime_changed_by`,
       `patients/services/minors.py::transition_patient_to_adult`,
       `patients/views.py::TransitionPatientToAdultView`, UI "Marcar como adulto"
-      (`docs/design/screens.md` §6.5), migración `patients.0004` con backfill de `regime` para
-      filas existentes. Ver checklist completo en `docs/adr/ADR-007-...md` §8.
-- [ ] Política de cuenta propia (`User`) del paciente adulto (§11.2.2, subconjunto todavía
-      abierto) — **pendiente**, no resuelto por omisión.
+      (`docs/design/screens.md` §6.5), migración `patients.0004`. `regime` es obligatorio, sin
+      `default` de campo y sin inferencia por edad — la migración no calcula ningún valor a
+      partir de `birth_date`; cada `Patient` debe declarar su `regime` explícitamente en el
+      momento de crearse (Fase 1 no tiene datos de producción que backfillear). Ver checklist
+      completo en `docs/adr/ADR-007-...md` §8.
+- [x] Política de cuenta propia (`User`) del paciente adulto (§11.2.2, subconjunto todavía
+      abierto) — **resuelta como decisión de alcance (2026-09-09): fuera de Fase 1, diferida a
+      una fase posterior.** No se implementó ni se infirió nada en código; se documentó
+      explícitamente en `requirements.md` §7.2.9 y `docs/adr/ADR-007-...md` §5. Es la
+      diferencia entre "no resuelto por omisión" (lo que era hasta 2026-09-08) y "resuelto
+      explícitamente como fuera de alcance" (lo que es ahora).
 
 ## ResponsiblePatientRelationship
 
@@ -1068,9 +1083,10 @@ siguen genuinamente pendientes — ver §27 para por qué el estado global sigue
 - [x] No existen referencias que indiquen que el registro de menor ni la transición a régimen
       adulto siguen sin implementar — verificado con grep sobre los 5 documentos afectados
       (2026-09-08); mismo criterio a reaplicar si se vuelve a tocar esta área.
-- [x] Fase 2 no depende de ninguna decisión de §11.2.2 todavía no documentada — lo único
-      genuinamente abierto (política de cuenta propia del paciente adulto) queda explícito en
-      §11.2.2, `requirements.md` §7.2.9 y ADR-007 §5, no inferido.
+- [x] Fase 2 no depende de ninguna decisión de §11.2.2 todavía no documentada — la política de
+      cuenta propia del paciente adulto quedó formalmente fuera de alcance de Fase 1 y
+      diferida a una fase posterior (2026-09-09), registrada en §11.2.2, `requirements.md`
+      §7.2.9 y ADR-007 §5, no inferida ni dejada pendiente sin registro.
 
 ---
 
@@ -1097,18 +1113,24 @@ si ocurre cualquiera de los siguientes casos:
 - existe documentación que contradice una decisión ya aceptada en un ADR (por ejemplo,
   describir el registro de menor como pendiente cuando ADR-007 ya lo define e implementa, o
   usar `is_active` para `ResponsiblePatientRelationship` cuando el campo real es `status`);
-- la política de cuenta propia (`User`) para el paciente adulto (§11.2.2, puntos 1-4 del
-  subconjunto todavía abierto) sigue sin definirse.
+- existe una decisión funcional pendiente que **no** está registrada explícitamente como tal
+  (ni resuelta, ni marcada como diferida a otra fase) en `requirements.md` y, si corresponde,
+  en la ADR relacionada. Una decisión de alcance documentada explícitamente — "esto queda
+  fuera de Fase 1, se resuelve en una fase posterior" — no cuenta como pendiente para este
+  criterio; lo que sí cuenta es dejar algo sin resolver *y sin registrar* que se dejó así a
+  propósito.
 
-**Estado actual de Fase 1: PARTIALLY COMPLETED** por el último punto — la arquitectura, el
-código y los tests de todo lo ya implementado están completos y en verde (incluyendo el
-registro de menor por responsable y la transición a régimen adulto, ADR-007, implementada
-2026-09-08). `ResponsiblePatientRelationship.status` y `Patient.regime` ya resuelven
-"¿tiene el responsable autorización vigente sobre este paciente?" sin ambigüedad y Fase 2
-puede consumir ambos directamente. Lo único que falta para marcar Fase 1 como COMPLETADA es
-no asumir por omisión ninguna política de cuenta propia del paciente adulto — esa decisión
-sigue siendo del negocio, no del código, y debe tomarse explícitamente antes de que Fase 2 (o
-una fase posterior) dependa de ella.
+**Estado actual de Fase 1: COMPLETADA** (2026-09-09) — la arquitectura, el código y los tests
+de todo lo implementado están completos y en verde (incluyendo el registro de menor por
+responsable y la transición a régimen adulto, ADR-007, implementada 2026-09-08).
+`ResponsiblePatientRelationship.status` y `Patient.regime` ya resuelven "¿tiene el responsable
+autorización vigente sobre este paciente?" sin ambigüedad y Fase 2 puede consumir ambos
+directamente. El único punto que mantenía la fase en `PARTIALLY COMPLETED` — la política de
+cuenta propia (`User`) del paciente adulto — se resolvió como **decisión de alcance**: queda
+formalmente fuera de Fase 1 y diferida a una fase posterior (`requirements.md` §7.2.9,
+`docs/adr/ADR-007-...md` §5). Ninguna funcionalidad de Fase 1 depende de que esa decisión
+exista para funcionar correctamente hoy — un paciente en `regime = ADULT` sin `User` es un
+estado válido y estable, no un caso a medio resolver.
 
 ---
 
@@ -1166,13 +1188,14 @@ Enumerar únicamente pendientes reales.
 
 ## Preparación para Fase 2
 
-Explicar brevemente cómo la arquitectura deja preparado el terreno para:
+Explicar brevemente cómo la arquitectura deja preparado el terreno para lo que fija
+`docs/phases/phase-2-agenda.md`:
 
-- disponibilidad;
-- citas;
-- conflictos;
-- bloqueo temporal;
-- check-in.
+- disponibilidad por fecha concreta;
+- citas creadas directamente (sin `CareRequest` ni confirmación);
+- conflictos y concurrencia de reserva;
+- hold temporal;
+- inicio de consulta (no check-in).
 
 No implementar esas funcionalidades.
 
@@ -1248,6 +1271,12 @@ La siguiente fase debe poder construirse sobre estas fundaciones sin rediseñar 
 
 # 31. Contrato Fase 1 → Fase 2
 
+El contrato funcional completo de Fase 2 ya está aprobado en `docs/phases/phase-2-agenda.md`
+(2026-09-09) — verificado consistente con las invariantes de esta sección. Lo que sigue aquí
+es la lista de garantías que Fase 1 le entrega a Fase 2; para las políticas propias de Agenda
+(disponibilidad, hold, estados de `Appointment`, reserva directa sin `CareRequest`), ver ese
+documento, no este.
+
 Antes de comenzar Fase 2 (Agenda), deben darse por ciertas estas invariantes — Fase 2 no debe
 reconstruir ni reinterpretar lo siguiente, solo consumirlo:
 
@@ -1288,11 +1317,17 @@ particular, "¿tiene el responsable autorización vigente?" sigue respondiéndos
 `ResponsiblePatientRelationship.status == ACTIVE` (que la transición ya mantiene consistente),
 no con una consulta directa a `regime`.
 
-**Lo que Fase 2 NO puede asumir todavía** (§11.2.2, `requirements.md` §7.2.9,
-`docs/adr/ADR-007-responsible-initiated-minor-registration.md` §5): cómo/cuándo un paciente
-adulto obtiene cuenta propia (`User`), la verificación de identidad para ese trámite, cómo
-revoca o reautoriza un responsable por su propia cuenta una vez que tenga esa cuenta, y qué
-ocurre cuando una coincidencia por CURP no tiene ningún responsable activo a quien pedir
-aprobación. Si una funcionalidad de Fase 2 depende de resolver alguno de estos puntos, la
-decisión debe tomarse explícitamente primero — documentada en `requirements.md` y, si cambia
-una decisión ya aceptada, en una ADR — no inferirse dentro del código de Fase 2.
+**Fuera de alcance — diferido a una fase posterior, no responsabilidad de Fase 2** (§11.2.2,
+`requirements.md` §7.2.9, `docs/adr/ADR-007-responsible-initiated-minor-registration.md` §5):
+cómo/cuándo un paciente adulto obtiene cuenta propia (`User`), la verificación de identidad
+para ese trámite, y cómo revoca o reautoriza un responsable por su propia cuenta una vez que
+tenga esa cuenta. Esta es una decisión de alcance ya tomada (2026-09-09), no un hueco que Fase
+2 deba llenar ni una decisión que Fase 2 deba tomar por su cuenta — si alguna vez una
+funcionalidad la necesita, se resuelve explícitamente en la fase que corresponda, documentada
+en `requirements.md` y, si cambia una decisión ya aceptada, en una ADR nueva o actualizada.
+
+**Sigue genuinamente pendiente, sin fase asignada:** qué ocurre cuando una coincidencia por
+CURP no tiene ningún responsable activo a quien pedir aprobación (hereda la indefinición de
+ADR-004 §36 sobre el alcance del Administrador). Si una funcionalidad de Fase 2 depende de
+resolver esto, la decisión debe tomarse explícitamente primero, no inferirse dentro del código
+de Fase 2.
