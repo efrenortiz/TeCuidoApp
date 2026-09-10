@@ -1,0 +1,24 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Pacientes a mi cargo — Agenda — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Pacientes a mi cargo" description="Selecciona un paciente para ver o reservar sus citas." %}
+
+{% if patients %}
+<div class="card">
+  <dl class="data-list">
+    {% for patient in patients %}
+    <div>
+      <dt class="data-list__label">{{ patient.person }}</dt>
+      <dd class="data-list__value">
+        <a href="{% url 'appointments:my_appointments' %}?patient_id={{ patient.pk }}">Ver citas</a>
+        ·
+        <a href="{% url 'appointments:booking' %}?patient_id={{ patient.pk }}">Reservar cita</a>
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+</div>
+{% else %}
+{% include "components/_empty_state.html" with title="No tienes pacientes con relación vigente." %}
+{% endif %}
+{% endblock %}

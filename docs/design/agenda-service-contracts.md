@@ -191,25 +191,36 @@ Modificar una disponibilidad existente que todavía pueda modificarse.
 
 - actor autorizado;
 - disponibilidad activa;
-- sin citas asociadas que sean invalidadas por el cambio;
-- no se puede modificar una disponibilidad con citas asociadas;
+- el nuevo intervalo debe seguir conteniendo por completo cada cita asociada existente;
 - el nuevo intervalo es válido;
 - no se crean solapamientos;
 - el inicio resultante no está en el pasado;
 - se mantiene el resto de las reglas de disponibilidad.
 
-### Regla
+### Regla (corregida — 2026-09-10)
 
-Una disponibilidad con citas asociadas es inmutable desde el punto de vista operativo.
-
-Por tanto:
+**Esta sección contradecía al documento rector** (`docs/phases/phase-2-agenda.md` §5.6:
+"no se permite... modificar una disponibilidad de manera que **invalide** citas existentes")
+y a `docs/design/availability-rules.md` §18-19, que sí definen — con un ejemplo trabajado —
+que una modificación **compatible** (el nuevo intervalo sigue conteniendo todas las citas
+existentes) es válida. La redacción anterior de esta sección afirmaba lo contrario en dos
+lugares ("sin citas asociadas que sean invalidadas por el cambio" y, en la misma lista,
+"no se puede modificar una disponibilidad con citas asociadas" — contradictorias entre sí).
+Se corrige a favor del rector: no existe inmutabilidad total: lo que no puede ocurrir es que
+la modificación **invalide** una cita ya existente.
 
 ```text
-Availability con citas
+Availability con citas, modificación compatible (contiene todas las citas existentes)
     ↓
 update
     ↓
-rechazado
+éxito
+
+Availability con citas, modificación incompatible (dejaría alguna cita fuera del intervalo)
+    ↓
+update
+    ↓
+rechazado (AvailabilityHasIncompatibleAppointments)
 ```
 
 ### Resultado
@@ -221,7 +232,7 @@ Devuelve la disponibilidad modificada.
 ```text
 NotAuthorized
 AvailabilityNotFound
-AvailabilityHasAppointments
+AvailabilityHasIncompatibleAppointments
 InvalidAvailabilityInterval
 AvailabilityConflict
 AvailabilityStartInPast

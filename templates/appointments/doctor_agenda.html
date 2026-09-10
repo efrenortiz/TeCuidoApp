@@ -1,0 +1,79 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Mi agenda — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Mi agenda" description="Disponibilidad y citas por día." %}
+
+{% if is_admin_managed %}
+<div class="card card--narrow">
+  <p class="field__help">Administrando la agenda de: <strong>{{ doctor.person }}</strong> · <a href="{% url 'appointments:admin_doctor_picker' %}">Cambiar médico</a></p>
+</div>
+{% endif %}
+
+<div class="card card--narrow">
+  <div class="agenda-day-nav">
+    <a class="btn btn--secondary" href="?date={{ prev_day|date:'Y-m-d' }}{{ doctor_qs }}">&larr; Día anterior</a>
+    <strong>{{ day|date:"l j \d\e F, Y" }}</strong>
+    <a class="btn btn--secondary" href="?date={{ next_day|date:'Y-m-d' }}{{ doctor_qs }}">Día siguiente &rarr;</a>
+  </div>
+</div>
+
+{% url 'appointments:availability_create' as create_availability_base_url %}
+<div class="patient-detail-actions">
+  <a class="btn btn--primary" href="{{ create_availability_base_url }}{% if is_admin_managed %}?doctor_id={{ doctor.pk }}{% endif %}">Crear disponibilidad</a>
+</div>
+
+{% if blocks %}
+{% for block in blocks %}
+<div class="card">
+  <h2 class="card__title">
+    {{ block.availability.clinic.name }} · {{ block.availability.start_time|time:"H:i" }}–{{ block.availability.end_time|time:"H:i" }}
+  </h2>
+  <div class="patient-detail-actions">
+    {% if not block.has_appointments %}
+    <a class="btn btn--secondary" href="{% url 'appointments:availability_edit' block.availability.pk %}">Editar</a>
+    <button type="button" class="btn btn--secondary"
+      onclick="document.getElementById('modal-deactivate-{{ block.availability.pk }}').showModal()">
+      Desactivar disponibilidad
+    </button>
+    {% else %}
+    <p class="field__help">Esta disponibilidad tiene citas asociadas y no puede modificarse. Primero deben reprogramarse las citas afectadas.</p>
+    {% endif %}
+  </div>
+
+  <dialog id="modal-deactivate-{{ block.availability.pk }}" class="modal">
+    <div class="modal__body">
+      <h2 class="modal__title">Desactivar disponibilidad</h2>
+      <p class="modal__text">
+        Esta acción retirará la disponibilidad de nuevas reservas. La disponibilidad conservará su historial.
+      </p>
+      <form method="post" action="{% url 'appointments:availability_deactivate' block.availability.pk %}">
+        {% csrf_token %}
+        <div class="modal__actions">
+          <button type="button" class="btn btn--secondary" onclick="document.getElementById('modal-deactivate-{{ block.availability.pk }}').close()">Cancelar</button>
+          <button type="submit" class="btn btn--danger">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <div class="slot-grid">
+    {% for slot in block.slots %}
+    <div class="slot-grid__slot slot-grid__slot--{{ slot.status|lower }}">
+      <span class="slot-grid__time">{{ slot.start|time:"H:i" }}–{{ slot.end|time:"H:i" }}</span>
+      {% if slot.appointment %}
+      <a href="{% url 'appointments:appointment_detail' slot.appointment.pk %}">
+        {{ slot.appointment.patient.person }}
+        {% include "components/_badge.html" with text=slot.appointment.get_status_display variant="info" %}
+      </a>
+      {% else %}
+      {% include "components/_badge.html" with text=slot.status variant="neutral" %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+{% else %}
+{% include "components/_empty_state.html" with title="No hay disponibilidad para este día." description="Crea una disponibilidad para que pacientes y responsables puedan reservar." action_url=create_availability_base_url action_label="Crear disponibilidad" %}
+{% endif %}
+{% endblock %}

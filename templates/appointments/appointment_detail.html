@@ -1,0 +1,91 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Cita — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Detalle de la cita" %}
+
+<div class="card card--narrow">
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Paciente</dt>
+      <dd class="data-list__value">{{ appointment.patient.person }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Médico</dt>
+      <dd class="data-list__value">{{ appointment.doctor.person }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Consultorio</dt>
+      <dd class="data-list__value">{{ appointment.clinic.name }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Fecha</dt>
+      <dd class="data-list__value">{{ appointment.start_at|date:"d/m/Y" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Hora</dt>
+      <dd class="data-list__value">{{ appointment.start_at|date:"H:i" }}–{{ appointment.end_at|date:"H:i" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Duración</dt>
+      <dd class="data-list__value">{{ appointment.duration_minutes }} min</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Estado</dt>
+      <dd class="data-list__value">
+        {% include "components/_badge.html" with text=appointment.get_status_display variant="info" %}
+      </dd>
+    </div>
+    {% if appointment.status == "CANCELLED" %}
+    <div>
+      <dt class="data-list__label">Cancelación</dt>
+      <dd class="data-list__value">
+        {{ appointment.cancelled_at|date:"d/m/Y H:i" }} · {{ appointment.get_cancellation_reason_display }}
+      </dd>
+    </div>
+    {% endif %}
+    {% if appointment.status == "NO_SHOW" %}
+    <div>
+      <dt class="data-list__label">No se presentó</dt>
+      <dd class="data-list__value">{{ appointment.no_show_at|date:"d/m/Y H:i" }}</dd>
+    </div>
+    {% endif %}
+    {% if appointment.status == "IN_CONSULTATION" or appointment.status == "COMPLETED" %}
+    <div>
+      <dt class="data-list__label">Inicio de consulta</dt>
+      <dd class="data-list__value">{{ appointment.started_at|date:"d/m/Y H:i" }}</dd>
+    </div>
+    {% endif %}
+    {% if appointment.status == "COMPLETED" %}
+    <div>
+      <dt class="data-list__label">Fin de consulta</dt>
+      <dd class="data-list__value">{{ appointment.completed_at|date:"d/m/Y H:i" }}</dd>
+    </div>
+    {% endif %}
+  </dl>
+</div>
+
+<div class="patient-detail-actions">
+  {% if appointment.status == "SCHEDULED" and appointment.start_at > now %}
+  <a class="btn btn--secondary" href="{% url 'appointments:appointment_reschedule' appointment.pk %}">Reprogramar</a>
+  <a class="btn btn--danger" href="{% url 'appointments:appointment_cancel' appointment.pk %}">Cancelar cita</a>
+  {% endif %}
+
+  {% if is_assigned_doctor and appointment.status == "SCHEDULED" %}
+  <form method="post" action="{% url 'appointments:appointment_start' appointment.pk %}" class="inline-form">
+    {% csrf_token %}
+    <button type="submit" class="btn btn--primary">Iniciar consulta</button>
+  </form>
+  <form method="post" action="{% url 'appointments:appointment_no_show' appointment.pk %}" class="inline-form">
+    {% csrf_token %}
+    <button type="submit" class="btn btn--secondary">Marcar no se presentó</button>
+  </form>
+  {% endif %}
+
+  {% if is_assigned_doctor and appointment.status == "IN_CONSULTATION" %}
+  <form method="post" action="{% url 'appointments:appointment_complete' appointment.pk %}" class="inline-form">
+    {% csrf_token %}
+    <button type="submit" class="btn btn--primary">Finalizar consulta</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

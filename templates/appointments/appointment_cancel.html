@@ -1,0 +1,25 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Cancelar cita — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Cancelar cita" %}
+
+<div class="card card--narrow">
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Cita actual</dt>
+      <dd class="data-list__value">
+        {{ appointment.start_at|date:"d/m/Y H:i" }} · {{ appointment.doctor.person }} · {{ appointment.clinic.name }}
+      </dd>
+    </div>
+  </dl>
+</div>
+
+<form method="post" class="card card--narrow">
+  {% csrf_token %}
+  {% include "components/_form_fields.html" with form=form %}
+  <div class="modal__actions">
+    <a class="btn btn--secondary" href="{% url 'appointments:appointment_detail' appointment.pk %}">Volver</a>
+    <button type="submit" class="btn btn--danger">Confirmar cancelación</button>
+  </div>
+</form>
+{% endblock %}

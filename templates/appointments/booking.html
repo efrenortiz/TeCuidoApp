@@ -1,0 +1,77 @@
+{% extends "layouts/app_base.html" %}
+{% load static %}
+{% block title %}Reservar cita — TeCuidoApp{% endblock %}
+{% block extra_head %}
+<script src="{% static 'js/agenda-booking.js' %}" defer></script>
+{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Reservar cita" description="Selecciona médico, consultorio, fecha y horario." %}
+
+<div id="booking-app">
+  {{ doctor_clinic_pairs|json_script:"doctor-clinic-data" }}
+  {{ booking_config|json_script:"booking-config" }}
+
+  <div id="booking-error" class="card card--narrow" hidden></div>
+
+  <div class="card">
+    {% if patient_mode == "self" %}
+    <p class="field__help">Paciente: {{ fixed_patient.person }}</p>
+    {% elif patient_mode == "responsible" %}
+      {% if fixed_patient %}
+      <p class="field__help">Paciente: {{ fixed_patient.person }}</p>
+      {% else %}
+      <div class="field">
+        <label class="field__label" for="patient-select">Paciente autorizado</label>
+        <select id="patient-select" class="field-input">
+          {% for patient in responsible_patients %}
+          <option value="{{ patient.pk }}">{{ patient.person }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    {% elif patient_mode == "manual" %}
+    <div class="field">
+      <label class="field__label" for="patient-id-input">ID del paciente</label>
+      <input type="number" id="patient-id-input" class="field-input" min="1">
+      <p class="field__help">Puedes encontrar el ID en el listado de pacientes.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <div id="picker-panel" class="card">
+    <div class="booking-picker">
+      <div class="field">
+        <label class="field__label" for="doctor-select">Médico</label>
+        <select id="doctor-select" class="field-input"></select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="clinic-select">Consultorio</label>
+        <select id="clinic-select" class="field-input"></select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="date-input">Fecha</label>
+        <input type="date" id="date-input" class="field-input">
+      </div>
+      <button type="button" id="search-slots-btn" class="btn btn--secondary">Buscar horarios</button>
+    </div>
+
+    <p id="slot-grid-status" class="field__help" hidden></p>
+    <div id="slot-grid" class="slot-grid"></div>
+  </div>
+
+  <div id="hold-panel" class="card card--narrow" hidden>
+    <p id="hold-summary"></p>
+    <p>Tiempo restante: <span id="countdown" class="hold-countdown">15:00</span></p>
+    <div class="modal__actions">
+      <button type="button" id="release-btn" class="btn btn--secondary">Liberar horario</button>
+      <button type="button" id="continue-btn" class="btn btn--primary">Continuar</button>
+    </div>
+  </div>
+
+  <div id="success-panel" class="card card--narrow" hidden>
+    {% include "components/_alert.html" with type="success" text="Cita programada correctamente." %}
+    <p id="success-detail"></p>
+    <a class="btn btn--primary" href="{% url 'appointments:my_appointments' %}">Ver mis citas</a>
+  </div>
+</div>
+{% endblock %}

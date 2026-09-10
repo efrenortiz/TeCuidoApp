@@ -1,0 +1,23 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}{% if mode == "edit" %}Editar disponibilidad{% else %}Crear disponibilidad{% endif %} — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% if mode == "edit" %}
+{% include "components/_page_header.html" with title="Editar disponibilidad" %}
+{% else %}
+{% include "components/_page_header.html" with title="Crear disponibilidad" %}
+{% endif %}
+
+{% if managed_doctor %}
+<div class="card card--narrow">
+  <p class="field__help">Médico: <strong>{{ managed_doctor.person }}</strong></p>
+</div>
+{% endif %}
+
+<form method="post" class="card card--narrow">
+  {% csrf_token %}
+  {% if managed_doctor %}<input type="hidden" name="doctor_id" value="{{ managed_doctor.pk }}">{% endif %}
+  {% include "components/_form_fields.html" with form=form %}
+  <p class="field__help">La duración de cada cita se toma de la configuración vigente del consultorio elegido.</p>
+  <button type="submit" class="btn btn--primary btn--block">Guardar</button>
+</form>
+{% endblock %}

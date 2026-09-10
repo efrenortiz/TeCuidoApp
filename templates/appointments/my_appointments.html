@@ -1,0 +1,55 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Mis citas — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Mis citas" %}
+
+<div class="patient-detail-actions">
+  {% if patient_id %}
+  <a class="btn btn--primary" href="{% url 'appointments:booking' %}?patient_id={{ patient_id }}">Reservar cita</a>
+  {% else %}
+  <a class="btn btn--primary" href="{% url 'appointments:booking' %}">Reservar cita</a>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 class="card__title">Próximas</h2>
+  {% if upcoming %}
+  <dl class="data-list">
+    {% for appointment in upcoming %}
+    <div>
+      <dt class="data-list__label">{{ appointment.start_at|date:"d/m/Y H:i" }}</dt>
+      <dd class="data-list__value">
+        <a href="{% url 'appointments:appointment_detail' appointment.pk %}">
+          {{ appointment.doctor.person }} · {{ appointment.clinic.name }}
+        </a>
+        {% include "components/_badge.html" with text=appointment.get_status_display variant="info" %}
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+  {% else %}
+  {% include "components/_empty_state.html" with title="No tienes citas programadas." %}
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 class="card__title">Historial</h2>
+  {% if history %}
+  <dl class="data-list">
+    {% for appointment in history %}
+    <div>
+      <dt class="data-list__label">{{ appointment.start_at|date:"d/m/Y H:i" }}</dt>
+      <dd class="data-list__value">
+        <a href="{% url 'appointments:appointment_detail' appointment.pk %}">
+          {{ appointment.doctor.person }} · {{ appointment.clinic.name }}
+        </a>
+        {% include "components/_badge.html" with text=appointment.get_status_display variant="neutral" %}
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+  {% else %}
+  {% include "components/_empty_state.html" with title="Sin historial de citas todavía." %}
+  {% endif %}
+</div>
+{% endblock %}

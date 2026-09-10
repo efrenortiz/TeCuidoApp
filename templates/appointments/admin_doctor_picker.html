@@ -1,0 +1,22 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Médicos — Agenda — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Médicos" description="Selecciona un médico para administrar su agenda y disponibilidad." %}
+
+{% if doctors %}
+<div class="card">
+  <dl class="data-list">
+    {% for doctor in doctors %}
+    <div>
+      <dt class="data-list__label">{{ doctor.person }}</dt>
+      <dd class="data-list__value">
+        <a href="{% url 'appointments:doctor_agenda' %}?doctor_id={{ doctor.pk }}">Ver agenda</a>
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+</div>
+{% else %}
+{% include "components/_empty_state.html" with title="No hay médicos activos registrados." %}
+{% endif %}
+{% endblock %}

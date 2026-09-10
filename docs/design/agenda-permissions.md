@@ -220,9 +220,11 @@ No puede utilizar Agenda para consultar arbitrariamente las citas privadas de ot
 
 ### Administrador
 
-Puede consultar citas dentro de las clínicas de su ámbito administrativo.
-
-El privilegio administrativo no implica acceso global a todas las clínicas.
+Puede consultar citas dentro de todas las clínicas — el rol Administrador tiene acceso
+funcional global en TeCuidoApp (`docs/adr/ADR-004-role-and-object-permissions.md` §8; Fase 1
+no define ni Fase 2 introduce un modelo de administradores por clínica). "Ámbito
+administrativo" en este documento se refiere a ese acceso global, no a una restricción por
+clínica.
 
 ---
 
@@ -415,20 +417,28 @@ La conservación histórica es obligatoria.
 
 ---
 
-## 19. Administrador — ámbito clínico
+## 19. Administrador — alcance de la autorización
 
-El administrador no tiene acceso global por el simple hecho de tener privilegios administrativos.
+**Corrección de consistencia (2026-09-09):** una redacción anterior de esta sección afirmaba
+que el administrador "no tiene acceso global", lo cual contradecía una decisión arquitectónica
+ya aceptada — `docs/adr/ADR-004-role-and-object-permissions.md` §8 define al rol Administrador
+como acceso funcional global. Ni Fase 1 ni ningún documento de Fase 2 definen un modelo de
+"administrador por clínica" (no existe esa entidad); cambiar esa decisión requeriría el
+proceso de actualización de ADR que fija `CLAUDE.md` §7, que no se ha hecho. Se corrige aquí
+para no introducir una contradicción antes de la implementación.
 
-Toda operación debe comprobar que la clínica de la operación pertenece a su ámbito autorizado.
+El administrador (`user.is_superuser`) tiene acceso funcional global a las operaciones de
+Agenda, igual que al resto de la aplicación. La verificación que Agenda sí exige, y que no es
+redundante, es que exista una relación `DoctorClinic` válida entre el médico y el consultorio
+involucrados en la operación — no porque el administrador esté restringido a esa clínica, sino
+porque la combinación médico+consultorio debe ser operativamente válida para cualquier actor.
 
 Conceptualmente:
 
 ```text
-Administrator
+Administrator (acceso global, ADR-004 §8)
       ↓
-Administrative scope
-      ↓
-Clinic
+DoctorClinic válida (médico + consultorio de la operación)
       ↓
 Agenda operation
 ```

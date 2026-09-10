@@ -19,7 +19,7 @@
   </dl>
 </div>
 
-{% if "DOCTOR" in roles or "PATIENT" in roles or "RESPONSIBLE" in roles %}
+{% if "DOCTOR" in roles or "PATIENT" in roles or "RESPONSIBLE" in roles or "ADMINISTRATOR" in roles %}
 <div class="card card--narrow">
   <h2 class="card__title">Accesos rápidos</h2>
   <dl class="data-list">
@@ -29,7 +29,10 @@
       <dd class="data-list__value">
         <a href="{% url 'accounts:invitation_create' %}">Nueva invitación</a> ·
         <a href="{% url 'accounts:invitation_list' %}">Listado de invitaciones</a> ·
-        <a href="{% url 'patients:patient_list' %}">Mis pacientes</a>
+        <a href="{% url 'patients:patient_list' %}">Mis pacientes</a> ·
+        <a href="{% url 'appointments:doctor_agenda' %}">Mi agenda</a> ·
+        <a href="{% url 'appointments:booking' %}">Reservar cita</a> ·
+        <a href="{% url 'appointments:my_appointments' %}">Citas que atiendo</a>
       </dd>
     </div>
     {% endif %}
@@ -37,7 +40,8 @@
     <div>
       <dt class="data-list__label">Responsable</dt>
       <dd class="data-list__value">
-        <a href="{% url 'patients:my_dependents' %}">Mis pacientes a cargo</a>
+        <a href="{% url 'patients:my_dependents' %}">Mis pacientes a cargo</a> ·
+        <a href="{% url 'appointments:responsible_patients' %}">Agenda de mis pacientes</a>
       </dd>
     </div>
     {% endif %}
@@ -45,7 +49,19 @@
     <div>
       <dt class="data-list__label">Paciente</dt>
       <dd class="data-list__value">
-        <a href="{% url 'patients:my_profile' %}">Mi perfil</a>
+        <a href="{% url 'patients:my_profile' %}">Mi perfil</a> ·
+        <a href="{% url 'appointments:booking' %}">Reservar cita</a> ·
+        <a href="{% url 'appointments:my_appointments' %}">Mis citas</a>
+      </dd>
+    </div>
+    {% endif %}
+    {% if "ADMINISTRATOR" in roles %}
+    <div>
+      <dt class="data-list__label">Administrador</dt>
+      <dd class="data-list__value">
+        <a href="{% url 'appointments:admin_doctor_picker' %}">Agenda por médico</a> ·
+        <a href="{% url 'appointments:booking' %}">Reservar cita</a> ·
+        <a href="{% url 'appointments:my_appointments' %}">Citas</a>
       </dd>
     </div>
     {% endif %}

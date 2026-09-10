@@ -1,0 +1,65 @@
+{% extends "layouts/app_base.html" %}
+{% load static %}
+{% block title %}Reprogramar cita — TeCuidoApp{% endblock %}
+{% block extra_head %}
+<script src="{% static 'js/agenda-reschedule.js' %}" defer></script>
+{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Reprogramar cita" %}
+
+<div id="reschedule-app">
+  {{ clinics|json_script:"reschedule-clinics-data" }}
+  {{ reschedule_config|json_script:"reschedule-config" }}
+
+  <div class="card card--narrow">
+    <p class="field__label">Cita actual</p>
+    <p>
+      {{ appointment.start_at|date:"d/m/Y" }} · {{ appointment.start_at|date:"H:i" }} ·
+      {{ appointment.clinic.name }}
+    </p>
+  </div>
+
+  <div id="reschedule-error" class="card card--narrow" hidden></div>
+
+  <div id="picker-panel" class="card">
+    <div class="booking-picker">
+      <div class="field">
+        <label class="field__label" for="clinic-select">Nuevo consultorio</label>
+        <select id="clinic-select" class="field-input"></select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="date-input">Nueva fecha</label>
+        <input type="date" id="date-input" class="field-input">
+      </div>
+      <div class="field">
+        <label class="field__label" for="reason-select">Motivo</label>
+        <select id="reason-select" class="field-input">
+          <option value="PATIENT_REQUEST">Solicitud del paciente</option>
+          <option value="RESPONSIBLE_REQUEST">Solicitud del responsable</option>
+          <option value="DOCTOR_REQUEST">Solicitud del médico</option>
+          <option value="CLINIC_REQUEST">Solicitud del consultorio</option>
+          <option value="OTHER">Otro</option>
+        </select>
+      </div>
+      <button type="button" id="search-slots-btn" class="btn btn--secondary">Buscar horarios</button>
+    </div>
+
+    <p id="slot-grid-status" class="field__help" hidden></p>
+    <div id="slot-grid" class="slot-grid"></div>
+  </div>
+
+  <div id="confirm-panel" class="card card--narrow" hidden>
+    <p class="field__label">Nueva programación</p>
+    <p id="confirm-summary"></p>
+    <div class="modal__actions">
+      <button type="button" id="back-btn" class="btn btn--secondary">Elegir otro horario</button>
+      <button type="button" id="confirm-btn" class="btn btn--primary">Confirmar reprogramación</button>
+    </div>
+  </div>
+
+  <div id="success-panel" class="card card--narrow" hidden>
+    {% include "components/_alert.html" with type="success" text="La cita fue reprogramada correctamente." %}
+    <a class="btn btn--primary" href="{% url 'appointments:appointment_detail' appointment.pk %}">Ver cita</a>
+  </div>
+</div>
+{% endblock %}

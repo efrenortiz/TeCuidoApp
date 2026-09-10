@@ -485,3 +485,87 @@
   justify-content: flex-end;
   gap: var(--space-3);
 }
+
+/* ---------------------------------------------------------------- */
+/* Agenda (Fase 2, phase-2-agenda-ux.md) — day nav, slot grid, hold   */
+/* countdown. Not part of Fase 1's shared component set — these are   */
+/* the first screens with a derived, live-updating grid of choices.   */
+/* ---------------------------------------------------------------- */
+
+.agenda-day-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+}
+
+.slot-grid__slot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-family: inherit;
+  font-size: var(--font-size-body);
+  text-align: left;
+}
+
+.slot-grid__time {
+  font-weight: var(--font-weight-semibold);
+}
+
+.slot-grid__slot--button {
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.slot-grid__slot--button:hover:not(:disabled) {
+  border-color: var(--color-primary-500);
+}
+
+.slot-grid__slot--button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.slot-grid__slot--available {
+  border-color: var(--color-success-200);
+  background: var(--color-success-50);
+}
+
+.slot-grid__slot--held {
+  border-color: var(--color-warning-200);
+  background: var(--color-warning-50);
+}
+
+.slot-grid__slot--booked {
+  border-color: var(--color-info-200);
+  background: var(--color-info-50);
+}
+
+.slot-grid__slot--unavailable {
+  border-color: var(--color-neutral-200);
+  background: var(--color-neutral-50);
+}
+
+.booking-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+  align-items: end;
+  margin-bottom: var(--space-5);
+}
+
+.hold-countdown {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-warning-700);
+}
