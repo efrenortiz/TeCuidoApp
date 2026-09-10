@@ -749,9 +749,9 @@ transiciona una cita automáticamente).
 existe flujo de solicitud previa ni confirmación posterior. Al completarse correctamente una
 reserva, la cita queda en `SCHEDULED`; no hay un paso adicional que "confirmarla". Pueden
 crear una cita directamente: paciente, responsable con relación `ACTIVE`, médico (con acceso
-legítimo al paciente — ver regla de primera cita más abajo) y administrador autorizado (con
-`DoctorClinic` válida para el médico y consultorio involucrados, además del ámbito sobre la
-clínica).
+legítimo al paciente — ver regla de primera cita más abajo) y administrador (acceso funcional
+global, ADR-004 §8, únicamente con `DoctorClinic` válida para el médico y consultorio
+involucrados — corregido 2026-09-10, no existe un "ámbito" territorial adicional que validar).
 
 **Regla de primera cita por médico (decisión de cierre, 2026-09-09):** un médico puede crear
 la primera cita de un paciente **sin que exista todavía una `DoctorPatientRelationship`
@@ -1366,8 +1366,9 @@ Las modificaciones de información relevante deben mantener trazabilidad.
     `DoctorPatientRelationship` activa previa, siempre que tenga acceso legítimo
     (`DoctorClinic` válida); crear la cita no crea, activa ni modifica esa relación ni ningún
     otro mecanismo de autorización de Fase 1 (§14).
-23. Toda operación administrativa de agenda exige, además del ámbito sobre la clínica, una
-    relación `DoctorClinic` válida entre el médico y el consultorio involucrados (§10, §14).
+23. Toda operación administrativa de agenda exige una relación `DoctorClinic` válida entre el
+    médico y el consultorio involucrados; el administrador tiene acceso funcional global
+    (ADR-004 §8), sin ámbito territorial por clínica (§10, §14; corregido 2026-09-10).
 24. El paso del tiempo nunca cambia por sí solo el estado de una cita; todo cambio de estado
     requiere la acción humana autorizada correspondiente — nunca un cron, signal o tarea
     programada (§13.1).

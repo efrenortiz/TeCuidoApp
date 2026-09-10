@@ -71,9 +71,11 @@ Crear esa cita **no crea, modifica ni activa** ninguna `DoctorPatientRelationshi
 
 ### Administrador
 
-Puede crear citas, crear y modificar disponibilidades para brindar soporte operativo, y realizar las acciones administrativas de agenda autorizadas dentro de su ámbito.
+Puede crear citas, crear y modificar disponibilidades para brindar soporte operativo, y realizar las acciones administrativas de agenda autorizadas.
 
-Toda operación administrativa requiere que la clínica pertenezca al ámbito autorizado del administrador **y** que exista una relación `DoctorClinic` válida entre el médico y el consultorio involucrados. Ninguna de las dos condiciones sustituye a la otra.
+**Corrección de consistencia (2026-09-10):** una redacción anterior de esta sección y de otras más adelante en este documento (§18, §19, §23, §24) exigía que "la clínica pertenezca al ámbito autorizado del administrador" como precondición distinta de `DoctorClinic`, y una de ellas llegaba a advertir explícitamente contra tratar el acceso del administrador como global. Esa idea de un "ámbito administrativo por clínica" no corresponde a ninguna entidad, relación ni regla definida en Fase 1 ni en el resto de Fase 2 — no existe un modelo de "administrador de una clínica" — y contradecía una decisión arquitectónica ya aceptada: `docs/adr/ADR-004-role-and-object-permissions.md` §8 define al rol Administrador con acceso funcional global. Cambiar esa decisión exigiría el proceso de actualización de ADR que fija `CLAUDE.md` §7, que no se siguió; se corrige aquí y en el resto de este documento para no dejar una contradicción antes de la implementación.
+
+Toda operación administrativa exige únicamente que exista una relación `DoctorClinic` válida entre el médico y el consultorio involucrados — esa es la única precondición real, no una restricción territorial sobre qué clínicas puede tocar el administrador.
 
 La autorización debe validarse en servidor. La interfaz no es una barrera suficiente.
 
@@ -729,9 +731,9 @@ Las operaciones sobre una cita ya existente (cancelar, reprogramar, iniciar, fin
 
 ### Administrador
 
-Las capacidades administrativas se limitan al ámbito autorizado. La implementación no debe convertir el rol administrativo global en acceso irrestricto a todas las operaciones de dominio.
+El acceso global del administrador (`user.is_superuser`, ADR-004 §8) no equivale a acceso irrestricto a todas las operaciones de dominio: sigue sin poder iniciar consulta, finalizarla ni marcar `NO_SHOW` — esas permanecen exclusivas del médico asignado (§18 Médico, arriba) sin excepción para ningún otro actor.
 
-Toda operación administrativa exige, además del ámbito sobre la clínica, una relación `DoctorClinic` válida entre el médico y el consultorio involucrados (ver §4).
+Toda operación administrativa exige una relación `DoctorClinic` válida entre el médico y el consultorio involucrados (ver §4) — esa es la única precondición adicional, no un ámbito territorial sobre la clínica.
 
 ## 19. Experiencia de usuario mínima
 
@@ -762,7 +764,7 @@ Durante un hold activo, no debe ofrecerse cambiar directamente a otro slot. Prim
 
 ### Administrador
 
-Debe poder brindar soporte operativo para crear disponibilidades y gestionar citas dentro de su ámbito autorizado.
+Debe poder brindar soporte operativo para crear disponibilidades y gestionar citas para cualquier médico/consultorio con `DoctorClinic` válida (acceso global, ADR-004 §8).
 
 ## 20. Manejo de errores de dominio
 
@@ -856,7 +858,7 @@ Estas decisiones son parte del contrato funcional de Fase 2 y no deben cambiarse
 30. La reprogramación puede cambiar el consultorio si el nuevo consultorio es válido y está disponible.
 31. Un médico no puede tener dos disponibilidades activas que se solapen temporalmente, aunque correspondan a consultorios distintos (decisión de cierre, 2026-09-09).
 32. La agenda utiliza la zona horaria del `Clinic` (decisión de cierre, 2026-09-09).
-33. Toda operación administrativa requiere, además del ámbito sobre la clínica, una relación `DoctorClinic` válida entre el médico y el consultorio involucrados (decisión de cierre, 2026-09-09).
+33. Toda operación administrativa requiere una relación `DoctorClinic` válida entre el médico y el consultorio involucrados; el administrador tiene acceso funcional global (ADR-004 §8), sin restricción territorial por clínica (decisión de cierre, 2026-09-09; corregido 2026-09-10 — ver §4 y §18).
 34. Un médico puede crear la primera cita de un paciente sin que exista una `DoctorPatientRelationship` activa previa, siempre que tenga acceso legítimo (`DoctorClinic` válida en la combinación de la cita). Crear la cita no crea, activa ni modifica ninguna `DoctorPatientRelationship` ni ningún otro mecanismo de autorización de Fase 1 (decisión de cierre, 2026-09-09).
 
 ## 24. Criterios de aceptación de Fase 2
@@ -883,7 +885,7 @@ La fase se considerará funcionalmente completa cuando, como mínimo, se pueda d
 - reserva directa por administrador autorizado (con `DoctorClinic` válida para el médico y consultorio involucrados);
 - rechazo de responsable sin relación `ACTIVE`;
 - rechazo de médico sin `DoctorClinic` válida en la combinación de la cita;
-- rechazo de administrador fuera de su ámbito o sin `DoctorClinic` válida para el médico/consultorio;
+- rechazo de administrador sin `DoctorClinic` válida para el médico/consultorio (no existe un caso de rechazo "fuera de ámbito": el administrador tiene acceso global, ADR-004 §8);
 - rechazo de slot ocupado;
 - rechazo de slot con hold incompatible;
 - aceptación dentro de los 30 minutos posteriores al inicio del slot;

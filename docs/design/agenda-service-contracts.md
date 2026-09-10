@@ -59,7 +59,7 @@ El servicio debe validar:
 - identidad del actor;
 - perfil funcional;
 - relaciones de Fase 1;
-- ámbito administrativo;
+- acceso global de Administrador, cuando aplique (ADR-004 §8 — no hay ámbito territorial que validar);
 - propiedad del recurso;
 - estado actual;
 - reglas de negocio.
@@ -151,8 +151,7 @@ La duración efectiva se obtiene de la configuración vigente de `Doctor + Clini
 
 - actor autorizado;
 - si actor es médico, `doctor` debe ser el propio actor;
-- si actor es administrador, la clínica debe pertenecer a su ámbito;
-- debe existir relación válida `DoctorClinic`;
+- debe existir relación válida `DoctorClinic` (única precondición adicional para administrador — acceso global, ADR-004 §8, sin restricción territorial);
 - la fecha/hora inicial no puede estar en el pasado;
 - no puede superar el horizonte de 6 meses calendario;
 - `start_time < end_time`;
@@ -867,11 +866,13 @@ Administrator
 
 # 14. Administrador
 
+**Corrección de consistencia (2026-09-10):** una redacción anterior de esta sección describía un "ámbito" territorial del administrador limitado a "las clínicas autorizadas", como si existiera un modelo de administrador por clínica. Esa entidad no existe en Fase 1 ni en el resto de Fase 2, y contradecía `docs/adr/ADR-004-role-and-object-permissions.md` §8 (acceso funcional global). Se corrige, alineado con `docs/design/agenda-permissions.md` §19 y `docs/phases/phase-2-agenda.md` §4/§18.
+
 Cuando el actor es administrador:
 
-- su ámbito se limita a las clínicas autorizadas;
-- debe existir una relación válida `DoctorClinic` para el médico y consultorio;
-- puede crear, cancelar y reprogramar dentro de su ámbito;
+- tiene acceso funcional global (`user.is_superuser`, ADR-004 §8) — no está restringido a un subconjunto de clínicas;
+- debe existir una relación válida `DoctorClinic` para el médico y consultorio — esa es la única precondición adicional, no una restricción territorial;
+- puede crear, cancelar y reprogramar citas para cualquier médico/consultorio con `DoctorClinic` válida;
 - puede apoyar la gestión de disponibilidades;
 - no puede iniciar ni completar la consulta;
 - no puede marcar `NO_SHOW`.

@@ -137,12 +137,14 @@ No puede:
 
 ## 3.4 Administrador
 
-Puede operar dentro de las clínicas de su ámbito autorizado.
+**Corrección de consistencia (2026-09-10):** una redacción anterior de esta sección limitaba al administrador a "las clínicas de su ámbito autorizado", un modelo de administrador por clínica que no existe en Fase 1 ni en el resto de Fase 2 y que contradecía `docs/adr/ADR-004-role-and-object-permissions.md` §8 (acceso funcional global). Se corrige, alineado con `docs/design/agenda-permissions.md` §19 y `docs/phases/phase-2-agenda.md` §4/§18.
+
+Tiene acceso funcional global (ADR-004 §8) — sin restricción territorial por clínica. Cada operación sobre un médico/consultorio exige, además, que exista una relación `DoctorClinic` válida entre ambos; esa es la única precondición real.
 
 Puede:
 
 - consultar disponibilidad;
-- crear y administrar disponibilidades de médicos de clínicas autorizadas;
+- crear y administrar disponibilidades de cualquier médico con `DoctorClinic` válida;
 - crear citas;
 - consultar citas;
 - cancelar;
@@ -154,7 +156,7 @@ No puede:
 - iniciar consultas;
 - finalizar consultas;
 - marcar `NO_SHOW`;
-- operar fuera de su ámbito administrativo.
+- operar sobre un médico/consultorio sin `DoctorClinic` válida entre ambos.
 
 ---
 
@@ -939,9 +941,7 @@ cuando corresponda.
 # 33. Flujo completo del administrador
 
 ```text
-Clínica autorizada
-  ↓
-Médico + Clinic válidos
+Médico + Clinic con DoctorClinic válida
   ↓
 Disponibilidad / Cita
   ↓

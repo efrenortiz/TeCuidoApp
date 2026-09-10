@@ -47,7 +47,7 @@ Cada endpoint debe validar:
 - identidad;
 - perfil funcional;
 - relaciones de Fase 1;
-- ámbito administrativo;
+- acceso global de Administrador, cuando aplique (ADR-004 §8 — no hay ámbito territorial que validar);
 - propiedad del recurso;
 - estado actual.
 
@@ -272,13 +272,15 @@ POST /api/holds/
 }
 ```
 
-### Headers
-
-Debe soportar:
-
-```http
-Idempotency-Key: <unique-operation-key>
-```
+**Corrección de consistencia (2026-09-10):** una redacción anterior de esta sección exigía
+soportar un header `Idempotency-Key` en la creación de Hold. Se elimina: §8 y §15 (las
+secciones normativas de idempotencia de este proyecto) solo exigen idempotencia para
+creación de cita y reprogramación, `Hold` no tiene un campo `idempotency_key` (decisión de
+modelo de Fase 2, Etapa 1) y no existe ningún mecanismo real de deduplicación implementado
+para este endpoint. Un cliente que reintente `POST /api/holds/` puede recibir `HOLD_CONFLICT`
+si el slot ya quedó tomado por el intento anterior — ese es el comportamiento esperado, no un
+defecto a mitigar con idempotencia (el hold en sí ya es una protección temporal de 15
+minutos, no una operación que deba sobrevivir reintentos exactos).
 
 ### Reglas
 

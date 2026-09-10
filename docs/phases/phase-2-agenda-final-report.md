@@ -105,21 +105,33 @@ System check identified no issues (0 silenced).
 
 332 = 186 de `appointments` + 146 de Fase 1 (`accounts`, `patients`, `doctors`, `clinics`), todos verdes. Ningún test de Fase 1 se rompió.
 
-## 11. Deuda técnica
+## 11. Deuda técnica (backlog no bloqueante)
 
 - **Selección de paciente para médico/administrador en la reserva**: sin un buscador de pacientes por nombre, se usa un campo de ID numérico simple (`patients:patient_list` es doctor-only y ya filtrado a pacientes con relación activa, así que no sirve para encontrar un paciente *nuevo*). Funcionalmente correcto, no pulido.
-- **`Idempotency-Key` en `POST /api/holds/`**: el contrato lo menciona en el ejemplo de §6.1 pero §8 (la sección normativa) no lo exige, y `Hold` no tiene campo para ello (decisión de Etapa 1). El header se acepta pero no tiene efecto — documentado explícitamente en el código.
 - **Paginación de `GET /api/appointments/`**: usa números de página (`next`/`previous`), no URLs completas — el contrato solo exige "metadatos suficientes para navegar", sin especificar formato.
 - **No se verificó visualmente en navegador con extensión conectada** la cuenta regresiva del hold ni la interacción de clics en el grid de slots (el entorno no tenía la extensión de Chrome disponible); sí se verificó la lógica completa vía API real + sintaxis JS.
 - **Sin auditoría de acceso administrativo a datos clínicos** — gap conocido y heredado de Fase 1 (Fase 6), no específico de Agenda.
 
+Ninguno de estos puntos bloquea el cierre de Fase 2: son mejoras de calidad/pulido, no reglas de negocio incumplidas ni brechas de integridad/seguridad.
+
 ## 12. Decisiones y correcciones tomadas (no pendientes — ya resueltas y documentadas)
 
-Dos contradicciones documentales genuinas se identificaron y corrigieron **antes** de programar cada etapa afectada, siguiendo la jerarquía `phase-2-agenda.md` → docs derivados, nunca inventando regla nueva:
+### Ronda de implementación (2026-09-09/10)
 
 1. `agenda-permissions.md` afirmaba dos veces que "el administrador NO tiene acceso global", contradiciendo `ADR-004` §8 (ya aceptado). Corregido a favor del ADR.
-2. `agenda-service-contracts.md` §5.2 se autocontradecía sobre si una disponibilidad con citas puede modificarse; se resolvió a favor de la lectura más matizada del documento rector (`phase-2-agenda.md` §5.6): una modificación *compatible* (que sigue conteniendo las citas existentes) se permite; una incompatible se rechaza con el nuevo error `AvailabilityHasIncompatibleAppointments`.
+2. `agenda-service-contracts.md` §5.2 se autocontradecía sobre si una disponibilidad con citas puede modificarse; se resolvió a favor de la lectura más matizada del documento rector (`phase-2-agenda.md` §5.6): una modificación *compatible* (que sigue conteniendo las citas existentes) se permite; una incompatible se rechaza con el nuevo error `AvailabilityHasIncompatibleAppointments`. **Confirmado explícitamente por el usuario en la ronda de cierre (2026-09-10): se mantiene.**
 
-Ambas correcciones quedaron registradas en los propios documentos con nota de fecha y justificación, no solo en el código.
+### Ronda de cierre (2026-09-10) — auditoría final solicitada por el usuario
 
-**Nota final:** todo el trabajo de Fase 2 está en el árbol de trabajo (sin commitear) al momento de este informe — 8 archivos modificados y 4 directorios nuevos (`appointments/`, `templates/appointments/`, `static/js/`, más la migración de `clinics`).
+3. **Idempotencia de Hold eliminada del contrato.** `agenda-api-contracts.md` §6.1 exigía un header `Idempotency-Key` en `POST /api/holds/` que nunca tuvo efecto real: §8/§15 (las secciones normativas de idempotencia) solo cubren creación de cita y reprogramación, y `Hold` no tiene campo `idempotency_key`. Se eliminó del contrato con nota explicativa; un reintento que pierde el slot contra sí mismo recibe `HOLD_CONFLICT`, comportamiento esperado dado que el hold ya es en sí una protección temporal de 15 minutos. Código actualizado (`appointments/api.py`) para reflejar la decisión — no hubo cambio de comportamiento, solo de documentación/comentario, ya que el header nunca se usaba.
+4. **Auditoría exhaustiva de ADR-004 §8 vs. todos los documentos de Fase 2.** La corrección de la ronda anterior había quedado incompleta: solo se habían corregido los dos pasajes más visibles de `agenda-permissions.md`, pero el lenguaje de "ámbito administrativo por clínica" seguía apareciendo — de forma contradictoria con el acceso global ya decidido — en **9 archivos adicionales**, incluido el propio documento rector (`docs/phases/phase-2-agenda.md`, que en una sección llegaba a advertir explícitamente *contra* tratar el acceso del administrador como global) y en `requirements.md`, la fuente de verdad funcional del proyecto. Se corrigieron todas las apariciones para que la única interpretación posible en todo el proyecto sea: el Administrador tiene acceso funcional global (`user.is_superuser`, ADR-004 §8), sin restricción territorial por clínica; `DoctorClinic` válida es la única precondición operativa adicional para cualquier operación sobre un médico/consultorio concreto. Archivos corregidos: `docs/phases/phase-2-agenda.md`, `docs/design/agenda-permissions.md`, `docs/design/agenda-service-contracts.md`, `docs/design/agenda-api-contracts.md`, `docs/design/phase-2-agenda-ux.md`, `docs/design/appointment-domain.md`, `docs/architecture.md`, `CLAUDE.md`, `requirements.md`. Ningún cambio de código fue necesario para este punto: la implementación (`appointments/services/permissions.py`) ya era consistente con el acceso global desde la Etapa 2 — el problema era exclusivamente documental.
+
+Todas las correcciones quedaron registradas en los propios documentos con nota de fecha y justificación, no solo en este informe.
+
+---
+
+## FASE 2 — COMPLETADA
+
+Dominio, hold/reserva, gestión de cita, operación médica, API JSON y UI están implementados, probados (332/332 tests) y documentalmente consistentes — incluida la auditoría final de la única decisión arquitectónica que tuvo divergencias entre documentos (alcance del Administrador, ADR-004 §8). Las deudas listadas en §11 quedan registradas como backlog no bloqueante para una iteración futura, no como trabajo pendiente de esta fase.
+
+**Nota final:** el trabajo de implementación de Fase 2 ya está commiteado (`0a159e1`). Las correcciones de esta ronda de cierre (Pasos 1-4) están en el árbol de trabajo, pendientes de commit — 9 archivos modificados, todos documentación salvo un comentario en `appointments/api.py`.

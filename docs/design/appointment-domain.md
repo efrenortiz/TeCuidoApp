@@ -63,7 +63,7 @@ Doctor ─────── DoctorClinic ─────── Clinic
                                                └── RescheduleHistory
 ```
 
-La autorización para cada actor se resuelve mediante las relaciones canónicas de Fase 1 y el ámbito administrativo correspondiente.
+La autorización para cada actor se resuelve mediante las relaciones canónicas de Fase 1 (`DoctorPatientRelationship`, `ResponsiblePatientRelationship`, `DoctorClinic`) o, para el Administrador, su acceso funcional global (`user.is_superuser`, ADR-004 §8).
 
 ---
 
@@ -700,7 +700,7 @@ Puede crear una cita para cualquier paciente al que tenga acceso legítimo — e
 
 ### Administrador
 
-Toda operación administrativa exige, además del ámbito sobre la clínica, que exista una relación `DoctorClinic` válida entre el médico y el consultorio involucrados (§4.3). Ninguna de las dos condiciones sustituye a la otra.
+Tiene acceso funcional global (ADR-004 §8) — sin restricción territorial por clínica. Toda operación administrativa exige únicamente que exista una relación `DoctorClinic` válida entre el médico y el consultorio involucrados (§4.3).
 
 ### Régimen adulto
 
@@ -781,7 +781,7 @@ Estas invariantes deberán quedar protegidas por modelo, constraints, servicios 
 20. Toda reprogramación conserva historial.
 21. No existe transición automática de estado por tiempo.
 22. Un médico no puede tener dos disponibilidades activas que se solapen temporalmente, aunque correspondan a consultorios distintos.
-23. Toda operación administrativa exige `DoctorClinic` válida entre el médico y el consultorio involucrados, además del ámbito sobre la clínica.
+23. Toda operación administrativa exige `DoctorClinic` válida entre el médico y el consultorio involucrados; el administrador tiene acceso funcional global (ADR-004 §8), sin restricción territorial por clínica.
 24. Crear un `Appointment` con un médico que no tiene `DoctorPatientRelationship` previa con el paciente es válido y no crea, activa ni modifica dicha relación.
 
 ---

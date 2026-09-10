@@ -163,7 +163,8 @@ Decisiones de cierre (2026-09-09): un médico puede crear la primera cita de un 
 `DoctorPatientRelationship` previa (esa creación no crea ni modifica la relación — son
 operaciones independientes); un médico no puede tener disponibilidad simultánea en dos
 consultorios distintos; la agenda usa la zona horaria del `Clinic`; toda operación
-administrativa exige `DoctorClinic` válida además del ámbito sobre la clínica.
+administrativa exige `DoctorClinic` válida — el administrador tiene acceso funcional global
+(ADR-004 §8), sin ámbito territorial por clínica (corregido 2026-09-10).
 
 ## Fase 3 — Gestión clínica
 

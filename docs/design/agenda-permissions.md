@@ -29,7 +29,7 @@ Las operaciones de Agenda deben utilizar:
 - `DoctorPatientRelationship`;
 - `ResponsiblePatientRelationship`;
 - `DoctorClinic`;
-- ámbito administrativo de la clínica.
+- `user.is_superuser` (Administrador, acceso funcional global — ADR-004 §8; no existe un "ámbito administrativo de la clínica" como entidad o relación separada).
 
 Agenda no debe duplicar ni reinterpretar las relaciones de autorización ya existentes.
 
@@ -105,7 +105,7 @@ No puede crear, modificar ni desactivar disponibilidades.
 
 ### Administrador
 
-Puede consultar las disponibilidades dentro de las clínicas que estén dentro de su ámbito administrativo autorizado.
+Puede consultar cualquier disponibilidad — acceso funcional global (ADR-004 §8), sin restricción territorial por clínica.
 
 ---
 
@@ -125,10 +125,7 @@ cuando exista una relación `DoctorClinic` válida.
 
 ### Administrador
 
-Puede crear disponibilidad únicamente cuando:
-
-1. la clínica pertenece a su ámbito administrativo;
-2. el médico tiene una relación `DoctorClinic` válida con esa clínica.
+Puede crear disponibilidad para cualquier médico y consultorio (acceso global, ADR-004 §8), únicamente cuando el médico tiene una relación `DoctorClinic` válida con esa clínica — esa es la única precondición.
 
 ### Paciente / Responsable
 
@@ -194,7 +191,7 @@ Puede crear una cita para cualquier paciente al que tenga **acceso legítimo**, 
 
 ### Administrador
 
-Puede crear citas dentro de las clínicas de su ámbito administrativo, y únicamente cuando existe una relación `DoctorClinic` válida entre el médico y el consultorio involucrados. Ambas condiciones son necesarias; ninguna sustituye a la otra.
+Puede crear citas para cualquier médico y consultorio (acceso global, ADR-004 §8), únicamente cuando existe una relación `DoctorClinic` válida entre el médico y el consultorio involucrados — esa es la única precondición adicional.
 
 ---
 
@@ -287,7 +284,7 @@ Una cita cuyo médico asignado sea él mismo.
 
 ### Administrador
 
-Una cita dentro de las clínicas de su ámbito administrativo.
+Cualquier cita, siempre que exista una relación `DoctorClinic` válida entre el médico y el consultorio de la cita (acceso global, ADR-004 §8).
 
 En todos los casos se aplican además las reglas funcionales de cancelación:
 
@@ -509,7 +506,7 @@ Esto no impide que:
 
 - un médico cree la cita;
 - un responsable autorizado, cuando corresponda, la gestione antes de perder su autorización;
-- un administrador autorizado la gestione dentro de su ámbito.
+- un administrador la gestione (acceso global, ADR-004 §8, siempre que exista `DoctorClinic` válida).
 
 La existencia de `User` no sustituye las reglas de autorización sobre la persona/paciente.
 
@@ -517,24 +514,25 @@ La existencia de `User` no sustituye las reglas de autorización sobre la person
 
 ## 24. Matriz principal de permisos
 
-| Operación | Paciente | Responsable ACTIVE | Médico | Administrador autorizado |
+| Operación | Paciente | Responsable ACTIVE | Médico | Administrador (global‡) |
 |---|---:|---:|---:|---:|
-| Ver disponibilidad | ✅ | ✅ | ✅ propia | ✅ ámbito |
-| Crear disponibilidad | ❌ | ❌ | ✅ propia | ✅ ámbito |
-| Modificar disponibilidad | ❌ | ❌ | ✅ propia* | ✅ ámbito* |
-| Desactivar disponibilidad | ❌ | ❌ | ✅ propia* | ✅ ámbito* |
-| Crear cita | ✅ propia | ✅ paciente autorizado | ✅ `DoctorClinic` válida† | ✅ ámbito + `DoctorClinic` válida |
-| Ver cita | ✅ propia | ✅ paciente autorizado | ✅ asignado | ✅ ámbito |
+| Ver disponibilidad | ✅ | ✅ | ✅ propia | ✅ |
+| Crear disponibilidad | ❌ | ❌ | ✅ propia | ✅ `DoctorClinic` válida |
+| Modificar disponibilidad | ❌ | ❌ | ✅ propia* | ✅ `DoctorClinic` válida* |
+| Desactivar disponibilidad | ❌ | ❌ | ✅ propia* | ✅ `DoctorClinic` válida* |
+| Crear cita | ✅ propia | ✅ paciente autorizado | ✅ `DoctorClinic` válida† | ✅ `DoctorClinic` válida |
+| Ver cita | ✅ propia | ✅ paciente autorizado | ✅ asignado | ✅ |
 | Crear Hold | ✅ | ✅ | ✅ | ✅ |
 | Liberar Hold | ✅ propio | ✅ propio | ✅ propio | ✅ propio |
-| Cancelar cita | ✅ propia | ✅ paciente autorizado | ✅ correspondiente | ✅ ámbito |
-| Reprogramar cita | ✅ propia | ✅ paciente autorizado | ✅ correspondiente | ✅ ámbito |
+| Cancelar cita | ✅ propia | ✅ paciente autorizado | ✅ correspondiente | ✅ `DoctorClinic` válida |
+| Reprogramar cita | ✅ propia | ✅ paciente autorizado | ✅ correspondiente | ✅ `DoctorClinic` válida |
 | Iniciar consulta | ❌ | ❌ | ✅ asignado | ❌ |
 | Finalizar consulta | ❌ | ❌ | ✅ asignado | ❌ |
 | `NO_SHOW` | ❌ | ❌ | ✅ asignado | ❌ |
 
 `*` No puede modificarse/desactivarse cuando hacerlo afectaría citas asociadas.
 `†` No se exige `DoctorPatientRelationship` previa con el paciente (§9) — la creación no la crea ni la modifica.
+`‡` El administrador tiene acceso funcional global (ADR-004 §8) — sin restricción territorial por clínica; `DoctorClinic` válida, donde se indica, es la única precondición adicional, no un ámbito.
 
 ---
 
@@ -614,4 +612,4 @@ Esos aspectos pertenecen a sus respectivos documentos de Fase 2.
 
 La Agenda debe aplicar el principio:
 
-> **El usuario sólo puede operar sobre recursos para los cuales su identidad, perfil, relación y ámbito administrativo le conceden autorización; cualquier ausencia de autorización implica rechazo.**
+> **El usuario sólo puede operar sobre recursos para los cuales su identidad, perfil funcional, relación (`DoctorPatientRelationship`, `ResponsiblePatientRelationship`, `DoctorClinic`) o acceso global de Administrador (ADR-004 §8) le conceden autorización; cualquier ausencia de autorización implica rechazo.**

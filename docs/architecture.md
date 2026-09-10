@@ -405,8 +405,9 @@ Fase 2 sin que `care_requests` exista todavía.
 
 Reglas adicionales de cierre (2026-09-09): un médico no puede tener dos disponibilidades
 activas que se solapen aunque correspondan a consultorios distintos; la agenda usa la zona
-horaria del `Clinic`; toda operación administrativa exige `DoctorClinic` válida además del
-ámbito sobre la clínica; y un médico puede crear la primera cita de un paciente sin
+horaria del `Clinic`; toda operación administrativa exige `DoctorClinic` válida — el
+administrador tiene acceso funcional global (ADR-004 §8), sin ámbito territorial por clínica
+(corregido 2026-09-10); y un médico puede crear la primera cita de un paciente sin
 `DoctorPatientRelationship` previa — esa creación **no** crea, activa ni modifica dicha
 relación (`crear Appointment` y `crear DoctorPatientRelationship` son operaciones
 independientes).

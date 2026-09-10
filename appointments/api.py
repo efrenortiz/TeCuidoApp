@@ -358,10 +358,10 @@ class HoldCreateView(JsonApiView):
         start_at = _parse_iso_datetime(_require_field(data, "start"), "start")
         end_at = _parse_iso_datetime(_require_field(data, "end"), "end")
 
-        # §6.1 lists an Idempotency-Key header, but §8's idempotency
-        # section only requires it for cita creation/reprogramación, and
-        # `Hold` has no idempotency_key field (Etapa 1 design) — the
-        # header is accepted (never rejected) but has no effect here.
+        # No Idempotency-Key here — §6.1/§15 only require idempotency for
+        # cita creation/reprogramación (corrected 2026-09-10); `Hold` has
+        # no idempotency_key field. A retried request that lost the slot
+        # to itself simply gets HOLD_CONFLICT, which is expected.
         hold = hold_service.create_hold(
             actor=request.user, doctor=doctor, clinic=clinic, start_at=start_at, end_at=end_at
         )
