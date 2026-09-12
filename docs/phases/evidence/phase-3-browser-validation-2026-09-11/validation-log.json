@@ -1,0 +1,121 @@
+[
+  {
+    "step": "A1",
+    "description": "Login de médico válido",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/",
+    "timestamp": "2026-09-11T13:00:41"
+  },
+  {
+    "step": "A2-A3",
+    "description": "Cita elegible visible, paciente/cita correctos",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/agenda/citas/4/",
+    "timestamp": "2026-09-11T13:00:41"
+  },
+  {
+    "step": "B4-B6",
+    "description": "Iniciar consulta transiciona a IN_PROGRESS, contexto correcto",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/clinica/encuentros/2/",
+    "timestamp": "2026-09-11T13:00:42"
+  },
+  {
+    "step": "B7",
+    "description": "Reintentar iniciar no genera una segunda consulta (idempotente)",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/clinica/encuentros/2/",
+    "timestamp": "2026-09-11T13:00:43"
+  },
+  {
+    "step": "C8-C10",
+    "description": "Captura de 2 campos + guardado parcial exitoso y visible",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/clinica/encuentros/2/guardar/",
+    "timestamp": "2026-09-11T13:00:43"
+  },
+  {
+    "step": "C11-C12",
+    "description": "Recarga de pagina conserva el contenido guardado",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/clinica/encuentros/2/guardar/",
+    "timestamp": "2026-09-11T13:00:44"
+  },
+  {
+    "step": "D13",
+    "description": "Salir sin completar (navegar a otra pantalla)",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/agenda/citas/4/",
+    "timestamp": "2026-09-11T13:00:44"
+  },
+  {
+    "step": "D14-D16",
+    "description": "Reanudacion: sigue IN_PROGRESS con datos guardados disponibles",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/clinica/encuentros/2/",
+    "timestamp": "2026-09-11T13:00:45"
+  },
+  {
+    "step": "E17-E20",
+    "description": "Completion exitoso, estado final Completada visible",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/clinica/encuentros/2/completar/",
+    "timestamp": "2026-09-11T13:00:45"
+  },
+  {
+    "step": "E21",
+    "description": "Sin controles de edicion tras completion",
+    "result": "OK",
+    "detail": "",
+    "timestamp": "2026-09-11T13:00:46"
+  },
+  {
+    "step": "E22",
+    "description": "La cita refleja su estado final (Atendida/COMPLETED)",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/agenda/citas/4/",
+    "timestamp": "2026-09-11T13:00:46"
+  },
+  {
+    "step": "F23-F25",
+    "description": "Edicion post-completion rechazada por el servidor, sin reapertura",
+    "result": "OK",
+    "detail": "fetch_status=200",
+    "timestamp": "2026-09-11T13:00:46"
+  },
+  {
+    "step": "G26",
+    "description": "Expediente accesible por el medico asignado",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/clinica/pacientes/10/expediente/",
+    "timestamp": "2026-09-11T13:00:46"
+  },
+  {
+    "step": "G27",
+    "description": "El encuentro aparece en el historial",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/clinica/pacientes/10/historial/",
+    "timestamp": "2026-09-11T13:00:46"
+  },
+  {
+    "step": "G28-G29",
+    "description": "Detalle historico muestra los datos persistidos",
+    "result": "OK",
+    "detail": "url=http://127.0.0.1:8877/clinica/encuentros/2/",
+    "timestamp": "2026-09-11T13:00:46"
+  },
+  {
+    "step": "H30",
+    "description": "Paciente ajeno no puede abrir el expediente (404)",
+    "result": "OK",
+    "detail": "status=404",
+    "timestamp": "2026-09-11T13:00:48"
+  },
+  {
+    "step": "H31-H33",
+    "description": "URL directa del encuentro rechazada, sin fuga de datos clinicos",
+    "result": "OK",
+    "detail": "status=404",
+    "timestamp": "2026-09-11T13:00:48"
+  }
+]

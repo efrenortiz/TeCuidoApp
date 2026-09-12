@@ -839,29 +839,21 @@ estados reales de `Appointment` (§13.1): `SCHEDULED`, `IN_CONSULTATION`, `COMPL
 
 # 17. Consulta médica
 
-La **Consulta / MedicalEncounter** debe ser independiente de la cita.
+**Actualizado 2026-09-11 conforme al cierre de Fase 3** (`docs/phases/phase-3-clinical-encounter.md`, documento rector). Una redacción anterior de esta sección era el placeholder previo al diseño de Fase 3 y quedaba desactualizada respecto de decisiones ya cerradas.
 
-Una cita puede generar una consulta médica. El estado `IN_CONSULTATION` de la cita (§13.1,
-Fase 2) es la frontera hacia la atención clínica — la existencia de una cita o su estado
-nunca debe interpretarse por sí solo como diagnóstico, tratamiento o decisión médica alguna;
-eso pertenece exclusivamente al dominio clínico de Fase 3.
+La **Consulta / `ClinicalEncounter`** se origina siempre en una `Appointment` válida — no existe como entidad independiente ni se crea manualmente sin una cita de origen (`Appointment 1 ─── 0..1 ClinicalEncounter`). El estado `IN_CONSULTATION` de la cita (§13.1, Fase 2) es la frontera hacia la atención clínica — la existencia de una cita o su estado nunca debe interpretarse por sí solo como diagnóstico, tratamiento o decisión médica alguna; eso pertenece exclusivamente al dominio clínico de Fase 3.
 
-La consulta debe conservar un historial permanente y no debe sobrescribirse como si fuera un simple registro actual.
+La consulta debe conservar un historial permanente y no debe sobrescribirse como si fuera un simple registro actual. Una vez completada (`COMPLETED`), queda bloqueada: no se edita, no se reabre y no tiene `DELETE` funcional.
 
-Debe contener como mínimo:
+Para completar la consulta son obligatorios exactamente estos cinco campos:
 
-- Paciente.
-- Médico.
-- Cita relacionada.
-- Fecha/hora.
 - Motivo de consulta.
+- Padecimiento actual.
 - Exploración física.
-- Paraclínicos.
-- Impresión diagnóstica.
-- Manejo/tratamiento.
-- Pronóstico.
-- Evolución.
-- Observaciones clínicas.
+- Evaluación / diagnóstico (texto libre; sin CIE-10 ni catálogo diagnóstico en Fase 3).
+- Plan / indicaciones.
+
+Campos como paraclínicos, manejo/tratamiento, pronóstico, evolución y observaciones clínicas siguen formando parte del dominio como información opcional, pero **no son obligatorios** para completar la consulta.
 
 El médico debe poder registrar información adicional relevante.
 
@@ -889,6 +881,8 @@ Los registros históricos de las consultas no deben sobrescribirse.
 ---
 
 # 19. Resumen clínico para el médico
+
+**Nota de alcance (revisión de consistencia, 2026-09-11):** esta sección describe la visión funcional completa del producto, no un requisito literal de Fase 3. §44 ("Fase 3 — Gestión clínica") y `docs/architecture.md` §36 cierran el alcance real de Fase 3: el resumen clínico de esta fase se limita a metadatos de la última consulta registrada (fecha, médico, estado) — sin BMI, alergias, laboratorios ni estudios, que dependen de datos/entidades de fases posteriores.
 
 Al abrir el expediente de un paciente, el sistema debe mostrar un resumen de contexto clínico.
 
@@ -932,6 +926,8 @@ Debe contemplar, cuando exista información:
 ---
 
 # 20. Alertas clínicas
+
+**Nota de alcance (revisión de consistencia, 2026-09-11):** `ClinicalAlert` queda explícitamente fuera del núcleo de Fase 3 — entidad futura separada (§44, `docs/architecture.md` §36/§7.8). No implementada todavía.
 
 Debe existir el concepto de **alerta clínica** visible al médico.
 
@@ -1551,14 +1547,17 @@ Contrato funcional completo y detallado en `docs/phases/phase-2-agenda.md` (apro
 
 ## Fase 3 — Gestión clínica
 
-- Historia clínica.
-- Consultas.
-- Evolución.
-- Diagnósticos.
-- Tratamientos.
-- Pronóstico.
-- Alertas clínicas.
-- Resumen clínico.
+Especificación funcional aprobada 2026-09-11, ver `docs/phases/phase-3-clinical-encounter.md` (documento rector) — ese documento manda en caso de duda.
+
+- `ClinicalEncounter`: registro de la consulta iniciada a partir de una `Appointment` válida (`Appointment 1 ─── 0..1 ClinicalEncounter`); estados técnicos únicamente `IN_PROGRESS`/`COMPLETED`.
+- Inicio ("Iniciar consulta") exclusivo del médico asignado; crea el encuentro y cambia la cita a `IN_CONSULTATION` de forma atómica e idempotente.
+- Guardado parcial durante la consulta; sin autosave obligatorio.
+- Mínimo obligatorio para completar: motivo de consulta, padecimiento actual, exploración física, evaluación/diagnóstico y plan/indicaciones — exactamente estos cinco campos (evolución, pronóstico, tratamiento y otros datos pasan a ser opcionales, no obligatorios para el cierre).
+- Diagnóstico como texto libre; sin CIE-10 ni catálogo diagnóstico en esta fase.
+- Cierre atómico `ClinicalEncounter COMPLETED` + `Appointment COMPLETED`; sin reapertura, edición ni `DELETE` funcional posteriores.
+- `MedicalRecord`: expediente longitudinal único por paciente (`Patient 1 ─── 1 MedicalRecord`), creación lazy; no duplica datos de `Patient` ni de los encuentros.
+- `DoctorPatientRelationship` permanece independiente — ninguna operación clínica la crea, activa ni modifica.
+- Alertas clínicas, recetas, órdenes de estudio y documentos clínicos quedan fuera del núcleo de Fase 3 (entidades futuras separadas).
 
 ## Fase 4 — Documentos
 
@@ -1660,7 +1659,7 @@ Hold
 Appointment
 CareRequest
 MedicalRecord
-MedicalEncounter / Consultation
+ClinicalEncounter
 ClinicalAlert
 Prescription
 PrescriptionItem

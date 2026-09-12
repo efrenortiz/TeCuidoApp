@@ -71,7 +71,13 @@
   {% endif %}
 
   {% if is_assigned_doctor and appointment.status == "SCHEDULED" %}
-  <form method="post" action="{% url 'appointments:appointment_start' appointment.pk %}" class="inline-form">
+  {% comment %}
+  Fase 3 (ADR-009): "Iniciar consulta" ahora entra al flujo clínico
+  (crea el ClinicalEncounter atómicamente con la transición de la cita),
+  nunca la transición directa de Fase 2 — ver medical_records/views.py
+  EncounterStartView.
+  {% endcomment %}
+  <form method="post" action="{% url 'clinical_ui:encounter_start' appointment.pk %}" class="inline-form">
     {% csrf_token %}
     <button type="submit" class="btn btn--primary">Iniciar consulta</button>
   </form>
@@ -81,11 +87,14 @@
   </form>
   {% endif %}
 
-  {% if is_assigned_doctor and appointment.status == "IN_CONSULTATION" %}
-  <form method="post" action="{% url 'appointments:appointment_complete' appointment.pk %}" class="inline-form">
-    {% csrf_token %}
-    <button type="submit" class="btn btn--primary">Finalizar consulta</button>
-  </form>
+  {% if is_clinical_actor and appointment.status == "IN_CONSULTATION" and appointment.clinical_encounter %}
+  <a class="btn btn--primary" href="{% url 'clinical_ui:encounter_detail' appointment.clinical_encounter.pk %}">
+    {% if is_assigned_doctor %}Continuar consulta{% else %}Ver consulta{% endif %}
+  </a>
+  {% endif %}
+
+  {% if is_clinical_actor and appointment.status == "COMPLETED" and appointment.clinical_encounter %}
+  <a class="btn btn--secondary" href="{% url 'clinical_ui:encounter_detail' appointment.clinical_encounter.pk %}">Ver consulta</a>
   {% endif %}
 </div>
 {% endblock %}

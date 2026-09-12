@@ -434,18 +434,18 @@ Debe permanecer como Django app dentro del mismo proyecto.
 
 ## 7.8 `medical_records`
 
-Responsabilidad futura:
+Especificación funcional aprobada 2026-09-11, ver `docs/phases/phase-3-clinical-encounter.md` (documento rector), `docs/design/clinical-encounter-domain.md` y `docs/design/clinical-record-domain.md`.
 
-- historia clínica;
-- consultas;
-- evolución;
-- diagnósticos;
-- tratamientos;
-- pronóstico;
-- resumen clínico;
-- alertas.
+Responsabilidad (ADR-008 — Clinical Domain Boundary):
 
-**No forma parte de la Fase 1.**
+- `ClinicalEncounter`: registro de la consulta clínica originada por una `Appointment` válida (`Appointment 1 ─── 0..1 ClinicalEncounter`), estados `IN_PROGRESS`/`COMPLETED` únicamente, cinco campos obligatorios al completar (motivo de consulta, padecimiento actual, exploración física, evaluación/diagnóstico en texto libre, plan/indicaciones), sin edición ni reapertura posterior al cierre;
+- `MedicalRecord`: expediente longitudinal único por paciente (`Patient 1 ─── 1 MedicalRecord`, ADR-011), creación lazy, sin duplicar datos de `Patient` ni de los encuentros;
+- evolución, pronóstico, tratamientos, paraclínicos y observaciones permanecen como información clínica opcional, no como requisitos de cierre;
+- alertas clínicas, recetas, órdenes de estudio y documentos clínicos son entidades futuras separadas, fuera del núcleo de Fase 3.
+
+`appointments` (Fase 2) sigue siendo propietario exclusivo de `Appointment` y su ciclo de vida de Agenda; `medical_records` no lo duplica ni lo sustituye.
+
+**No forma parte de la Fase 1 ni de la Fase 2.**
 
 ---
 
@@ -1126,18 +1126,19 @@ La Fase 1 no implementa estas entidades.
 
 ---
 
-# 36. Evolución hacia Gestión Clínica
+# 36. Gestión Clínica (Fase 3 — cerrada, ver §7.8)
 
-Las entidades clínicas futuras deberán mantener el principio:
+Las entidades clínicas mantienen el principio:
 
 ```text
 Patient
    │
    ├── MedicalRecord
-   ├── MedicalEncounter
-   ├── ClinicalAlert
-   ├── Prescription
-   └── StudyOrder
+   │      │
+   │      └── ClinicalEncounter (vía Appointment)
+   ├── ClinicalAlert       [futuro]
+   ├── Prescription        [futuro]
+   └── StudyOrder          [futuro]
 ```
 
 Las consultas y registros clínicos deberán conservar historial.
@@ -1145,7 +1146,7 @@ Las consultas y registros clínicos deberán conservar historial.
 No se debe construir un expediente como un único registro mutable que sobrescriba toda la información anterior.
 
 `Appointment.IN_CONSULTATION` (Fase 2) es la frontera hacia este dominio — `appointments` no
-debe absorber `MedicalEncounter` ni decisiones clínicas; la existencia o el estado de una cita
+debe absorber `ClinicalEncounter` ni decisiones clínicas; la existencia o el estado de una cita
 nunca constituye por sí solo un diagnóstico o tratamiento.
 
 ---
@@ -1157,11 +1158,10 @@ Posteriormente:
 ```text
 Patient
    │
-   ├── Appointment
-   ├── MedicalEncounter
-   ├── Prescription
-   ├── StudyOrder
-   └── ClinicalDocument
+   ├── Appointment ── ClinicalEncounter
+   ├── Prescription        [futuro]
+   ├── StudyOrder          [futuro]
+   └── ClinicalDocument    [futuro]
 ```
 
 Los documentos deberán permanecer privados y protegidos por autorización.
@@ -1335,7 +1335,24 @@ Cuando sea necesario cambiarla debe:
 
 # 44. Estado actual
 
-### Fase 1
+**Corrección de consistencia (cierre documental de Fase 3, 2026-09-11):** las dos listas
+originales de esta sección (checklist de Fase 1 sin marcar, y Fase 2/Fase 3 bajo "Fases
+futuras") quedaron desactualizadas — Fase 1, Fase 2 y Fase 3 ya están completadas. Se
+conservan íntegras más abajo como registro histórico de construcción; el resumen siguiente
+es la fuente de verdad sobre el estado real y consolidado del proyecto.
+
+### Resumen de fases
+
+```text
+Fase 1 — Fundaciones                COMPLETADA (docs/phases/phase-1-foundations.md)
+Fase 2 — Agenda                     COMPLETADA (docs/phases/phase-2-agenda-final-report.md)
+Fase 3 — Gestión clínica            COMPLETADA (docs/phases/phase-3-clinical-final-report.md — PHASE 3 — CLOSED)
+Fase 4 — Documentos                 SIGUIENTE (no iniciada)
+Fase 5 — CareRequest y operación    futura
+Fase 6 — Notificaciones y auditoría futura
+```
+
+### Fase 1 — checklist original de construcción (histórico)
 
 ```text
 [ ] Configuración
@@ -1358,11 +1375,16 @@ Cuando sea necesario cambiarla debe:
 [ ] Documentation
 ```
 
-### Fases futuras
+### Fase 2 y Fase 3 — especificación funcional (histórico)
 
 ```text
 Fase 2 — Agenda (especificación funcional aprobada 2026-09-09, ver docs/phases/phase-2-agenda.md)
-Fase 3 — Gestión clínica
+Fase 3 — Gestión clínica (especificación funcional aprobada 2026-09-11, ver docs/phases/phase-3-clinical-encounter.md)
+```
+
+### Fases futuras
+
+```text
 Fase 4 — Documentos
 Fase 5 — CareRequest y operación
 Fase 6 — Notificaciones y auditoría

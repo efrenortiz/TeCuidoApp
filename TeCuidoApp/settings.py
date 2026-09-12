@@ -76,6 +76,7 @@ INSTALLED_APPS = [
     'clinics',
     'patients',
     'appointments',
+    'medical_records',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
