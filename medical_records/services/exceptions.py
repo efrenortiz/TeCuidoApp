@@ -96,3 +96,56 @@ class ClinicalAuditError(ClinicalError):
     """SC-143 — reservada para cuando una política explícita futura
     convierta el registro exitoso de auditoría en condición de la
     operación; no se usa en Etapa 2."""
+
+
+# Fase 4 (phase-4-service-contracts.md §7 / ADR-029) — taxonomía compartida
+# de `PrescriptionService`/`StudyOrderService`/`ClinicalDocumentService`.
+# Prefijo `Document*` para distinguirlas por nombre de las de Fase 3
+# (`Clinical*`) sin renombrar el concepto ya cerrado documentalmente.
+
+
+class DocumentError(Exception):
+    """Base para los errores de dominio de Fase 4."""
+
+
+class DocumentNotFound(DocumentError):
+    """Recurso documental inexistente o no accesible al actor (mismo
+    criterio SC-131/SC-068 de Fase 3: nunca se distingue "no existe" de
+    "no autorizado" en la respuesta al cliente)."""
+
+
+class DocumentPermissionDenied(DocumentError):
+    """El actor está identificado pero no autorizado para la operación."""
+
+
+class DocumentInvalidState(DocumentError):
+    """La operación no es válida en el estado actual del recurso (p. ej.
+    anular con datos distintos un recurso ya `VOIDED`)."""
+
+
+class DocumentValidationError(DocumentError):
+    """El payload viola una regla estructural (campos no permitidos, tipo
+    inválido, items faltantes)."""
+
+
+class DocumentConflict(DocumentError):
+    """Conflicto de idempotencia o concurrencia (`phase-4-documents-workflow.md`
+    §10): mismo `Idempotency-Key` reutilizado para una intención distinta,
+    o una corrección/anulación que perdió la carrera por la versión
+    vigente."""
+
+
+class DocumentImmutableResource(DocumentError):
+    """Intento de mutar directamente un recurso `ISSUED`/`VOIDED`, o de
+    corregir una versión que ya no es la vigente (`is_current_version=False`)
+    — ver la nota de `phase-4-service-contracts.md` §7."""
+
+
+class DocumentReferenceInconsistency(DocumentError):
+    """Una referencia cruzada no es consistente (p. ej. el `patient`
+    derivado de `clinical_encounter` no coincide con el `patient`
+    indicado)."""
+
+
+class DocumentStorageError(DocumentError):
+    """Fallo del mecanismo de almacenamiento de archivos (Stage 3)."""

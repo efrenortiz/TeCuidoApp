@@ -240,6 +240,19 @@ class AuditEvent(models.Model):
         READ_CLINICAL_HISTORY = "READ_CLINICAL_HISTORY", "Lectura de historial clínico"
         CREATE_MEDICAL_RECORD = "CREATE_MEDICAL_RECORD", "Creación de expediente"
         UPDATE_MEDICAL_RECORD = "UPDATE_MEDICAL_RECORD", "Actualización de expediente"
+        # Fase 4 (phase-4-audit-and-history.md §2) — mismo AuditEvent,
+        # nuevas acciones documentales; no se crea un modelo de auditoría
+        # paralelo (ADR-021 reutiliza explícitamente el mecanismo de Fase 3).
+        ISSUE_PRESCRIPTION = "ISSUE_PRESCRIPTION", "Emisión de receta"
+        ISSUE_STUDY_ORDER = "ISSUE_STUDY_ORDER", "Emisión de solicitud de estudio"
+        VOID_PRESCRIPTION = "VOID_PRESCRIPTION", "Anulación de receta"
+        VOID_STUDY_ORDER = "VOID_STUDY_ORDER", "Anulación de solicitud de estudio"
+        UPLOAD_CLINICAL_DOCUMENT = "UPLOAD_CLINICAL_DOCUMENT", "Carga de documento clínico"
+        GENERATE_CLINICAL_DOCUMENT = "GENERATE_CLINICAL_DOCUMENT", "Generación de documento clínico"
+        READ_CLINICAL_DOCUMENT = "READ_CLINICAL_DOCUMENT", "Lectura de documento clínico"
+        DOWNLOAD_CLINICAL_DOCUMENT = "DOWNLOAD_CLINICAL_DOCUMENT", "Descarga de documento clínico"
+        CREATE_DOCUMENT_VERSION = "CREATE_DOCUMENT_VERSION", "Nueva versión de documento clínico"
+        VOID_CLINICAL_DOCUMENT = "VOID_CLINICAL_DOCUMENT", "Anulación de documento clínico"
 
     class Result(models.TextChoices):
         SUCCESS = "SUCCESS", "Éxito"
@@ -252,6 +265,9 @@ class AuditEvent(models.Model):
         MEDICAL_RECORD = "MedicalRecord", "Expediente clínico"
         CLINICAL_HISTORY = "ClinicalHistory", "Historial clínico"
         APPOINTMENT = "Appointment", "Cita"
+        PRESCRIPTION = "Prescription", "Receta"
+        STUDY_ORDER = "StudyOrder", "Solicitud de estudio"
+        CLINICAL_DOCUMENT = "ClinicalDocument", "Documento clínico"
 
     # AH-084/175 — asignado por el servidor, nunca por el cliente.
     occurred_at = models.DateTimeField(auto_now_add=True)
@@ -283,6 +299,17 @@ class AuditEvent(models.Model):
     )
     clinical_encounter = models.ForeignKey(
         "medical_records.ClinicalEncounter", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    # Fase 4 — mismas reglas que las tres FKs de arriba: opcionales, sólo
+    # para integridad referencial adicional cuando aportan valor real.
+    prescription = models.ForeignKey(
+        "prescriptions.Prescription", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    study_order = models.ForeignKey(
+        "study_orders.StudyOrder", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
+    )
+    clinical_document = models.ForeignKey(
+        "clinical_documents.ClinicalDocument", on_delete=models.PROTECT, null=True, blank=True, related_name="+"
     )
 
     class Meta:

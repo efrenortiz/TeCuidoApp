@@ -1,0 +1,73 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Solicitud de estudio — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Solicitud de estudio" %}
+
+<div class="card card--narrow">
+  <dl class="data-list">
+    <div><dt class="data-list__label">Médico</dt><dd class="data-list__value">{{ order.doctor.person }}</dd></div>
+    <div><dt class="data-list__label">Tipo</dt><dd class="data-list__value">{{ order.get_study_type_display }}</dd></div>
+    <div>
+      <dt class="data-list__label">Estado</dt>
+      <dd class="data-list__value">
+        {% if order.status == "VOIDED" %}
+        {% include "components/_badge.html" with text="Anulada" variant="danger" %}
+        {% else %}
+        {% include "components/_badge.html" with text="Emitida" variant="success" %}
+        {% endif %}
+        {% if not order.is_current_version %}
+        {% include "components/_badge.html" with text="Versión anterior" variant="neutral" %}
+        {% endif %}
+      </dd>
+    </div>
+    <div><dt class="data-list__label">Emisión</dt><dd class="data-list__value">{{ order.issued_at|date:"d/m/Y H:i" }}</dd></div>
+    <div><dt class="data-list__label">Versión</dt><dd class="data-list__value">{{ order.version_number }}</dd></div>
+    {% if order.indications %}<div><dt class="data-list__label">Indicaciones</dt><dd class="data-list__value">{{ order.indications }}</dd></div>{% endif %}
+    {% if order.observations %}<div><dt class="data-list__label">Observaciones</dt><dd class="data-list__value">{{ order.observations }}</dd></div>{% endif %}
+  </dl>
+</div>
+
+<div class="card">
+  <h2 class="card__title">Estudios solicitados</h2>
+  <table class="table">
+    <thead><tr><th>#</th><th>Estudio</th><th>Indicaciones</th></tr></thead>
+    <tbody>
+      {% for item in order.items.all %}
+      <tr><td>{{ item.position }}</td><td>{{ item.study_name }}</td><td>{{ item.specific_instructions|default:"—" }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="patient-detail-actions">
+  {% if document %}
+  <a class="btn btn--secondary" href="{% url 'clinical_documents_api:document_download' document.pk %}">Descargar PDF</a>
+  {% endif %}
+  {% if order.status == "ISSUED" and order.is_current_version %}
+  <a class="btn btn--secondary" href="{% url 'study_orders_ui:study_order_version' order.pk %}">Nueva versión</a>
+  <button type="button" class="btn btn--danger" onclick="document.getElementById('modal-void').showModal()">Anular</button>
+  {% endif %}
+</div>
+
+{% if order.previous_version_id %}
+<p class="field__help"><a href="{% url 'study_orders_ui:study_order_detail' order.previous_version_id %}">Ver versión anterior</a></p>
+{% endif %}
+
+<dialog id="modal-void" class="modal">
+  <div class="modal__body">
+    <h2 class="modal__title">Anular solicitud</h2>
+    <form method="post" action="{% url 'study_orders_ui:study_order_void' order.pk %}">
+      {% csrf_token %}
+      <div class="field">
+        <label class="field__label" for="id_void_reason">Motivo <span class="field__required">*</span></label>
+        <textarea class="field-input" id="id_void_reason" name="reason" rows="2" required></textarea>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--secondary" onclick="document.getElementById('modal-void').close()">Cancelar</button>
+        <button type="submit" class="btn btn--danger">Confirmar anulación</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+{% endblock %}

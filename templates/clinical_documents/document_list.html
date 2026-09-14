@@ -1,0 +1,58 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Documentos del paciente — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Documentos" action_url=None %}
+
+<form method="get" class="card card--narrow">
+  <div class="field">
+    <label class="field__label" for="id_type">Tipo</label>
+    <select class="field-input" id="id_type" name="type" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      {% for value, label in document_types %}
+      <option value="{{ value }}"{% if value == selected_type %} selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<div class="patient-detail-actions">
+  <a class="btn btn--secondary" href="{% url 'clinical_documents_ui:document_upload' patient.pk %}">Cargar documento</a>
+</div>
+
+{% if page.object_list %}
+<table class="table">
+  <thead><tr><th>Fecha</th><th>Tipo</th><th>Origen</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+    {% for document in page.object_list %}
+    <tr>
+      <td>{{ document.created_at|date:"d/m/Y H:i" }}</td>
+      <td>{{ document.get_document_type_display }}</td>
+      <td>{{ document.get_origin_display }}</td>
+      <td>
+        {% if document.status == "VOIDED" %}
+        {% include "components/_badge.html" with text="Anulado" variant="danger" %}
+        {% elif document.status == "ACTIVE" %}
+        {% include "components/_badge.html" with text="Activo" variant="success" %}
+        {% else %}
+        {% include "components/_badge.html" with text="—" variant="neutral" %}
+        {% endif %}
+      </td>
+      <td><a class="btn btn--link" href="{% url 'clinical_documents_ui:document_detail' document.pk %}">Ver</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if page.has_other_pages %}
+<nav class="pagination">
+  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&type={{ selected_type }}">Anterior</a>{% endif %}
+  <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?page={{ page.next_page_number }}&type={{ selected_type }}">Siguiente</a>{% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+{% include "components/_empty_state.html" with title="Sin documentos" description="Este paciente todavía no tiene documentos clínicos." %}
+{% endif %}
+{% endblock %}

@@ -4,6 +4,15 @@
 {% include "components/_patient_context_header.html" with patient=patient %}
 {% include "components/_page_header.html" with title="Consulta clínica" %}
 
+{% comment %}Fase 4 (phase-4-ux.md §2) — accesibles desde el contexto clínico ya existente.{% endcomment %}
+<div class="patient-detail-actions">
+  {% if can_edit %}
+  <a class="btn btn--secondary" href="{% url 'prescriptions_ui:prescription_create' encounter.pk %}">Emitir receta</a>
+  <a class="btn btn--secondary" href="{% url 'study_orders_ui:study_order_create' encounter.pk %}">Solicitar estudios</a>
+  {% endif %}
+  <a class="btn btn--link" href="{% url 'clinical_documents_ui:document_list' patient.pk %}">Ver documentos</a>
+</div>
+
 <div class="card card--narrow">
   <dl class="data-list">
     <div>

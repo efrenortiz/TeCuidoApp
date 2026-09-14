@@ -1,10 +1,13 @@
-# ADRs — Fase 3 Clinical
+# ADRs — Fase 3 Clinical y Fase 4 Documentos
 
-**Estado global:** conjunto generado y consolidado 2026-09-11
+**Estado global:** conjunto Fase 3 generado y consolidado 2026-09-11; conjunto Fase 4 generado y
+consolidado 2026-09-11 (revisión documental de Fase 4).
 
-Estos ADRs registran decisiones arquitectónicas de Fase 3. Las reglas funcionales detalladas permanecen en `docs/phases/`; no deben duplicarse aquí salvo cuando una regla sea necesaria para expresar una decisión arquitectónica.
+Estos ADRs registran decisiones arquitectónicas de Fase 3 y Fase 4. Las reglas funcionales
+detalladas permanecen en `docs/phases/`; no deben duplicarse aquí salvo cuando una regla sea
+necesaria para expresar una decisión arquitectónica.
 
-## Orden de lectura
+## Orden de lectura — Fase 3
 
 1. [ADR-008 — Clinical Domain Boundary](ADR-008-clinical-domain-boundary.md)
 2. [ADR-009 — Appointment as Origin of ClinicalEncounter](ADR-009-appointment-originates-encounter.md)
@@ -20,9 +23,27 @@ Estos ADRs registran decisiones arquitectónicas de Fase 3. Las reglas funcional
 12. [ADR-019 — Server and Database as Clinical Source of Truth](ADR-019-optimistic-ui-server-source-of-truth.md)
 13. [ADR-020 — Legacy Agenda Transition Endpoints Remain Unrestricted](ADR-020-legacy-agenda-transition-endpoints.md)
 
-## Relación con Fase 2
+## Orden de lectura — Fase 4
 
-Los ADRs 008–020 complementan `ADR-005-django-app-boundaries.md` y `ADR-006-database-integrity-and-transactions.md` y no sustituyen decisiones ya cerradas de Agenda.
+14. [ADR-021 — Clinical Documents Domain Boundary](ADR-021-clinical-documents-domain-boundary.md)
+15. [ADR-022 — Prescription and StudyOrder Originate from ClinicalEncounter](ADR-022-prescription-studyorder-originate-from-encounter.md)
+16. [ADR-023 — Document Versioning Model](ADR-023-document-versioning-model.md)
+17. [ADR-024 — No Functional DELETE; VOIDED/ACTIVE for Logical Cancellation](ADR-024-no-functional-delete-voided-documents.md)
+18. [ADR-025 — ClinicalDocument as Independent Entity](ADR-025-clinical-document-independent-entity.md)
+19. [ADR-026 — Private File Storage and Authorized Download Only](ADR-026-private-file-storage.md)
+20. [ADR-027 — Synchronous Server-Side PDF Generation](ADR-027-synchronous-server-side-pdf-generation.md)
+21. [ADR-028 — Document Authorization Inherits Fase 3 Clinical Policy](ADR-028-document-authorization-inherits-phase3.md)
+22. [ADR-029 — Document Services as Application Boundary](ADR-029-document-services-boundary.md)
+23. [ADR-030 — Fase 4 Scope Boundary](ADR-030-phase4-scope-boundary.md)
+
+## Relación con fases anteriores
+
+Los ADRs 008–020 complementan `ADR-005-django-app-boundaries.md` y
+`ADR-006-database-integrity-and-transactions.md` y no sustituyen decisiones ya cerradas de Agenda.
+
+Los ADRs 021–030 complementan los ADRs 008–020 y no sustituyen ninguna decisión ya cerrada de
+Fase 3 (`ClinicalEncounter`, `MedicalRecord`, autorización clínica, auditoría) — la reutilizan
+explícitamente para el dominio documental.
 
 ## Regla de mantenimiento
 

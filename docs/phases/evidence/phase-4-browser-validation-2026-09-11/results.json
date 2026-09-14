@@ -1,0 +1,67 @@
+[
+  {
+    "step": "login_doctor",
+    "ok": true,
+    "extra": "http://127.0.0.1:8765/"
+  },
+  {
+    "step": "encounter_detail_loads",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "step": "prescription_create_page",
+    "ok": true,
+    "extra": "http://127.0.0.1:8765/clinica/encuentros/3/recetas/nueva/"
+  },
+  {
+    "step": "prescription_issued_redirect",
+    "ok": true,
+    "extra": "http://127.0.0.1:8765/clinica/recetas/3/"
+  },
+  {
+    "step": "prescription_detail_shows_medication",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "step": "pdf_downloaded_nonempty",
+    "ok": true,
+    "extra": 1306
+  },
+  {
+    "step": "pdf_has_valid_header",
+    "ok": true,
+    "extra": "b'%PDF-'"
+  },
+  {
+    "step": "version_2_created",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "step": "version_shows_2",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "step": "void_shows_badge",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "step": "study_order_issued",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "step": "documents_list_shows_generated_docs",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "step": "unauthorized_doctor_gets_404",
+    "ok": true,
+    "extra": "404 page"
+  }
+]

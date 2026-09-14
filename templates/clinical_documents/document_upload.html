@@ -1,0 +1,27 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Cargar documento — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Cargar documento" %}
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <div class="card card--narrow">
+    <div class="field">
+      <label class="field__label" for="id_document_type">Tipo documental <span class="field__required">*</span></label>
+      <select class="field-input" id="id_document_type" name="document_type" required>
+        {% for value, label in document_types %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label class="field__label" for="id_file">Archivo (PDF o imagen) <span class="field__required">*</span></label>
+      <input class="field-input" id="id_file" name="file" type="file" accept=".pdf,.jpg,.jpeg,.png" required>
+    </div>
+  </div>
+  <div class="patient-detail-actions">
+    <button type="submit" class="btn btn--primary">Cargar</button>
+  </div>
+</form>
+{% endblock %}

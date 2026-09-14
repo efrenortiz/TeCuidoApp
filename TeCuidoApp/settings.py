@@ -77,6 +77,9 @@ INSTALLED_APPS = [
     'patients',
     'appointments',
     'medical_records',
+    'prescriptions',
+    'study_orders',
+    'clinical_documents',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -163,6 +166,19 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+
+# Almacenamiento privado de documentos clínicos (Fase 4 — ADR-026).
+#
+# Deliberadamente NO usa `MEDIA_ROOT`/`MEDIA_URL`: ese mecanismo sirve
+# archivos bajo una URL pública fija, exactamente lo que ADR-026 prohíbe
+# ("nunca exponerse mediante una URL pública permanente"). Los archivos
+# viven fuera del árbol servido por cualquier ruta pública/estática; sólo
+# se sirven mediante una vista autenticada que revalida autorización por
+# objeto en cada solicitud (clinical_documents.services.storage).
+CLINICAL_DOCUMENTS_STORAGE_ROOT = Path(
+    os.environ.get("CLINICAL_DOCUMENTS_STORAGE_ROOT", BASE_DIR / "private_media" / "clinical_documents")
+)
 
 
 # Email

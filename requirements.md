@@ -1014,6 +1014,12 @@ El paciente/responsable autorizado debe poder consultar y descargar la solicitud
 
 # 23. Documentos clínicos
 
+**Nota de alcance (revisión de consistencia, Fase 4, 2026-09-11):** la relación con `CareRequest`
+listada abajo es arquitectónicamente posible a futuro, pero `CareRequest` no existe como entidad
+en Fase 4 (pertenece a Fase 5, §41) — ver `docs/phases/phase-4-documents.md` §19, que ya cierra
+explícitamente que no existe dependencia funcional de `CareRequest` para emitir un documento
+clínico en esta fase.
+
 Debe existir una entidad genérica para documentos asociados a:
 
 - Paciente.

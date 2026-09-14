@@ -1,0 +1,57 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Nueva receta — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Nueva receta" %}
+<p class="field__help">Encuentro clínico #{{ encounter.pk }}</p>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="card">
+    <h2 class="card__title">Medicamentos</h2>
+    <p class="field__help">Captura al menos un medicamento. Las filas vacías se ignoran.</p>
+
+    {% for item in items|slice:":5" %}
+    <fieldset class="card card--narrow" style="margin-bottom: 1rem;">
+      <legend>Medicamento {{ forloop.counter }}</legend>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-medication_name">Medicamento{% if forloop.first %} <span class="field__required">*</span>{% endif %}</label>
+        <input class="field-input" id="id_item-{{ forloop.counter }}-medication_name" name="item-{{ forloop.counter }}-medication_name" type="text" value="{{ item.medication_name|default:"" }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-presentation">Presentación</label>
+        <input class="field-input" id="id_item-{{ forloop.counter }}-presentation" name="item-{{ forloop.counter }}-presentation" type="text" value="{{ item.presentation|default:"" }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-dose">Dosis</label>
+        <input class="field-input" id="id_item-{{ forloop.counter }}-dose" name="item-{{ forloop.counter }}-dose" type="text" value="{{ item.dose|default:"" }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-dose_unit">Unidad</label>
+        <input class="field-input" id="id_item-{{ forloop.counter }}-dose_unit" name="item-{{ forloop.counter }}-dose_unit" type="text" value="{{ item.dose_unit|default:"" }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-route">Vía</label>
+        <input class="field-input" id="id_item-{{ forloop.counter }}-route" name="item-{{ forloop.counter }}-route" type="text" value="{{ item.route|default:"" }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-frequency">Frecuencia</label>
+        <input class="field-input" id="id_item-{{ forloop.counter }}-frequency" name="item-{{ forloop.counter }}-frequency" type="text" value="{{ item.frequency|default:"" }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-duration">Duración</label>
+        <input class="field-input" id="id_item-{{ forloop.counter }}-duration" name="item-{{ forloop.counter }}-duration" type="text" value="{{ item.duration|default:"" }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-instructions">Indicaciones</label>
+        <textarea class="field-input" id="id_item-{{ forloop.counter }}-instructions" name="item-{{ forloop.counter }}-instructions" rows="2">{{ item.instructions|default:"" }}</textarea>
+      </div>
+    </fieldset>
+    {% endfor %}
+  </div>
+
+  <div class="patient-detail-actions">
+    <button type="submit" class="btn btn--primary">Emitir receta</button>
+  </div>
+</form>
+{% endblock %}

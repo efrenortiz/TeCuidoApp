@@ -1,0 +1,52 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Nueva solicitud de estudio — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Solicitar estudios" %}
+<p class="field__help">Encuentro clínico #{{ encounter.pk }}</p>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="card">
+    <h2 class="card__title">Datos generales</h2>
+    <div class="field">
+      <label class="field__label" for="id_study_type">Tipo de estudio <span class="field__required">*</span></label>
+      <select class="field-input" id="id_study_type" name="study_type" required>
+        {% for value, label in study_types %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label class="field__label" for="id_indications">Indicaciones</label>
+      <textarea class="field-input" id="id_indications" name="indications" rows="2"></textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="id_observations">Observaciones</label>
+      <textarea class="field-input" id="id_observations" name="observations" rows="2"></textarea>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card__title">Estudios solicitados</h2>
+    <p class="field__help">Captura al menos un estudio. Las filas vacías se ignoran.</p>
+    {% for item in items|slice:":5" %}
+    <fieldset class="card card--narrow" style="margin-bottom: 1rem;">
+      <legend>Estudio {{ forloop.counter }}</legend>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-study_name">Nombre del estudio{% if forloop.first %} <span class="field__required">*</span>{% endif %}</label>
+        <input class="field-input" id="id_item-{{ forloop.counter }}-study_name" name="item-{{ forloop.counter }}-study_name" type="text" value="{{ item.study_name|default:"" }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-specific_instructions">Indicaciones específicas</label>
+        <textarea class="field-input" id="id_item-{{ forloop.counter }}-specific_instructions" name="item-{{ forloop.counter }}-specific_instructions" rows="2">{{ item.specific_instructions|default:"" }}</textarea>
+      </div>
+    </fieldset>
+    {% endfor %}
+  </div>
+
+  <div class="patient-detail-actions">
+    <button type="submit" class="btn btn--primary">Emitir solicitud</button>
+  </div>
+</form>
+{% endblock %}

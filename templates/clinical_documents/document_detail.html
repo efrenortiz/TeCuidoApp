@@ -1,0 +1,39 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Documento clínico — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Detalle de documento" %}
+
+<div class="card card--narrow">
+  <dl class="data-list">
+    <div><dt class="data-list__label">Tipo</dt><dd class="data-list__value">{{ document.get_document_type_display }}</dd></div>
+    <div><dt class="data-list__label">Origen</dt><dd class="data-list__value">{{ document.get_origin_display }}</dd></div>
+    <div>
+      <dt class="data-list__label">Estado</dt>
+      <dd class="data-list__value">
+        {% if document.status == "VOIDED" %}
+        {% include "components/_badge.html" with text="Anulado" variant="danger" %}
+        {% elif document.status == "ACTIVE" %}
+        {% include "components/_badge.html" with text="Activo" variant="success" %}
+        {% else %}
+        {% include "components/_badge.html" with text="Vigente en su entidad de origen" variant="neutral" %}
+        {% endif %}
+      </dd>
+    </div>
+    <div><dt class="data-list__label">Cargado el</dt><dd class="data-list__value">{{ document.created_at|date:"d/m/Y H:i" }}</dd></div>
+    {% if document.version_number %}
+    <div><dt class="data-list__label">Versión</dt><dd class="data-list__value">{{ document.version_number }}</dd></div>
+    {% endif %}
+    {% if document.prescription_id %}
+    <div><dt class="data-list__label">Receta relacionada</dt><dd class="data-list__value"><a href="{% url 'prescriptions_ui:prescription_detail' document.prescription_id %}">Ver receta</a></dd></div>
+    {% endif %}
+    {% if document.study_order_id %}
+    <div><dt class="data-list__label">Solicitud relacionada</dt><dd class="data-list__value"><a href="{% url 'study_orders_ui:study_order_detail' document.study_order_id %}">Ver solicitud</a></dd></div>
+    {% endif %}
+  </dl>
+</div>
+
+<div class="patient-detail-actions">
+  <a class="btn btn--secondary" href="{% url 'clinical_documents_api:document_download' document.pk %}">Descargar</a>
+</div>
+{% endblock %}

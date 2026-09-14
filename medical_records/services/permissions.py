@@ -104,6 +104,45 @@ def can_edit_patient_record(actor, patient):
     return ClinicalEncounter.objects.filter(doctor=doctor, appointment__patient=patient).exists()
 
 
+def can_issue_document_for_encounter(actor, clinical_encounter):
+    """ADR-028 — emitir Prescription/StudyOrder requiere ser el médico
+    asignado al `ClinicalEncounter` que da contexto (igual que
+    iniciar/completar un encuentro, P-011/012). No requiere
+    `DoctorPatientRelationship` para esta operación puntual (P-010: no se
+    exige relación longitudinal para actuar sobre la propia atención)."""
+    return is_assigned_doctor(actor, appointment=clinical_encounter.appointment)
+
+
+def can_correct_or_void_document(actor, clinical_encounter):
+    """ADR-028 — corregir/anular: mismo criterio que emitir, o relación
+    activa que lo autorice (un médico distinto, con
+    `DoctorPatientRelationship` vigente, también puede hacerlo)."""
+    if is_assigned_doctor(actor, appointment=clinical_encounter.appointment):
+        return True
+    doctor = doctor_profile(actor)
+    return (
+        doctor is not None
+        and doctor.is_active
+        and doctor_has_active_relationship(doctor, clinical_encounter.patient)
+    )
+
+
+def can_read_document_resource(actor, patient, clinical_encounter=None):
+    """ADR-028/P-009/P-010 — leer/descargar un documento del encuentro que
+    el médico atendió está siempre autorizado para ese médico (sin relación
+    activa); leer/descargar el historial documental completo (fuera de ese
+    encuentro, o cuando el documento no tiene `clinical_encounter` propio)
+    exige la misma regla que ya rige `MedicalRecord`/historial en Fase 3
+    (`can_access_patient_record`: relación activa, paciente propio,
+    responsable activo). Un médico simplemente asignado a una atención
+    puntual no obtiene, por eso, acceso histórico permanente (P-010)."""
+    if clinical_encounter is not None and is_assigned_doctor(
+        actor, appointment=clinical_encounter.appointment
+    ):
+        return True
+    return can_access_patient_record(actor, patient)
+
+
 def can_view_audit_log(actor):
     """P-041/AH-107/182 (cerrado) — el `AuditEvent` solo puede ser leído
     por el Administrador (`is_superuser`). Ningún otro actor —incluido el

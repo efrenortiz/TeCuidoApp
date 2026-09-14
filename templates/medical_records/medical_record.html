@@ -4,6 +4,10 @@
 {% include "components/_patient_context_header.html" with patient=patient %}
 {% include "components/_page_header.html" with title="Expediente clínico" %}
 
+<div class="patient-detail-actions">
+  <a class="btn btn--link" href="{% url 'clinical_documents_ui:document_list' patient.pk %}">Ver documentos, recetas y solicitudes</a>
+</div>
+
 {% comment %}
 SCREEN-088/UX-077 — tres secciones separadas, nunca fusionadas: Resumen
 clínico, Datos longitudinales, Historial.
