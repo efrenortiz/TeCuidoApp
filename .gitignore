@@ -34,3 +34,4 @@ htmlcov/
 # Secrets
 *.pem
 *.key
+.mcp.json

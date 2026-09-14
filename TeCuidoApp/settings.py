@@ -178,7 +178,7 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 # objeto en cada solicitud (clinical_documents.services.storage).
 CLINICAL_DOCUMENTS_STORAGE_ROOT = Path(
     os.environ.get("CLINICAL_DOCUMENTS_STORAGE_ROOT", BASE_DIR / "private_media" / "clinical_documents")
-)
+).expanduser()
 
 
 # Email
