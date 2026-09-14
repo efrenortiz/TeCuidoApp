@@ -32,25 +32,42 @@ crear Prescription ISSUED
         ↓
 generar PDF
         ↓
+persistir archivo (almacenamiento privado)
+        ↓
 crear ClinicalDocument GENERATED
+        ↓
+commit
         ↓
 auditar
 ```
 
-La emisión de la receta y su ClinicalDocument deben quedar consistentes. La transacción de base de datos controla los registros de emisión; el archivo físico se genera fuera de la transacción de base de datos y, si falla la persistencia posterior, debe eliminarse/compensarse el artefacto no referenciado. No debe quedar una receta marcada como emitida sin su representación documental requerida.
+La emisión de la receta y su `ClinicalDocument` comparten la misma transacción de base de datos.
+No debe quedar una receta marcada como emitida sin su representación documental requerida.
 
-**Corrección de consistencia (2026-09-11):** la compensación es siempre **síncrona**, dentro de la
-misma llamada de servicio (p. ej. `try/finally` alrededor de la escritura del archivo), nunca un
-job diferido — coherente con que Fase 4 no incorpora Celery ni infraestructura asíncrona (§16 del
-contrato). Orden exacto: (1) generar el PDF en memoria; (2) escribir el archivo en el almacenamiento
-privado; (3) abrir la transacción de base de datos, crear `Prescription`/`ClinicalDocument`
-referenciando el `storage_key` ya escrito, y hacer commit. Si (2) falla, no se abre la transacción
-— no hay nada que compensar. Si (3) falla después de (2), el archivo ya escrito queda huérfano (sin
-ninguna fila que lo referencie): el servicio intenta borrarlo en el mismo `except` como mejor
-esfuerzo; si ese borrado también falla, el archivo huérfano no representa un riesgo de seguridad ni
-de integridad (nunca es referenciado por ningún `ClinicalDocument`, por lo tanto nunca es
-accesible) y su limpieza eventual es una tarea operativa de mantenimiento, no un requisito de
-cierre de Fase 4.
+**Corrección de consistencia (2026-09-11) — diseño original, refinado por la implementación final
+(ver nota siguiente):** se documentó que la compensación es siempre **síncrona**, dentro de la
+misma llamada de servicio, nunca un job diferido — coherente con que Fase 4 no incorpora Celery ni
+infraestructura asíncrona (§16 del contrato). El orden descrito entonces era: (1) generar el PDF en
+memoria; (2) escribir el archivo en el almacenamiento privado; (3) abrir la transacción de base de
+datos, crear `Prescription`/`ClinicalDocument` referenciando el `storage_key` ya escrito, y hacer
+commit — con el archivo escrito **antes** de abrir la transacción.
+
+**Nota de implementación (vigente):** para el caso `GENERATED` (`Prescription`/`StudyOrder`), la
+implementación final abre la transacción primero y genera/persiste el PDF **dentro** de ella, antes
+del `commit` — exactamente el orden reflejado en el diagrama anterior
+(`prescriptions/services/prescription.py::issue`/`create_version`,
+`study_orders/services/study_order.py::issue`/`create_version`,
+`clinical_documents/services/document.py::create_generated_document`). Django anida `atomic()`
+como SAVEPOINT sobre la misma conexión, así que `Prescription`/`StudyOrder` y su `ClinicalDocument`
+comparten una única transacción real: un fallo en cualquier punto posterior a abrir la transacción
+revierte todo junto. Esto no vuelve la escritura en disco transaccional (PostgreSQL no puede
+revertir un `write()` de sistema de archivos), pero al ocurrir antes del `commit` de la fila que lo
+referencia, un fallo posterior nunca deja una receta/solicitud "emitida" sin su documento — en el
+peor caso deja un archivo huérfano en disco, sin ninguna fila que lo referencie (nunca accesible).
+Es una garantía más fuerte que la descrita en la corrección de 2026-09-11, consistente con
+ADR-027 §2 y `docs/phases/phase-4-implementation/stage-03-files-pdf.md`; no contradice ninguna
+invariante cerrada entonces. Para `UPLOADED` (sin transacción padre preexistente) se conserva
+exactamente el diseño original de 2026-09-11 — ver §7.
 
 ## 4. Corrección de receta
 
@@ -115,14 +132,20 @@ seleccionar archivo
         ↓
 validar extensión + MIME + tamaño
         ↓
-crear ClinicalDocument
-        ↓
 almacenar archivo privado
+        ↓
+transacción: crear ClinicalDocument UPLOADED
         ↓
 auditar
 ```
 
-El archivo no se publica antes de completar autorización y persistencia.
+El archivo no se publica antes de completar autorización y persistencia. A diferencia del caso
+`GENERATED` (§3/§6), aquí no existe una transacción padre preexistente que proteja la escritura del
+archivo: el archivo se escribe primero (`clinical_documents/services/storage.py::save`) y, si la
+creación posterior de `ClinicalDocument` falla, el servicio borra el archivo huérfano como mejor
+esfuerzo (`ClinicalDocumentService.upload`, compensación aplicativa, no atomicidad de base de
+datos) — mecanismo verificado por
+`clinical_documents/tests/test_services.py::test_failed_row_creation_cleans_up_orphan_file`.
 
 ## 8. Lectura y descarga
 
