@@ -1,0 +1,197 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Consulta clínica — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Consulta clínica" %}
+
+{% comment %}Fase 4 (phase-4-ux.md §2) — accesibles desde el contexto clínico ya existente.{% endcomment %}
+<div class="patient-detail-actions">
+  {% if can_edit %}
+  <a class="btn btn--secondary" href="{% url 'prescriptions_ui:prescription_create' encounter.pk %}">Emitir receta</a>
+  <a class="btn btn--secondary" href="{% url 'study_orders_ui:study_order_create' encounter.pk %}">Solicitar estudios</a>
+  {% endif %}
+  <a class="btn btn--link" href="{% url 'clinical_documents_ui:document_list' patient.pk %}">Ver documentos</a>
+</div>
+
+<div class="card card--narrow">
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Médico</dt>
+      <dd class="data-list__value">{{ encounter.doctor.person }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Consultorio</dt>
+      <dd class="data-list__value">{{ encounter.clinic.name }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Estado</dt>
+      <dd class="data-list__value">
+        {% if encounter.status == "COMPLETED" %}
+        {% include "components/_badge.html" with text=encounter.get_status_display variant="success" %}
+        {% else %}
+        {% include "components/_badge.html" with text=encounter.get_status_display variant="info" %}
+        {% endif %}
+      </dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Inicio de consulta</dt>
+      <dd class="data-list__value">{{ encounter.started_at|date:"d/m/Y H:i" }}</dd>
+    </div>
+    {% if encounter.completed_at %}
+    <div>
+      <dt class="data-list__label">Cierre de consulta</dt>
+      <dd class="data-list__value">{{ encounter.completed_at|date:"d/m/Y H:i" }}</dd>
+    </div>
+    {% endif %}
+  </dl>
+</div>
+
+{% if can_edit %}
+{% comment %}
+SCREEN-071/UX-070: "Completar consulta" no exige un "Guardar" previo — el
+botón de confirmación dentro del modal envía el MISMO formulario (atributo
+`form`), con el contenido tal como está capturado en ese momento.
+{% endcomment %}
+<form id="encounter-form" method="post" novalidate>
+  {% csrf_token %}
+
+  <div class="card">
+    <h2 class="card__title">Motivo de consulta <span class="field__required">*</span></h2>
+    <div class="field{% if field_errors.reason_for_visit %} field--error{% endif %}">
+      <label class="field__label" for="id_reason_for_visit">Motivo de consulta</label>
+      <textarea id="id_reason_for_visit" name="reason_for_visit" class="field-input" rows="3">{{ form_values.reason_for_visit }}</textarea>
+      {% if field_errors.reason_for_visit %}<p class="field__error">{{ field_errors.reason_for_visit }}</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card__title">Padecimiento actual <span class="field__required">*</span></h2>
+    <div class="field{% if field_errors.present_illness %} field--error{% endif %}">
+      <label class="field__label" for="id_present_illness">Padecimiento actual</label>
+      <textarea id="id_present_illness" name="present_illness" class="field-input" rows="6">{{ form_values.present_illness }}</textarea>
+      {% if field_errors.present_illness %}<p class="field__error">{{ field_errors.present_illness }}</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card__title">Exploración física <span class="field__required">*</span></h2>
+    <div class="field{% if field_errors.physical_exam %} field--error{% endif %}">
+      <label class="field__label" for="id_physical_exam">Exploración física</label>
+      <textarea id="id_physical_exam" name="physical_exam" class="field-input" rows="4">{{ form_values.physical_exam }}</textarea>
+      {% if field_errors.physical_exam %}<p class="field__error">{{ field_errors.physical_exam }}</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card__title">Evaluación / diagnóstico <span class="field__required">*</span></h2>
+    {% comment %}SCREEN-039/ADR-013 — texto libre, sin selector CIE-10.{% endcomment %}
+    <div class="field{% if field_errors.assessment %} field--error{% endif %}">
+      <label class="field__label" for="id_assessment">Evaluación / diagnóstico</label>
+      <textarea id="id_assessment" name="assessment" class="field-input" rows="4">{{ form_values.assessment }}</textarea>
+      {% if field_errors.assessment %}<p class="field__error">{{ field_errors.assessment }}</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card__title">Plan / indicaciones <span class="field__required">*</span></h2>
+    <div class="field{% if field_errors.plan %} field--error{% endif %}">
+      <label class="field__label" for="id_plan">Plan / indicaciones</label>
+      <textarea id="id_plan" name="plan" class="field-input" rows="4">{{ form_values.plan }}</textarea>
+      {% if field_errors.plan %}<p class="field__error">{{ field_errors.plan }}</p>{% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 class="card__title">Datos complementarios</h2>
+    <p class="field__help">Opcionales — no se exigen para completar la consulta.</p>
+
+    <div class="field">
+      <label class="field__label" for="id_vital_signs">Signos vitales</label>
+      <textarea id="id_vital_signs" name="vital_signs" class="field-input" rows="2">{{ form_values.vital_signs }}</textarea>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="id_weight_kg">Peso (kg)</label>
+      <input id="id_weight_kg" name="weight_kg" type="number" step="0.01" min="0.01" class="field-input" value="{{ form_values.weight_kg }}">
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="id_height_cm">Talla (cm)</label>
+      <input id="id_height_cm" name="height_cm" type="number" step="0.01" min="0.01" class="field-input" value="{{ form_values.height_cm }}">
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="id_relevant_history">Antecedentes relevantes</label>
+      <textarea id="id_relevant_history" name="relevant_history" class="field-input" rows="3">{{ form_values.relevant_history }}</textarea>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="id_studies">Estudios</label>
+      <textarea id="id_studies" name="studies" class="field-input" rows="3">{{ form_values.studies }}</textarea>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="id_observations">Observaciones</label>
+      <textarea id="id_observations" name="observations" class="field-input" rows="3">{{ form_values.observations }}</textarea>
+    </div>
+  </div>
+
+  <div class="patient-detail-actions">
+    <button type="submit" formaction="{% url 'clinical_ui:encounter_save' encounter.pk %}" class="btn btn--secondary">Guardar</button>
+    <button type="button" class="btn btn--primary" onclick="document.getElementById('modal-complete').showModal()">Completar consulta</button>
+  </div>
+</form>
+
+{% if last_saved_at %}
+<p class="field__help">Guardado a las {{ last_saved_at|date:"H:i" }}.</p>
+{% endif %}
+
+<dialog id="modal-complete" class="modal">
+  <div class="modal__body">
+    <h2 class="modal__title">Completar consulta</h2>
+    <p class="modal__text">Al completar la consulta quedará cerrada y no podrá editarse en esta fase.</p>
+    <div class="modal__actions">
+      <button type="button" class="btn btn--secondary" onclick="document.getElementById('modal-complete').close()">Cancelar</button>
+      <button type="submit" form="encounter-form" formaction="{% url 'clinical_ui:encounter_complete' encounter.pk %}" class="btn btn--primary">Confirmar</button>
+    </div>
+  </div>
+</dialog>
+
+{% else %}
+{% comment %}S-04/S-07 — de solo lectura (SCREEN-077/105): sin editar, sin reabrir, sin eliminar.{% endcomment %}
+<div class="card">
+  <h2 class="card__title">Motivo de consulta</h2>
+  <p class="data-list__value">{{ encounter.reason_for_visit|default:"—" }}</p>
+</div>
+<div class="card">
+  <h2 class="card__title">Padecimiento actual</h2>
+  <p class="data-list__value">{{ encounter.present_illness|default:"—" }}</p>
+</div>
+<div class="card">
+  <h2 class="card__title">Exploración física</h2>
+  <p class="data-list__value">{{ encounter.physical_exam|default:"—" }}</p>
+</div>
+<div class="card">
+  <h2 class="card__title">Evaluación / diagnóstico</h2>
+  <p class="data-list__value">{{ encounter.assessment|default:"—" }}</p>
+</div>
+<div class="card">
+  <h2 class="card__title">Plan / indicaciones</h2>
+  <p class="data-list__value">{{ encounter.plan|default:"—" }}</p>
+</div>
+
+{% if encounter.vital_signs or encounter.weight_kg or encounter.height_cm or encounter.relevant_history or encounter.studies or encounter.observations %}
+<div class="card">
+  <h2 class="card__title">Datos complementarios</h2>
+  <dl class="data-list">
+    {% if encounter.vital_signs %}<div><dt class="data-list__label">Signos vitales</dt><dd class="data-list__value">{{ encounter.vital_signs }}</dd></div>{% endif %}
+    {% if encounter.weight_kg %}<div><dt class="data-list__label">Peso</dt><dd class="data-list__value">{{ encounter.weight_kg }} kg</dd></div>{% endif %}
+    {% if encounter.height_cm %}<div><dt class="data-list__label">Talla</dt><dd class="data-list__value">{{ encounter.height_cm }} cm</dd></div>{% endif %}
+    {% if encounter.relevant_history %}<div><dt class="data-list__label">Antecedentes relevantes</dt><dd class="data-list__value">{{ encounter.relevant_history }}</dd></div>{% endif %}
+    {% if encounter.studies %}<div><dt class="data-list__label">Estudios</dt><dd class="data-list__value">{{ encounter.studies }}</dd></div>{% endif %}
+    {% if encounter.observations %}<div><dt class="data-list__label">Observaciones</dt><dd class="data-list__value">{{ encounter.observations }}</dd></div>{% endif %}
+  </dl>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

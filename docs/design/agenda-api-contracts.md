@@ -12,7 +12,7 @@ Deriva de:
 - `docs/design/booking-and-concurrency.md`
 - `docs/design/agenda-permissions.md`
 - `docs/design/agenda-service-contracts.md`
-- `docs/design/phase-2-agenda-ux.md`
+- `docs/phases/phase-2-agenda-ux.md`
 
 Su objetivo es establecer una interfaz consistente entre cliente y backend para:
 

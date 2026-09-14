@@ -455,6 +455,19 @@ class AppointmentDetailView(LoginRequiredMixin, View):
             {
                 "appointment": appointment,
                 "is_assigned_doctor": is_assigned_doctor(request.user, appointment=appointment),
+                # Fase 3 (clinical-screens.md SCREEN-117): being an
+                # administrator never auto-grants the ordinary clinical
+                # UX — only a doctor/patient/responsible profile does.
+                # Deliberately computed here with Fase 2's own permission
+                # primitives (no import from `medical_records`, which
+                # would invert the one-directional app dependency fixed
+                # by ADR-008: `medical_records` depends on `appointments`,
+                # never the reverse).
+                "is_clinical_actor": (
+                    doctor_profile(request.user) is not None
+                    or patient_profile(request.user) is not None
+                    or responsible_profile(request.user) is not None
+                ),
                 "now": dj_timezone.now(),
             },
         )

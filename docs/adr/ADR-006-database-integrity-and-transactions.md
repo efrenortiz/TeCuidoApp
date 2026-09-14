@@ -1208,22 +1208,26 @@ porque los límites de las apps no deben impedir relaciones transaccionales entr
 
 # 47. Evolución futura
 
-Cuando se implementen nuevas fases, este ADR deberá complementarse con decisiones específicas cuando exista complejidad significativa.
+La arquitectura de integridad y transacciones se complementa mediante ADRs específicos cuando una nueva decisión introduzca una consecuencia arquitectónica significativa.
 
-Posibles ADR futuros (renumerados 2026-09-09: `ADR-007` ya está en uso — Responsible-Initiated
-Minor Patient Registration — por lo que la numeración disponible empieza en `ADR-008`):
+Para Fase 3, la numeración vigente y sus decisiones asociadas son:
 
 ```text
-ADR-008 — Appointment Concurrency (si la implementación de Fase 2 requiere una decisión
-          propia más allá de lo ya fijado en docs/phases/phase-2-agenda.md y en §38-39 de
-          este documento — no es automático que se necesite un ADR nuevo)
-ADR-009 — Clinical Record Immutability / Versioning
-ADR-010 — Private Clinical File Storage
-ADR-011 — Notification Delivery Architecture
-ADR-012 — Audit Log Architecture
+ADR-008 — Clinical Domain Boundary
+ADR-009 — Appointment Originates ClinicalEncounter
+ADR-010 — ClinicalEncounter State and Atomic Closure
+ADR-011 — One MedicalRecord per Patient
+ADR-012 — Explicit Clinical Fields
+ADR-013 — Free-Text Diagnosis
+ADR-014 — Doctor-Patient Relationship Independence
+ADR-015 — Clinical Authorization Boundary
+ADR-016 — No Reopen or Delete Clinical Record
+ADR-017 — Audit vs History
+ADR-018 — Clinical API / Services Boundary
+ADR-019 — Server and Database as Clinical Source of Truth
 ```
 
-Estos ADR deberán profundizar en problemas específicos sin duplicar las reglas generales establecidas aquí.
+Estos ADRs desarrollan decisiones arquitectónicas concretas de Fase 3 sin sustituir las reglas funcionales de los documentos de dominio, workflow, permisos, seguridad, API y testing.
 
 ---
 

@@ -1,0 +1,86 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Expediente clínico — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Expediente clínico" %}
+
+<div class="patient-detail-actions">
+  <a class="btn btn--link" href="{% url 'clinical_documents_ui:document_list' patient.pk %}">Ver documentos, recetas y solicitudes</a>
+</div>
+
+{% comment %}
+SCREEN-088/UX-077 — tres secciones separadas, nunca fusionadas: Resumen
+clínico, Datos longitudinales, Historial.
+{% endcomment %}
+
+<div class="card">
+  <h2 class="card__title">Resumen clínico</h2>
+  {% comment %}
+  SCREEN-085/089 — proyección de lectura derivada, nunca etiquetada como
+  "diagnóstico actual": solo metadatos de la última consulta, nunca su
+  contenido clínico.
+  {% endcomment %}
+  {% if last_encounter %}
+  <p>
+    Última consulta registrada: {{ last_encounter.started_at|date:"d/m/Y" }} con {{ last_encounter.doctor.person }}
+    ({{ last_encounter.get_status_display }}).
+    <a href="{% url 'clinical_ui:encounter_detail' last_encounter.pk %}">Ver detalle</a>
+  </p>
+  {% else %}
+  {% include "components/_empty_state.html" with title="Todavía no hay consultas registradas para este paciente." %}
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 class="card__title">Datos longitudinales</h2>
+  {% if record %}
+  {% if can_edit %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="field">
+      <label class="field__label" for="id_family_history">Antecedentes heredofamiliares</label>
+      <textarea id="id_family_history" name="family_history" class="field-input" rows="3">{{ record.family_history }}</textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="id_personal_pathological_history">Antecedentes personales patológicos</label>
+      <textarea id="id_personal_pathological_history" name="personal_pathological_history" class="field-input" rows="3">{{ record.personal_pathological_history }}</textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="id_personal_non_pathological_history">Antecedentes personales no patológicos</label>
+      <textarea id="id_personal_non_pathological_history" name="personal_non_pathological_history" class="field-input" rows="3">{{ record.personal_non_pathological_history }}</textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="id_housing_history">Vivienda</label>
+      <textarea id="id_housing_history" name="housing_history" class="field-input" rows="2">{{ record.housing_history }}</textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="id_gynecologic_obstetric_history">Antecedentes gineco-obstétricos</label>
+      <textarea id="id_gynecologic_obstetric_history" name="gynecologic_obstetric_history" class="field-input" rows="3">{{ record.gynecologic_obstetric_history }}</textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="id_other_relevant_history">Otros antecedentes relevantes</label>
+      <textarea id="id_other_relevant_history" name="other_relevant_history" class="field-input" rows="3">{{ record.other_relevant_history }}</textarea>
+    </div>
+    <button type="submit" class="btn btn--primary">Guardar antecedentes</button>
+  </form>
+  {% else %}
+  <dl class="data-list">
+    <div><dt class="data-list__label">Antecedentes heredofamiliares</dt><dd class="data-list__value">{{ record.family_history|default:"—" }}</dd></div>
+    <div><dt class="data-list__label">Antecedentes personales patológicos</dt><dd class="data-list__value">{{ record.personal_pathological_history|default:"—" }}</dd></div>
+    <div><dt class="data-list__label">Antecedentes personales no patológicos</dt><dd class="data-list__value">{{ record.personal_non_pathological_history|default:"—" }}</dd></div>
+    <div><dt class="data-list__label">Vivienda</dt><dd class="data-list__value">{{ record.housing_history|default:"—" }}</dd></div>
+    <div><dt class="data-list__label">Antecedentes gineco-obstétricos</dt><dd class="data-list__value">{{ record.gynecologic_obstetric_history|default:"—" }}</dd></div>
+    <div><dt class="data-list__label">Otros antecedentes relevantes</dt><dd class="data-list__value">{{ record.other_relevant_history|default:"—" }}</dd></div>
+  </dl>
+  {% endif %}
+  {% else %}
+  {% comment %}SCREEN-122 — sin expediente todavía: estado informativo, nunca un error técnico.{% endcomment %}
+  {% include "components/_empty_state.html" with title="Este paciente todavía no tiene expediente clínico." description="Se creará automáticamente en la primera consulta clínica." %}
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 class="card__title">Historial</h2>
+  <a class="btn btn--secondary" href="{% url 'clinical_ui:encounter_history' patient.pk %}">Ver historial completo</a>
+</div>
+{% endblock %}

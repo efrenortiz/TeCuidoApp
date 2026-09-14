@@ -1,0 +1,43 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Historial clínico — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Historial clínico" %}
+
+{% comment %}SCREEN-099/UX-080 — solo ClinicalEncounter; CANCELLED/NO_SHOW nunca aparecen aquí.{% endcomment %}
+{% if page.object_list %}
+<div class="card">
+  <dl class="data-list">
+    {% for encounter in page.object_list %}
+    <div>
+      <dt class="data-list__label">{{ encounter.started_at|date:"d/m/Y H:i" }}</dt>
+      <dd class="data-list__value">
+        {{ encounter.doctor.person }} · {{ encounter.clinic.name }}
+        {% if encounter.status == "COMPLETED" %}
+        {% include "components/_badge.html" with text=encounter.get_status_display variant="success" %}
+        {% else %}
+        {% include "components/_badge.html" with text=encounter.get_status_display variant="info" %}
+        {% endif %}
+        <a href="{% url 'clinical_ui:encounter_detail' encounter.pk %}">Ver detalle</a>
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+</div>
+
+{% if page.has_other_pages %}
+<nav class="pagination">
+  {% if page.has_previous %}
+  <a class="btn btn--secondary" href="?page={{ page.previous_page_number }}">&larr; Anterior</a>
+  {% endif %}
+  <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}
+  <a class="btn btn--secondary" href="?page={{ page.next_page_number }}">Siguiente &rarr;</a>
+  {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+{% include "components/_empty_state.html" with title="Todavía no existen encuentros clínicos accesibles." %}
+{% endif %}
+{% endblock %}

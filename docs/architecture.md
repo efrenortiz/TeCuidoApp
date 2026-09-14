@@ -1,8 +1,11 @@
 # TeCuidoApp — Architecture
 
-**Estado:** Propuesta inicial  
-**Versión:** 1.0  
-**Fase:** Fase 1 — Fundaciones  
+**Estado:** Vigente — documento enmendado incrementalmente; redactado originalmente como
+"Propuesta inicial" durante Fase 1. Ver §44 "Estado actual" para el estado real y consolidado del
+proyecto por fase (hasta Fase 4 — `PHASE 4 — CLOSED`).  
+**Versión:** 1.0 (sin nueva versión mayor; los cambios incrementales quedan documentados en §44 y
+en los ADR correspondientes)  
+**Fase de redacción original:** Fase 1 — Fundaciones  
 **Stack:** Python + Django + PostgreSQL  
 **Documento de referencia funcional:** `requirements.md`
 
@@ -75,7 +78,9 @@ Los archivos médicos nunca deben depender de una URL pública para su protecci�
 
 ## Documentos
 
-La aplicación generará documentos PDF para determinados documentos clínicos en fases posteriores.
+La aplicación genera documentos PDF para recetas y solicitudes de estudio (Fase 4 — cerrada, ver
+§7.9–§7.11): generación server-side y síncrona, sin Celery, dentro del mismo flujo transaccional
+de emisión (ADR-027).
 
 ---
 
@@ -214,7 +219,7 @@ La arquitectura lógica propuesta es:
                         │    PostgreSQL      │
                         └────────────────────┘
 
-                         Fases posteriores
+                    Fases 2-4 (implementadas)
                                   │
              ┌────────────────────┼────────────────────┐
              ▼                    ▼                    ▼
@@ -228,6 +233,14 @@ La arquitectura lógica propuesta es:
                                   ▼
                            Redis / Celery
 ```
+
+**Nota (cierre de Fase 4):** "Appointments" (Fase 2), "Medical Records" (Fase 3) y "Documents"
+(Fase 4 — `prescriptions`/`study_orders`/`clinical_documents`) ya están implementadas y cerradas
+(§44); el rótulo original "Fases posteriores" quedaba desactualizado para las tres. Ninguna de
+ellas usa Redis/Celery: las tres son síncronas — Fase 4 lo decide explícitamente en ADR-027 (sin
+incorporar infraestructura asíncrona sólo para PDF). El bloque `Redis / Celery` permanece como
+infraestructura contemplada condicionalmente (§1, "cuando corresponda") para necesidades futuras
+aún sin decisión concreta — no representa una dependencia real de ninguna fase cerrada.
 
 ---
 
@@ -434,45 +447,74 @@ Debe permanecer como Django app dentro del mismo proyecto.
 
 ## 7.8 `medical_records`
 
-Responsabilidad futura:
+Especificación funcional aprobada 2026-09-11, ver `docs/phases/phase-3-clinical-encounter.md` (documento rector), `docs/design/clinical-encounter-domain.md` y `docs/design/clinical-record-domain.md`.
 
-- historia clínica;
-- consultas;
-- evolución;
-- diagnósticos;
-- tratamientos;
-- pronóstico;
-- resumen clínico;
-- alertas.
+Responsabilidad (ADR-008 — Clinical Domain Boundary):
 
-**No forma parte de la Fase 1.**
+- `ClinicalEncounter`: registro de la consulta clínica originada por una `Appointment` válida (`Appointment 1 ─── 0..1 ClinicalEncounter`), estados `IN_PROGRESS`/`COMPLETED` únicamente, cinco campos obligatorios al completar (motivo de consulta, padecimiento actual, exploración física, evaluación/diagnóstico en texto libre, plan/indicaciones), sin edición ni reapertura posterior al cierre;
+- `MedicalRecord`: expediente longitudinal único por paciente (`Patient 1 ─── 1 MedicalRecord`, ADR-011), creación lazy, sin duplicar datos de `Patient` ni de los encuentros;
+- evolución, pronóstico, tratamientos, paraclínicos y observaciones permanecen como información clínica opcional, no como requisitos de cierre;
+- alertas clínicas, recetas, órdenes de estudio y documentos clínicos son entidades futuras separadas, fuera del núcleo de Fase 3.
+
+`appointments` (Fase 2) sigue siendo propietario exclusivo de `Appointment` y su ciclo de vida de Agenda; `medical_records` no lo duplica ni lo sustituye.
+
+**No forma parte de la Fase 1 ni de la Fase 2.**
 
 ---
 
 ## 7.9 `prescriptions`
 
-Responsabilidad futura:
+Especificación funcional y de diseño en `docs/phases/phase-4-documents.md` y
+`docs/design/prescription-domain.md`/`phase-4-documents-workflow.md`; cierre documentado en
+`docs/phases/phase-4-final-report.md` (`PHASE 4 — CLOSED`).
 
-- recetas;
-- medicamentos;
-- indicaciones;
-- PDF;
-- historial y versiones.
+Responsabilidad (implementada, Fase 4):
 
----
+- `Prescription`/`PrescriptionItem`: emisión desde un `ClinicalEncounter` válido (ADR-022),
+  medicamentos e indicaciones como texto estructurado, sin catálogo farmacológico obligatorio;
+- generación de PDF server-side, síncrona, persistida dentro del mismo flujo transaccional de
+  emisión (ADR-027);
+- historial y versionado (nueva versión ante corrección, sin sobrescritura — ADR-023) y anulación
+  lógica, sin borrado físico funcional (ADR-024).
 
-## 7.10 `clinical_documents`
-
-Responsabilidad futura:
-
-- documentos clínicos;
-- archivos privados;
-- autorización de acceso;
-- versionado.
+**No forma parte de la Fase 1, Fase 2 ni Fase 3 — es contenido de Fase 4.**
 
 ---
 
-## 7.11 `notifications`
+## 7.10 `study_orders`
+
+Especificación funcional y de diseño en `docs/phases/phase-4-documents.md` y
+`docs/design/study-order-domain.md`; cierre documentado en `docs/phases/phase-4-final-report.md`
+(`PHASE 4 — CLOSED`).
+
+Responsabilidad (implementada, Fase 4) — mismo patrón que `prescriptions` (§7.9): emisión desde un
+`ClinicalEncounter` válido, `StudyOrder`/`StudyOrderItem`, PDF server-side síncrono persistido
+dentro de la misma transacción de emisión (ADR-027), historial/versionado y anulación lógica.
+
+**No forma parte de la Fase 1, Fase 2 ni Fase 3 — es contenido de Fase 4.**
+
+---
+
+## 7.11 `clinical_documents`
+
+Especificación funcional y de diseño en `docs/design/clinical-document-domain.md` y
+`docs/design/clinical-documents-data-model.md`; cierre documentado en
+`docs/phases/phase-4-final-report.md` (`PHASE 4 — CLOSED`).
+
+Responsabilidad (implementada, Fase 4 — ADR-025):
+
+- `ClinicalDocument`: entidad independiente de documento clínico, origen `GENERATED` (emitido
+  desde `prescriptions`/`study_orders`) o `UPLOADED` (subido de forma standalone);
+- almacenamiento privado fuera de cualquier URL pública (ADR-026), nunca servido por
+  `MEDIA_ROOT`/`MEDIA_URL`;
+- autorización de acceso por objeto, revalidada en cada descarga (ADR-028);
+- versionado y anulación lógica, sin borrado físico funcional.
+
+**No forma parte de la Fase 1, Fase 2 ni Fase 3 — es contenido de Fase 4.**
+
+---
+
+## 7.12 `notifications`
 
 Responsabilidad futura:
 
@@ -485,7 +527,7 @@ La lógica de negocio no debe depender directamente de un proveedor concreto.
 
 ---
 
-## 7.12 `audit`
+## 7.13 `audit`
 
 Responsabilidad futura:
 
@@ -979,15 +1021,17 @@ Los serializers no deben convertirse en contenedores de toda la lógica de negoc
 
 # 29. Seguridad de archivos
 
-Aunque la gestión completa de documentos pertenece a fases posteriores, la arquitectura debe respetar desde el inicio el principio:
+La gestión de documentos (`clinical_documents`, Fase 4 — cerrada, ver §7.11) respeta desde su
+implementación el principio ya exigido aquí desde la redacción original:
 
 ```text
 Medical files = private
 ```
 
-Nunca deben utilizarse URLs públicas como mecanismo principal de seguridad.
+Nunca deben utilizarse URLs públicas como mecanismo principal de seguridad — verificado: `clinical_documents.services.storage` usa `CLINICAL_DOCUMENTS_STORAGE_ROOT`, fuera de
+`MEDIA_ROOT`/`MEDIA_URL` (ADR-026).
 
-El acceso futuro debe seguir:
+El acceso sigue (verificado, Fase 4):
 
 ```text
 User
@@ -1126,18 +1170,19 @@ La Fase 1 no implementa estas entidades.
 
 ---
 
-# 36. Evolución hacia Gestión Clínica
+# 36. Gestión Clínica (Fase 3 — cerrada, ver §7.8)
 
-Las entidades clínicas futuras deberán mantener el principio:
+Las entidades clínicas mantienen el principio:
 
 ```text
 Patient
    │
    ├── MedicalRecord
-   ├── MedicalEncounter
-   ├── ClinicalAlert
-   ├── Prescription
-   └── StudyOrder
+   │      │
+   │      └── ClinicalEncounter (vía Appointment)
+   ├── ClinicalAlert       [futuro]
+   ├── Prescription        (Fase 4 — cerrada, ver §7.9)
+   └── StudyOrder          (Fase 4 — cerrada, ver §7.10)
 ```
 
 Las consultas y registros clínicos deberán conservar historial.
@@ -1145,26 +1190,26 @@ Las consultas y registros clínicos deberán conservar historial.
 No se debe construir un expediente como un único registro mutable que sobrescriba toda la información anterior.
 
 `Appointment.IN_CONSULTATION` (Fase 2) es la frontera hacia este dominio — `appointments` no
-debe absorber `MedicalEncounter` ni decisiones clínicas; la existencia o el estado de una cita
+debe absorber `ClinicalEncounter` ni decisiones clínicas; la existencia o el estado de una cita
 nunca constituye por sí solo un diagnóstico o tratamiento.
 
 ---
 
-# 37. Evolución hacia documentos
+# 37. Documentos (Fase 4 — cerrada, ver §7.9–§7.11)
 
-Posteriormente:
+Implementado (originalmente descrito aquí como trabajo posterior, durante la redacción de Fase 1):
 
 ```text
 Patient
    │
-   ├── Appointment
-   ├── MedicalEncounter
-   ├── Prescription
-   ├── StudyOrder
-   └── ClinicalDocument
+   ├── Appointment ── ClinicalEncounter
+   ├── Prescription        (Fase 4)
+   ├── StudyOrder          (Fase 4)
+   └── ClinicalDocument    (Fase 4)
 ```
 
-Los documentos deberán permanecer privados y protegidos por autorización.
+Los documentos permanecen privados y protegidos por autorización (ADR-026/ADR-028), tal como
+exigía este principio desde su redacción original.
 
 ---
 
@@ -1335,7 +1380,33 @@ Cuando sea necesario cambiarla debe:
 
 # 44. Estado actual
 
-### Fase 1
+**Corrección de consistencia (cierre documental de Fase 3, 2026-09-11):** las dos listas
+originales de esta sección (checklist de Fase 1 sin marcar, y Fase 2/Fase 3 bajo "Fases
+futuras") quedaron desactualizadas — Fase 1, Fase 2 y Fase 3 ya están completadas. Se
+conservan íntegras más abajo como registro histórico de construcción; el resumen siguiente
+es la fuente de verdad sobre el estado real y consolidado del proyecto.
+
+**Corrección de consistencia (cierre documental de Fase 4, 2026-09-14):** Fase 4 fue
+implementada, se perdió por una falla catastrófica de la VM de desarrollo, se recuperó
+íntegramente desde un respaldo previo a la falla (implementación consolidada en el commit
+`cf77662` sobre `recovery/fase4`, con Fase 3 como baseline en `7621bae`), se revalidó
+exitosamente en el ambiente reconstruido, y quedó formalmente cerrada — ver
+`docs/phases/phase-4-final-report.md` §16 (`PHASE 4 — CLOSED`). La lista "Fases futuras" más
+abajo, que aún incluía a Fase 4, se corrige en el resumen siguiente; se conserva sin editar
+por lo demás como registro histórico de las fases que seguían pendientes al cierre de Fase 3.
+
+### Resumen de fases
+
+```text
+Fase 1 — Fundaciones                COMPLETADA (docs/phases/phase-1-foundations.md)
+Fase 2 — Agenda                     COMPLETADA (docs/phases/phase-2-agenda-final-report.md)
+Fase 3 — Gestión clínica            COMPLETADA (docs/phases/phase-3-clinical-final-report.md — PHASE 3 — CLOSED)
+Fase 4 — Documentos                 COMPLETADA (docs/phases/phase-4-final-report.md — PHASE 4 — CLOSED)
+Fase 5 — CareRequest y operación    futura
+Fase 6 — Notificaciones y auditoría futura
+```
+
+### Fase 1 — checklist original de construcción (histórico)
 
 ```text
 [ ] Configuración
@@ -1358,12 +1429,16 @@ Cuando sea necesario cambiarla debe:
 [ ] Documentation
 ```
 
-### Fases futuras
+### Fase 2 y Fase 3 — especificación funcional (histórico)
 
 ```text
 Fase 2 — Agenda (especificación funcional aprobada 2026-09-09, ver docs/phases/phase-2-agenda.md)
-Fase 3 — Gestión clínica
-Fase 4 — Documentos
+Fase 3 — Gestión clínica (especificación funcional aprobada 2026-09-11, ver docs/phases/phase-3-clinical-encounter.md)
+```
+
+### Fases futuras
+
+```text
 Fase 5 — CareRequest y operación
 Fase 6 — Notificaciones y auditoría
 ```

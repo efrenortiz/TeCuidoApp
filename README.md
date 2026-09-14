@@ -4,7 +4,16 @@ Aplicación Web para la gestión integral de un consultorio médico especializad
 gineco-obstetricia. Ver `requirements.md` (requerimientos funcionales) y
 `docs/architecture.md` + `docs/adr/` (arquitectura y decisiones técnicas).
 
-Estado actual: **Fase 1 — Fundaciones** (ver `docs/phases/phase-1-foundations.md`).
+Estado actual del proyecto (2026-09-11):
+
+| Fase | Estado |
+|---|---|
+| Fase 1 — Fundaciones | ✅ COMPLETADA (`docs/phases/phase-1-foundations.md`) |
+| Fase 2 — Agenda | ✅ COMPLETADA (`docs/phases/phase-2-agenda-final-report.md`) |
+| Fase 3 — Gestión clínica | ✅ COMPLETADA (`docs/phases/phase-3-clinical-final-report.md`) |
+| Fase 4 — Documentos | ✅ COMPLETADA (`docs/phases/phase-4-final-report.md`) |
+| Fase 5 — CareRequest y operación | ⏭️ SIGUIENTE (aún no iniciada) |
+| Fase 6 — Notificaciones y auditoría | Futura |
 
 ## Stack
 

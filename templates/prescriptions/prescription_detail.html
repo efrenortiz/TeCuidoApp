@@ -1,0 +1,88 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Receta médica — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Receta médica" %}
+
+<div class="card card--narrow">
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Médico</dt>
+      <dd class="data-list__value">{{ prescription.doctor.person }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Estado</dt>
+      <dd class="data-list__value">
+        {% if prescription.status == "VOIDED" %}
+        {% include "components/_badge.html" with text="Anulada" variant="danger" %}
+        {% else %}
+        {% include "components/_badge.html" with text="Emitida" variant="success" %}
+        {% endif %}
+        {% if not prescription.is_current_version %}
+        {% include "components/_badge.html" with text="Versión anterior" variant="neutral" %}
+        {% endif %}
+      </dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Emisión</dt>
+      <dd class="data-list__value">{{ prescription.issued_at|date:"d/m/Y H:i" }}</dd>
+    </div>
+    <div>
+      <dt class="data-list__label">Versión</dt>
+      <dd class="data-list__value">{{ prescription.version_number }}</dd>
+    </div>
+  </dl>
+</div>
+
+<div class="card">
+  <h2 class="card__title">Medicamentos</h2>
+  <table class="table">
+    <thead><tr><th>#</th><th>Medicamento</th><th>Dosis</th><th>Vía</th><th>Frecuencia</th><th>Indicaciones</th></tr></thead>
+    <tbody>
+      {% for item in prescription.items.all %}
+      <tr>
+        <td>{{ item.position }}</td>
+        <td>{{ item.medication_name }}{% if item.presentation %} ({{ item.presentation }}){% endif %}</td>
+        <td>{{ item.dose }} {{ item.dose_unit }}</td>
+        <td>{{ item.route }}</td>
+        <td>{{ item.frequency }}{% if item.duration %}, {{ item.duration }}{% endif %}</td>
+        <td>{{ item.instructions|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="patient-detail-actions">
+  {% if document %}
+  <a class="btn btn--secondary" href="{% url 'clinical_documents_api:document_download' document.pk %}">Descargar PDF</a>
+  {% endif %}
+  {% if prescription.status == "ISSUED" and prescription.is_current_version %}
+  <a class="btn btn--secondary" href="{% url 'prescriptions_ui:prescription_version' prescription.pk %}">Nueva versión</a>
+  <button type="button" class="btn btn--danger" onclick="document.getElementById('modal-void').showModal()">Anular</button>
+  {% endif %}
+</div>
+
+{% if prescription.previous_version_id %}
+<p class="field__help">
+  <a href="{% url 'prescriptions_ui:prescription_detail' prescription.previous_version_id %}">Ver versión anterior</a>
+</p>
+{% endif %}
+
+<dialog id="modal-void" class="modal">
+  <div class="modal__body">
+    <h2 class="modal__title">Anular receta</h2>
+    <form method="post" action="{% url 'prescriptions_ui:prescription_void' prescription.pk %}">
+      {% csrf_token %}
+      <div class="field">
+        <label class="field__label" for="id_void_reason">Motivo <span class="field__required">*</span></label>
+        <textarea class="field-input" id="id_void_reason" name="reason" rows="2" required></textarea>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--secondary" onclick="document.getElementById('modal-void').close()">Cancelar</button>
+        <button type="submit" class="btn btn--danger">Confirmar anulación</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+{% endblock %}

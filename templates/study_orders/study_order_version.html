@@ -1,0 +1,54 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Nueva versión de solicitud — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_patient_context_header.html" with patient=patient %}
+{% include "components/_page_header.html" with title="Nueva versión de solicitud" %}
+
+<div class="card card--narrow">
+  <h2 class="card__title">Versión previa (#{{ order.version_number }})</h2>
+  <table class="table">
+    <thead><tr><th>Estudio</th></tr></thead>
+    <tbody>
+      {% for item in order.items.all %}
+      <tr><td>{{ item.study_name }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="card">
+    <h2 class="card__title">Nueva versión</h2>
+    <div class="field">
+      <label class="field__label" for="id_reason">Motivo de la corrección <span class="field__required">*</span></label>
+      <textarea class="field-input" id="id_reason" name="reason" rows="2" required></textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="id_indications">Indicaciones</label>
+      <textarea class="field-input" id="id_indications" name="indications" rows="2">{{ order.indications }}</textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="id_observations">Observaciones</label>
+      <textarea class="field-input" id="id_observations" name="observations" rows="2">{{ order.observations }}</textarea>
+    </div>
+
+    {% for item in items|slice:":5" %}
+    <fieldset class="card card--narrow" style="margin-bottom: 1rem;">
+      <legend>Estudio {{ forloop.counter }}</legend>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-study_name">Nombre del estudio</label>
+        <input class="field-input" id="id_item-{{ forloop.counter }}-study_name" name="item-{{ forloop.counter }}-study_name" type="text" value="{{ item.study_name|default:"" }}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="id_item-{{ forloop.counter }}-specific_instructions">Indicaciones específicas</label>
+        <textarea class="field-input" id="id_item-{{ forloop.counter }}-specific_instructions" name="item-{{ forloop.counter }}-specific_instructions" rows="2">{{ item.specific_instructions|default:"" }}</textarea>
+      </div>
+    </fieldset>
+    {% endfor %}
+  </div>
+  <div class="patient-detail-actions">
+    <button type="submit" class="btn btn--primary">Guardar nueva versión</button>
+  </div>
+</form>
+{% endblock %}

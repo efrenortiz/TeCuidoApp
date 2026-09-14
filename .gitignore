@@ -13,6 +13,7 @@ db.sqlite3
 *.log
 staticfiles/
 media/
+private_media/
 
 # Environment variables
 .env
@@ -33,3 +34,4 @@ htmlcov/
 # Secrets
 *.pem
 *.key
+.mcp.json

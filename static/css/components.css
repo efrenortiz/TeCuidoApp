@@ -569,3 +569,12 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-warning-700);
 }
+
+/* Pagination — design-system.md §35 lists it as a planned component;
+   first real use is the clinical encounter history (Fase 3, SCREEN-101). */
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}

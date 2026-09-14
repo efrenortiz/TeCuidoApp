@@ -168,16 +168,34 @@ administrativa exige `DoctorClinic` válida — el administrador tiene acceso fu
 
 ## Fase 3 — Gestión clínica
 
+Contrato funcional completo y aprobado en `docs/phases/phase-3-clinical-encounter.md` (2026-09-11) — ese
+documento manda en caso de duda.
+
 Incluye:
 
-- historia clínica;
-- consultas;
-- evolución;
-- diagnósticos;
-- tratamientos;
-- pronóstico;
-- alertas;
-- resumen clínico.
+- `ClinicalEncounter`: consulta clínica originada exclusivamente por una `Appointment` válida
+  (`Appointment 1 ─── 0..1 ClinicalEncounter`), nunca creada de forma independiente;
+- estados de `ClinicalEncounter`: únicamente `IN_PROGRESS` y `COMPLETED` — sin `WAITING`,
+  `PAUSED`, `CHECKED_IN` ni cierre automático por tiempo;
+- inicio ("Iniciar consulta") exclusivo del médico asignado, atómico e idempotente con el
+  cambio de la cita a `IN_CONSULTATION`;
+- guardado parcial durante la consulta, sin autosave obligatorio;
+- cierre ("Completar consulta") exigiendo contenido clínico real en exactamente cinco campos
+  obligatorios: motivo de consulta, padecimiento actual, exploración física, evaluación/diagnóstico
+  y plan/indicaciones — evolución, pronóstico, tratamiento, paraclínicos y observaciones son
+  opcionales, no requisitos de cierre;
+- diagnóstico como texto libre; sin CIE-10 ni catálogo diagnóstico en esta fase;
+- cierre atómico `ClinicalEncounter COMPLETED` + `Appointment COMPLETED`; sin reapertura,
+  edición ni `DELETE` funcional posteriores al cierre;
+- `MedicalRecord`: expediente longitudinal único por paciente (`Patient 1 ─── 1 MedicalRecord`),
+  creación lazy, sin duplicar datos de `Patient` ni de los encuentros;
+- `DoctorPatientRelationship` permanece independiente — ninguna operación clínica la crea,
+  activa ni modifica;
+- alertas clínicas, recetas, órdenes de estudio y documentos clínicos quedan fuera del núcleo
+  de esta fase (entidades futuras separadas).
+
+No incluye historia clínica de módulos especializados (ginecología, obstetricia, colposcopia,
+menopausia, osteoporosis) — eso pertenece a fases posteriores.
 
 ## Fase 4 — Documentos
 
