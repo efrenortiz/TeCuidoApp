@@ -24,7 +24,8 @@ se encontraron y corrigieron 4 defectos reales durante la propia implementación
 cada etapa y consolidados en §9/§11). Ningún cambio sobre código de Fases 1–3 fue destructivo —
 todos los cambios sobre archivos existentes son estrictamente aditivos.
 
-**Estado final:** ver veredicto en §15.
+**Estado final:** validado originalmente el 2026-09-11 (§15); recuperado íntegramente tras una
+falla de VM y revalidado el 2026-09-14 (§16). Veredicto de cierre formal en §16.
 
 ---
 
@@ -212,6 +213,15 @@ Ver detalle completo en `docs/phases/phase-4-implementation/stage-07-concurrency
 
 No se identificó ninguna otra desviación entre diseño/ADRs e implementación.
 
+**Actualización de cierre (2026-09-14):** la nota de implementación recomendada en la columna
+"Documento a actualizar" ya está presente en
+`docs/adr/ADR-027-synchronous-server-side-pdf-generation.md` §2 ("Nota de implementación",
+fechada 2026-09-11) y fue verificada nuevamente contra el código real
+(`prescriptions.services.prescription.issue`/`create_version`,
+`study_orders.services.study_order.issue`/`create_version`,
+`clinical_documents.services.document.create_generated_document`) durante la preparación del
+cierre formal. No queda ninguna acción pendiente sobre ADR-027.
+
 ---
 
 ## 12. Regresión de Fases 1–3
@@ -233,8 +243,10 @@ No se identificó ninguna otra desviación entre diseño/ADRs e implementación.
   `docs/phases/phase-4-implementation/stage-0{0..8}-*.md`.
 - No se detectaron contradicciones nuevas entre documentación e implementación más allá de la ya
   descrita en §11.
-- **Recomendación antes del cierre formal**: actualizar ADR-027 con la nota de §11 (menor, no
-  bloqueante).
+- **Recomendación antes del cierre formal** (2026-09-11): actualizar ADR-027 con la nota de §11
+  (menor, no bloqueante).
+- **Estado de la recomendación (2026-09-14):** verificada como ya resuelta — ver nota de cierre
+  en §11. Ninguna acción documental pendiente sobre ADR-027 al momento del cierre formal.
 
 ---
 
@@ -258,10 +270,60 @@ No se identificó ninguna otra desviación entre diseño/ADRs e implementación.
 
 ## 15. Recomendación final
 
-Todos los criterios de cierre están satisfechos: código, pruebas, migraciones, seguridad,
-concurrencia, auditoría, UX/UI, regresión y documentación. No existe ningún gap CRITICAL/HIGH, y
-la única desviación documental identificada es menor y no bloqueante.
+**Recomendación original (2026-09-11):** todos los criterios de cierre estaban satisfechos:
+código, pruebas, migraciones, seguridad, concurrencia, auditoría, UX/UI, regresión y
+documentación. No existía ningún gap CRITICAL/HIGH, y la única desviación documental
+identificada era menor y no bloqueante (§11).
 
 ```text
 PHASE 4 — READY TO CLOSE
+```
+
+---
+
+## 16. Recovery Validation — 2026-09-14
+
+Con posterioridad a la validación original de este informe (2026-09-11), el entorno de
+desarrollo sufrió una falla catastrófica de VM. La implementación de Fase 4 se recuperó
+íntegramente desde un respaldo previo a la falla; esta sección documenta esa recuperación y su
+revalidación como un evento distinto y trazable, sin sustituir la evidencia original de §4–§8.
+
+- **Baseline de Fase 3** utilizado como punto de partida de la recuperación: commit `7621bae`
+  ("Close Fase 3: clinical domain implementation").
+- **Implementación de Fase 4 recuperada:** consolidada en el commit `cf77662` ("Recover Fase 4
+  implementation"), sobre la rama `recovery/fase4` (publicada como `origin/recovery/fase4`).
+- **Verificaciones re-ejecutadas en el ambiente reconstruido:**
+
+  | Verificación | Resultado |
+  |---|---|
+  | `python manage.py check` | PASS |
+  | Consistencia de migraciones | PASS |
+  | Tests de `medical_records` | 196/196 PASS |
+  | Tests de `clinical_documents` | PASS |
+  | Tests de `prescriptions` | PASS |
+  | Tests de `study_orders` | PASS |
+  | Suite completa del proyecto | PASS |
+
+  Esta corrida reproduce el resultado esperado por la evidencia original (§4: 685/685 — 528 de
+  Fases 1–3 + 157 de Fase 4). La validación de recuperación confirma que la suite completa vuelve
+  a pasar en el ambiente reconstruido; no se re-documenta aquí un conteo independiente de 685
+  porque el conteo exacto no forma parte de la evidencia de esta corrida — el resultado
+  registrado es "PASS" sobre la suite completa y sobre cada app de Fase 4 individualmente.
+- **Alcance de esta validación:** confirma la integridad de la recuperación (que la
+  implementación recuperada es equivalente en comportamiento a la validada originalmente). No
+  repite, ni necesita repetir, la validación manual/navegador (§5), de seguridad (§6) o de
+  concurrencia (§7) — esa evidencia histórica permanece vigente sin cambios y sigue siendo la
+  fuente primaria para esos aspectos.
+- **ADR-027:** la aclaración documental pendiente identificada en §11/§13 fue verificada como ya
+  presente y correcta en `docs/adr/ADR-027-synchronous-server-side-pdf-generation.md` §2 — sin
+  cambios pendientes.
+
+### Veredicto de cierre
+
+Con la implementación de Fase 4 recuperada íntegramente, revalidada exitosamente en el ambiente
+reconstruido, y sin ninguna desviación documental pendiente:
+
+```text
+FASE 4 — IMPLEMENTADA
+PHASE 4 — CLOSED
 ```
