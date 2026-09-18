@@ -25,8 +25,15 @@
 > como futura/siguiente pese a que este reporte ya la declaraba `CLOSED` en §41.K. §42 corrige
 > esa inconsistencia sin re-auditar código ni alterar ningún conteo de §41. No re-declara el
 > cierre — esa validación formal de esta nueva ronda corresponde a su Prompt 03.
+>
+> **`§43` (2026-09-18, misma ronda, Prompt 02):** trazabilidad Git y paquete de release —
+> **el `HEAD`/commit auditado real y vigente es `a4debdf0033e69a5cb085539027ab3a12a539c3d`**
+> (re-verificado con `git rev-parse HEAD` en esta sesión, no asumido de rondas anteriores);
+> `ff8abb8`/`c4bf7f1`/`7ccfd7c` quedan como historial de trazabilidad, no como `HEAD`. Paquete de
+> release regenerado desde ese `HEAD` con `git archive` y verificado sin `.env`/`private_media`/
+> `.pyc`/secretos. Tampoco declara cierre — ver §43.G.
 
-**Fecha:** 2026-09-16 (creación) — **última actualización: 2026-09-18** (§41, cierre formal)
+**Fecha:** 2026-09-16 (creación) — **última actualización: 2026-09-18** (§43)
 **Estado de diseño previo:** `✅ FASE 5 — TECHNICAL DESIGN FREEZE` (`docs/phases/phase-5-design-freeze.md`, 2026-09-15)
 **Estado de este reporte:** histórico acumulativo — ver banner arriba
 
@@ -2326,3 +2333,129 @@ emitido con evidencia completa en la ronda anterior) — esa declaración perman
 citada aquí solo como referencia. La instrucción explícita de este prompt es no declarar el
 cierre formal en este punto: esa validación final, incorporando ahora también la consistencia
 documental corregida en este §42, corresponde al Prompt 03 de esta misma ronda.
+
+---
+
+# 43. Trazabilidad Git y paquete de release — Prompt 02 de la misma ronda (2026-09-18)
+
+**Origen:** release engineering — el reporte debía identificar correctamente el `HEAD` real (no
+asumir que hashes citados en rondas anteriores seguían vigentes), y el ZIP de distribución debía
+generarse y verificarse desde Git, no desde el directorio de trabajo. No se modificó lógica
+funcional de Fase 5 en este prompt.
+
+## 43.A Auditoría Git — ejecutada realmente en esta sesión, no asumida
+
+```
+git status --short         → 7 archivos modificados: 6 de §42 (Prompt 01 de esta ronda) +
+                              .claude/settings.local.json (ajeno a Fase 5, sin commitear antes)
+git branch --show-current  → main
+git log --oneline --decorate -10 → HEAD (antes de este prompt) = 7ccfd7c; ff8abb8 y c4bf7f1
+                              debajo, ambos de la ronda anterior; b7a0cbc = origin/main/HEAD
+git rev-parse HEAD         → 7ccfd7c69f50027c9cf1a04f25cfb9b2f4357027 (antes de commitear
+                              el trabajo de §42)
+git diff --stat            → 7 files changed, 147 insertions(+), 18 deletions(-)
+git status --ignored --short → confirma de nuevo (ver 43.D) .env/.mcp.json/private_media/
+                              __pycache__ como IGNORADOS, nunca rastreados
+```
+
+## 43.B Trazabilidad final — commit funcional vs. documental vs. HEAD
+
+**No se asumió que los hashes de la ronda anterior seguían vigentes — se re-obtuvieron con Git
+en esta sesión.** Distinción explícita, del más antiguo al más reciente:
+
+| Rol | Commit | Contenido |
+|---|---|---|
+| **Commit funcional de Fase 5** | `ff8abb8e1797dee728fe7c1d8d4052413b77d944` | Código, tests, migraciones, UI de `care_requests/`; documentación de diseño de las 3 rondas de corrección previas |
+| Commit documental (ronda anterior, Prompt 04) | `c4bf7f175d8af882125ac10802fdc509bdb91ce8` | Consolidación §40-§41 del reporte final, corrección de conteo del DoD, fix de trazabilidad de AC-IDs, precisiones ADR-005/architecture.md |
+| Commit documental (ronda anterior, fix trivial) | `7ccfd7c69f50027c9cf1a04f25cfb9b2f4357027` | Registro del hash de `c4bf7f1` dentro del propio reporte |
+| Commit documental (esta ronda, Prompt 01) | `a4debdf0033e69a5cb085539027ab3a12a539c3d` | §42: corrección de `README.md`/`architecture.md`/handoff/design-freeze/índice — Fase 5 deja de describirse como futura |
+| **HEAD / commit auditado (real, verificado con `git rev-parse HEAD` en esta sesión)** | **`a4debdf0033e69a5cb085539027ab3a12a539c3d`** | El mismo que la fila anterior — es el commit vigente al momento de este prompt |
+
+**Ningún commit antiguo se etiqueta como `HEAD`.** Los 4 hashes anteriores (`ff8abb8`, `c4bf7f1`,
+`7ccfd7c`) se conservan como historial de trazabilidad, no como el estado vigente — coherente con
+`§41`/`§42`, que ya distinguen "veredicto vigente" de "historial".
+
+## 43.C Revisión de secretos — repetida en esta sesión, no heredada
+
+```
+git log --all --oneline -- .env '*.env'                        → vacío (jamás versionado)
+git ls-files | grep -iE "\.env"                                  → solo .env.example (placeholders)
+git grep -nI -E "(password|secret|token|api[_-]?key)\s*=\s*['\"][^'\"]{6,}" -- . ':!*.md' ':!docs/*'
+  → solo fixtures de test ("another-pass!", "already-here!", "whatever") en accounts/tests/ —
+    no son credenciales reales
+git grep -niE "DATABASE_URL\s*=\s*['\"]|credentials\s*=\s*['\"]" -- . ':!*.md'  → sin resultados
+TeCuidoApp/settings.py                                            → SECRET_KEY/POSTGRES_PASSWORD/
+    etc. leídos de os.environ.get(...); único literal es el placeholder estándar de Django
+    "django-insecure-dev-only-change-me" (solo bajo DEBUG=True, no es una exposición real)
+```
+
+**`.env` es exclusivamente local:** existe en disco (con valores reales, no reproducidos en este
+reporte), está en `.gitignore`, y nunca apareció en ningún commit de todo el historial del
+repositorio. **No aparece en el paquete de distribución** (43.D). **No se detectó ningún secreto
+real versionado** — no hay operación de release que detener, y no se inventa ninguna rotación de
+credenciales (no existe evidencia de exposición real que la justifique).
+
+## 43.D Paquete final — generado desde Git, no desde el directorio de trabajo
+
+```
+git archive --format=zip -o tecuidoapp-fase5-a4debdf.zip HEAD
+```
+
+(no `zip -r`/`tar` del directorio de trabajo — por construcción, `git archive` solo puede incluir
+lo que está en el commit `a4debdf`, nunca `.env`/`private_media`/archivos sin commitear).
+
+```
+unzip -l tecuidoapp-fase5-a4debdf.zip | tail -1  → 509 files
+grep .env                                          → sin resultados
+grep private_media                                 → sin resultados
+grep -E "\.pyc$|__pycache__"                        → sin resultados
+grep -E "\.pem$|\.key$|\.mcp\.json"                 → sin resultados
+grep "\.pdf$"                                       → sin resultados (sin datos clínicos de prueba)
+unzip -p tecuidoapp-fase5-a4debdf.zip README.md | grep "Fase 5"
+  → "✅ COMPLETADA (`docs/phases/phase-5-final-report.md` §41.K — `PHASE 5 — CLOSED`)"
+```
+
+**El paquete ahora refleja correctamente el estado de cierre de Fase 5 dentro de su propio
+`README.md`** — a diferencia del ZIP generado en la ronda anterior sobre `ff8abb8` (antes de la
+corrección de §42), que habría distribuido un `README.md` diciendo "Fase 5 — aún no iniciada"
+pese a que el propio reporte ya declaraba `CLOSED`. Esta es la razón concreta por la que el
+prompt exigía regenerar el paquete desde el `HEAD` real, no reutilizar el ZIP anterior.
+
+**No se eliminó `private_media/` ni ningún dato de desarrollo del working tree** — la limpieza es
+exclusivamente del artefacto de release (`git archive`), nunca del directorio de trabajo local
+(instrucción explícita §6 del prompt, ya establecida también en `§40.A` de la ronda anterior).
+
+## 43.E Tag — convención existente, no aplicada en este prompt
+
+El repositorio **ya usa** una convención de tags de cierre de fase: `fase-4-closed` apunta
+exactamente al commit de finalización documental de Fase 4 (`177b174`, "Finalize Fase 4
+documentation") — el mismo patrón que `a4debdf` (finalización documental de Fase 5) seguiría si
+se aplicara la misma convención. **No se crea `fase-5-closed` en este prompt**, aunque el
+procedimiento existente lo respaldaría, porque crear ese tag constituye en sí mismo una
+declaración de cierre — y este prompt exige explícitamente "no declares Fase 5 cerrada en este
+prompt". Se deja documentado como acción recomendada para `Prompt 03` (el validador formal de
+esta ronda), sobre el commit `a4debdf` (o el que sea `HEAD` en ese momento, re-verificado, no
+asumido).
+
+## 43.F Tests — ejecutados realmente en esta sesión, sobre el `HEAD` real (`a4debdf`)
+
+```
+python manage.py check                              → System check identified no issues   PASS
+python manage.py makemigrations --check --dry-run    → No changes detected                  PASS
+python manage.py test care_requests -v 1             → Ran 90 tests in 52.594s — OK          PASS
+python manage.py test -v 1  (suite completa)          → Ran 775 tests in 554.247s — OK        PASS
+```
+
+La única traza de error en la salida completa (`DatabaseError: simulated outage`) es el mismo
+mock deliberado de `medical_records.tests.test_audit` ya clasificado en `§41.C` — no una falla;
+el test aparece `ok` y el resultado final es `OK`. El entorno permitió ejecutar los 4 comandos
+exigidos sin impedimento; no se marca ningún resultado como `PASS` sin haberlo corrido.
+
+## 43.G Estado — no se declara cierre en este prompt
+
+Este prompt corrige exclusivamente trazabilidad Git e higiene de paquete. El `HEAD` real
+(`a4debdf0033e69a5cb085539027ab3a12a539c3d`) queda identificado sin ambigüedad, el paquete de
+release fue regenerado desde ese `HEAD` y verificado, y no se encontraron secretos reales. **No
+se declara `PHASE 5 — CLOSED` en este prompt** (instrucción explícita) — el veredicto vigente
+sigue siendo `§41.K`, y su validación formal con la trazabilidad ahora corregida corresponde al
+`Prompt 03` de esta misma ronda.
