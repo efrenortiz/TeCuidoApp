@@ -456,6 +456,9 @@ Responsabilidad futura (Fase 5):
   clinic, date)` (mismo formato `{start, end, status}` que ya consume el frontend de Agenda) —
   `CareRequest` reutiliza ese `start`/`end` tal cual, sin calcular duración por su cuenta
   (`docs/design/care-request-service-contracts.md` §3);
+- **precisión (2026-09-18, ADR-005 §44):** "`Appointment` no gana ningún campo ni migración"
+  incluye también no ganar navegabilidad ORM inversa — `CareRequest.appointment` usa
+  `related_name="+"` explícitamente por esta razón, no solo por omisión;
 - archivos relacionados — reutilizan `ClinicalDocument`/almacenamiento privado de Fase 4 **sin
   modificarlo**: mismos tipos (PDF/JPEG/PNG) y mismo límite único de tamaño
   (`CLINICAL_DOCUMENTS_MAX_UPLOAD_SIZE_BYTES`) que ya soporta `clinical_documents.services.storage`

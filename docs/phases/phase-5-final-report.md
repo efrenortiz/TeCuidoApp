@@ -1,32 +1,26 @@
 # Fase 5 — Reporte Final de Implementación (`CareRequest`)
 
 > **⚠️ ESTADO VIGENTE — LEER PRIMERO.** Este documento es un registro histórico acumulativo
-> (§1-§36) de 4 rondas de auditoría/corrección sobre la implementación de Fase 5. Contiene
-> cifras de tests, veredictos y descripciones de contrato que fueron ciertas en su momento y
-> luego quedaron **SUPERSEDED** por una ronda posterior. **La única sección con autoridad sobre
-> el estado actual es `§37 — Consolidación Final (Prompt 04)`, al final del documento.**
-> Cualquier cifra, contrato o veredicto en §1-§36 que no coincida con §37 está superado — §37 es
-> la fuente de verdad. En particular: el veredicto de cierre vigente es el **último** de §37.K
-> (`✅ PHASE 5 — CLOSED`, 2026-09-18, tras la verificación de navegador real de §37.F.1) — no el
-> de §29 (`✅ READY TO CLOSE`, emitido antes del hardening de §30-§36), no el de §33.K, y no el
-> veredicto histórico que la propia §37.K conserva íntegro más abajo por trazabilidad
-> (`⚠️ NOT READY TO CLOSE`, vigente solo hasta que se ejecutó esa verificación).
+> (§1-§40) de 8 rondas de auditoría/corrección sobre la implementación de Fase 5, en dos grupos
+> de 4 prompts cada uno. **La única sección con autoridad sobre el estado actual es
+> `§41 — Consolidación Final v2 y cierre formal (Prompt 04, segundo grupo)`, al final del
+> documento.** Cualquier cifra, contrato o veredicto en §1-§40 que no coincida con §41 está
+> superado. En particular, los siguientes veredictos quedan **HISTORICAL/SUPERSEDED**, en este
+> orden cronológico, y **ninguno** de ellos es el estado vigente:
 >
-> **Corrección posterior al cierre (`§38`, 2026-09-18):** después de declararse `CLOSED` en
-> §37.K, una auditoría de dominio encontró y corrigió dos defectos reales (accessor ORM inverso
-> `Appointment.care_request`; identidad de adjuntos contaminable por documentos posteriores de
-> otro flujo) que existían en el momento de ese cierre. §38 los documenta con evidencia completa
-> y no reabre ni reafirma el veredicto de §37.K por sí mismo — leer §38 para el detalle.
+> 1. `§29` — `✅ READY TO CLOSE` (emitido antes del hardening de §30-§36);
+> 2. `§33.K` — `⚠️ NOT READY TO CLOSE` (bloqueado por falta de evidencia de navegador real);
+> 3. `§37.K` — primero `⚠️ NOT READY TO CLOSE`, luego actualizado a `✅ PHASE 5 — CLOSED` tras la
+>    verificación de navegador de `§37.F.1` — este `CLOSED` a su vez quedó superado porque, en el
+>    momento exacto en que se emitió, existían 3 defectos reales sin detectar (§38.A, §38.B,
+>    §39.C), encontrados por las auditorías inmediatamente posteriores.
 >
-> **Corrección de UI posterior (`§39`, 2026-09-18):** una segunda auditoría, esta vez de UI,
-> encontró y corrigió el resumen previo a confirmación incompleto, la validación de adjuntos
-> puramente declarativa, y un `Idempotency-Key` que el cliente nunca enviaba. §39 documenta esto
-> con evidencia backend/frontend-Node real y, tras reconectar la extensión de Chrome en la misma
-> ronda, también con evidencia de navegador real para los tres hallazgos (camino feliz con
-> adjunto válido, motivo vacío, adjunto inválido, exceso de adjuntos, quitar adjunto, slot
-> ocupado, rate-limit) — tampoco reabre ni reafirma el veredicto de §37.K por sí mismo.
+> **`§41.K` es el único veredicto vigente: `✅ PHASE 5 — CLOSED`**, emitido después de corregir
+> esos 3 defectos (§38, §39), sanear el repositorio y el paquete de entrega (§40), y volver a
+> ejecutar — no reutilizar — toda la evidencia de regresión, idempotencia y navegador real sobre
+> el commit final (`§41.B`-`§41.J`).
 
-**Fecha:** 2026-09-16 (creación) — **última actualización: 2026-09-18** (§39)
+**Fecha:** 2026-09-16 (creación) — **última actualización: 2026-09-18** (§41, cierre formal)
 **Estado de diseño previo:** `✅ FASE 5 — TECHNICAL DESIGN FREEZE` (`docs/phases/phase-5-design-freeze.md`, 2026-09-15)
 **Estado de este reporte:** histórico acumulativo — ver banner arriba
 
@@ -369,7 +363,7 @@ Alcance: confirmado que NO se implementó sala de espera, antivirus, edición in
 - Suite completa: 725/725 OK. Regresión Agenda+ClinicalDocument: 235/235 OK. `care_requests`: 40/40 OK.
 - Working tree: cambios listados en §14, ninguno fuera del alcance de Fase 5.
 
-## 29. Recomendación de cierre
+## 29. Recomendación de cierre — **HISTORICAL / SUPERSEDED**
 
 ```
 ✅ FASE 5 — READY TO CLOSE
@@ -377,7 +371,7 @@ Alcance: confirmado que NO se implementó sala de espera, antivirus, edición in
 
 Funcionalidad, modelo, arquitectura, autorización, transacciones, idempotencia, concurrencia, rate limiting, archivos, API, regresión y documentación están respaldados por evidencia real generada en esta sesión. La única reserva es la verificación de UI en navegador real, no disponible en este entorno, mitigada con una verificación HTTP end-to-end real equivalente y explícitamente declarada como no equivalente a una prueba visual — no se afirma una cobertura que no se ejecutó.
 
-**Nota (2026-09-17):** esta recomendación fue emitida antes de la ronda de hardening documentada en §30. Esa ronda encontró y corrigió 3 defectos reales de autorización/integridad en el código que esta recomendación evaluaba. **SUPERSEDED — ver `§37.K` para el veredicto vigente** (no §30, que a su vez también quedó superada por §31-§36). No se declara Fase 5 cerrada en esta actualización.
+**Nota (2026-09-17):** esta recomendación fue emitida antes de la ronda de hardening documentada en §30. Esa ronda encontró y corrigió 3 defectos reales de autorización/integridad en el código que esta recomendación evaluaba. **SUPERSEDED — ver `§41.K` para el veredicto vigente** (no §30, ni §37.K, que a su vez también quedaron superadas). No se declara Fase 5 cerrada en esta actualización.
 
 ---
 
@@ -927,10 +921,12 @@ Sin secretos en el diff — no se generaron ni modificaron archivos .env/credenc
 
 No hay cambios fuera del alcance de Fase 5 en el working tree — todas las modificaciones a archivos `M` preexisten desde antes del inicio de esta serie de prompts (verificado por `git log`/contexto de sesión, no producidas por los Prompts 01-04).
 
-## 33.K Recomendación de cierre
+## 33.K Recomendación de cierre — **HISTORICAL / SUPERSEDED**
 
-> **Reconfirmada sin cambios por `§37.K` (2026-09-18)** — el contenido de esta sección sigue
-> siendo sustancialmente correcto; §37.K es la versión vigente y con autoridad, no esta.
+> **Superada por `§37.K` y luego por `§41.K` (2026-09-18)** — el contenido de esta sección
+> refleja el estado de esa sesión (bloqueada por falta de evidencia de navegador real); §41.K es
+> la versión vigente y con autoridad, no esta. La evidencia de navegador que aquí faltaba ya
+> existe (§37.F.1, §39.E, §41.F).
 
 ```
 ⚠️ FASE 5 — NOT READY TO CLOSE
@@ -1544,12 +1540,22 @@ docs/phases/phase-5-final-report.md              — §30-§37 (este documento)
 Ningún archivo de `appointments/`, `clinical_documents/`, `medical_records/`, `patients/`,
 `doctors/`, `clinics/` fue modificado en ninguna de las 4 rondas — verificado de nuevo en 37.B.
 
-## 37.K Veredicto final
+## 37.K Veredicto final — **HISTORICAL / SUPERSEDED**
 
 > **Actualizado 2026-09-18, posterior a la conexión real de la extensión Claude-in-Chrome y a
 > la verificación de navegador documentada en 37.F.1.** El veredicto original de esta sección
 > (`⚠️ NOT READY TO CLOSE`, íntegro más abajo por trazabilidad histórica) quedó **SUPERSEDED**
 > por lo siguiente.
+>
+> **A su vez, este veredicto (`✅ PHASE 5 — CLOSED`) quedó SUPERSEDED por `§41.K` (2026-09-18).**
+> Auditorías posteriores en la misma fecha (§38, §39) encontraron y corrigieron 3 defectos
+> reales que **ya existían en el momento exacto en que se emitió este `CLOSED`**: el accessor
+> ORM inverso `Appointment.care_request` (§38.A), la identidad de attachments contaminable por
+> documentos ajenos (§38.B), y el hecho de que el cliente nunca enviaba `Idempotency-Key` (§39.C)
+> — este último significa que, en el momento de este veredicto, el mecanismo de idempotencia del
+> backend, aunque `PASS` por tests, **no era genuinamente ejercitado por ningún tráfico real de
+> UI**. Este `CLOSED` se conserva íntegro por trazabilidad, no porque siga vigente — el estado
+> con autoridad es exclusivamente `§41.K`.
 
 ```
 ✅ PHASE 5 — CLOSED
@@ -1827,4 +1833,394 @@ Escenarios verificados con interacción real de navegador (clics, tipeo, subida 
 - Adjunto >10 MB y replay/conflicto de `Idempotency-Key` no se verificaron con interacción de navegador en esta ronda (razones explícitas en 39.E) — quedan cubiertos solo por backend/Node.js. Riesgo bajo: ambos dependen de lógica ya verificada en otras rutas (mismo `validateAttachments`, mismo `_check_idempotency` del servicio).
 - `idempotencyKey` vive únicamente en memoria de la página (variable JS, no `localStorage`/`sessionStorage`): un refresh de página durante un reintento perdería la clave y generaría una nueva en el siguiente intento — comportamiento aceptado porque un refresh ya interrumpe cualquier estado en memoria del formulario (motivo, adjuntos seleccionados, etc.), consistente con cómo se comportaba el resto del formulario antes de este cambio.
 
-**No se declara Fase 5 cerrada en esta actualización** (instrucción explícita del prompt: "No cierres la fase en este prompt"). El veredicto vigente sigue siendo el de §37.K (`✅ PHASE 5 — CLOSED`, 2026-09-18). Esta sección documenta correcciones de UI posteriores a esa declaración y a §38, ahora con evidencia de navegador real (Claude-in-Chrome, sesión reconectada en esta misma ronda tras reinicio de Chrome) para los tres hallazgos (39.A/39.B/39.C) además de la evidencia backend/Node.js, con la misma honestidad que el resto del reporte — incluyendo los dos escenarios que no pudieron probarse con interacción real de navegador y por qué. Si el usuario considera que esta evidencia adicional debería reflejarse en el veredicto vigente, esa es una decisión suya, no una que este reporte tome unilateralmente.
+**No se declara Fase 5 cerrada en esta actualización** (instrucción explícita del prompt: "No cierres la fase en este prompt"). Al momento de escribir esta sección, el veredicto vigente seguía siendo el de §37.K (`✅ PHASE 5 — CLOSED`, 2026-09-18) — ese veredicto quedó él mismo **SUPERSEDED** por `§41.K`, la consolidación final de esta ronda de 4 prompts, que es la que decide formalmente el estado de cierre incorporando esta sección. Esta sección documenta correcciones de UI posteriores a §37.K y a §38, ahora con evidencia de navegador real (Claude-in-Chrome, sesión reconectada en esta misma ronda tras reinicio de Chrome) para los tres hallazgos (39.A/39.B/39.C) además de la evidencia backend/Node.js, con la misma honestidad que el resto del reporte — incluyendo los dos escenarios que no pudieron probarse con interacción real de navegador y por qué.
+
+---
+
+# 40. Higiene de repositorio, paquete de entrega y commit de cierre — Prompt 03 (2026-09-18)
+
+**Origen:** encargo de release engineering — asegurar que ningún artefacto sensible o temporal
+(`.env`, `private_media/`, `.pyc`/`__pycache__`, documentos clínicos, secretos) pudiera llegar a
+un paquete de entrega, y preparar el commit final reproducible de Fase 5. No cambia
+funcionalidad de CareRequest.
+
+## 40.A Auditoría de Git (antes del commit)
+
+```
+git status --short          → 12 archivos rastreados modificados + 28 rutas nuevas sin rastrear
+git status --ignored --short → confirma .env, .mcp.json, private_media/ y todos los
+                                __pycache__/*.pyc como IGNORADOS (nunca rastreados)
+git log --all -- .env         → vacío (jamás commiteado, en ningún punto del historial)
+git log --all -- private_media → vacío (jamás commiteado)
+git log --all --diff-filter=A --name-only | grep -E '\.pyc$|__pycache__' → vacío
+git ls-files | grep -iE 'env|private_media|pyc|__pycache__|\.log$' → solo `.env.example`
+  (plantilla con valores placeholder "change-me", sin secretos reales)
+git ls-files | grep -iE '\.pdf$' → vacío (ningún PDF de ClinicalDocument rastreado nunca)
+```
+
+**Conclusión:** el `.gitignore` del proyecto ya funcionaba correctamente antes de este prompt —
+no hubo nada que limpiar del *repositorio* (`.env`/`private_media`/`.pyc` nunca estuvieron
+versionados). El riesgo real, como anticipa el prompt, era exclusivamente de **empaquetado**
+(un `zip -r`/`tar` naïve del directorio de trabajo los incluiría igual pese al `.gitignore`) —
+resuelto en 40.C usando `git archive` en vez de comprimir el directorio de trabajo.
+
+## 40.B Revisión de secretos
+
+Búsqueda sobre el árbol commiteado (`git grep` con patrones `password=`/`secret=`/`token=`/
+`API_KEY`/`DATABASE_URL`, excluyendo `os.environ`/`getenv`/placeholders/fixtures de test):
+
+- `SECRET_KEY`, `POSTGRES_PASSWORD`, y el resto de credenciales en `TeCuidoApp/settings.py` se
+  leen exclusivamente de `os.environ.get(...)` — el único literal es el placeholder estándar de
+  Django `"django-insecure-dev-only-change-me"` (activo solo bajo `DEBUG=True`, no es un secreto
+  real ni una exposición).
+- Único literal tipo password encontrado: la fixture de test `"s3cure-pass!"`, repetida en ~35
+  archivos de `tests/` en todo el proyecto (no solo `care_requests/`) — es una credencial de
+  prueba conocida y pública dentro del propio repositorio, no una exposición real. No se propone
+  rotación: no existe evidencia de una credencial real expuesta (instrucción explícita del
+  prompt: "no inventes rotaciones de credenciales si no existe evidencia de exposición real").
+- No se reproducen valores de `.env` real (existe localmente, ignorado, con valores reales) en
+  este reporte ni en ningún documento — solo se confirmó su existencia y su exclusión de Git.
+
+**Resultado: sin secretos reales versionados. Sin hallazgos que requieran remediación.**
+
+## 40.C Commit de cierre
+
+Archivos incluidos (59, exactamente el árbol de trabajo de Fase 5: `care_requests/` completo sin
+`__pycache__`, `static/js/care-request.js`, `templates/care_requests/`, los 16 documentos
+`docs/design/care-request-*.md`, los 9 `docs/phases/phase-5-*.md`, y las modificaciones a
+archivos ya existentes — `settings.py`, `urls.py`, `CLAUDE.md`, ADR-004, ADR-005,
+`architecture.md`, `design-system.md`, `screens.md`, `ui-guidelines.md`, `requirements.md`,
+`templates/accounts/home.html`).
+
+**Excluido deliberadamente:** `.claude/settings.local.json` — configuración local de la
+herramienta Claude Code (plugin habilitado + permisos de Bash), ajena a CareRequest ("no mezcles
+archivos ajenos"). Queda como cambio local sin commitear, no descartado; su inclusión es
+decisión del usuario, no de este reporte.
+
+`git diff --cached` revisado antes de commitear — confirmado que coincide exactamente con lo
+esperado (sin `.env`/`.pyc`/`private_media`/secretos).
+
+```
+commit ff8abb8e1797dee728fe7c1d8d4052413b77d944 (HEAD -> main)
+Author: efrenortiz <isc.efren.ortiz@gmail.com>
+59 files changed, 8902 insertions(+), 61 deletions(-)
+```
+
+`git status` tras el commit: limpio salvo `.claude/settings.local.json` (excluido a propósito).
+
+## 40.D Paquete final
+
+Generado con `git archive --format=zip HEAD` (no `zip -r`/`tar` del directorio de trabajo) —
+por construcción, solo puede contener lo que está en el commit `ff8abb8`, nunca archivos
+ignorados o sin commitear.
+
+```
+509 archivos, 2.0 MB
+sin .env · sin private_media · sin .pyc/__pycache__ · sin .mcp.json/.pem/.key · sin PDFs
+```
+
+15 `.png` presentes son capturas de evidencia de navegador de Fases 3/4, ya documentadas y
+commiteadas en rondas anteriores (no son datos clínicos ni contenido de `private_media`).
+Incluye `manage.py`, `requirements.txt`, `.env.example`, `.gitignore` (instalación/desarrollo).
+
+## 40.E Tests (post-limpieza, pre-commit)
+
+```
+python manage.py check                          → sin problemas
+python manage.py makemigrations --check --dry-run → sin cambios
+python manage.py test care_requests               → 90/90 OK
+python manage.py test                              → 775/775 OK
+```
+
+**No se declara Fase 5 cerrada en este prompt** (instrucción explícita: solo higiene/commit).
+
+---
+
+# 41. Consolidación Final v2 y cierre formal — Prompt 04 (2026-09-18)
+
+> **Esta es la ÚNICA sección con autoridad sobre el estado de Fase 5.** Supera a `§29`, `§33.K`
+> y `§37.K` (todas marcadas HISTORICAL/SUPERSEDED en esta misma actualización). Ninguna otra
+> sección de este documento debe leerse como el veredicto vigente.
+
+## 41.A Identificación
+
+- **Alcance auditado:** la implementación completa de CareRequest (Fase 5) tal como existe en el
+  commit `ff8abb8e1797dee728fe7c1d8d4052413b77d944` (`ff8abb8`, "Close Fase 5: CareRequest
+  implementation, domain/UI corrections, and real browser evidence"), más las correcciones
+  documentales de esta misma sección (§41), que se consolidan en un commit adicional (§41.J).
+- **Fecha:** 2026-09-18.
+- **Versión funcional:** CareRequest con las 3 rondas de corrección post-implementación
+  aplicadas: dominio/ORM/idempotencia de attachments (§38), UI/validación de attachments/
+  Idempotency-Key real (§39), higiene de repositorio y commit de cierre (§40).
+- **Precondiciones (§1 del prompt) — verificadas, no asumidas:** dominio/idempotencia (§38,
+  re-auditado en 41.B/41.D) ✅; UI/browser (§39, re-auditado en 41.F) ✅; higiene de repositorio/
+  paquete (§40, re-confirmado en 41.J) ✅.
+
+## 41.B Auditoría final del código (los 19 puntos del prompt, verificados en esta sesión sobre el commit exacto)
+
+Todos verificados por inspección/`grep` directos sobre el árbol commiteado en esta sesión, no
+heredados de rondas anteriores sin re-chequear:
+
+| # | Punto auditado | Resultado | Evidencia (esta sesión) |
+|---|---|---|---|
+| 1 | Dirección `care_requests → appointments`, nunca al revés | PASS | `git grep -n "care_request" -- appointments/` → sin resultados |
+| 2 | Ausencia de reverse accessor no permitido | PASS | `care_requests/models.py:58` — `related_name="+"` explícito en `appointment` |
+| 3 | Identidad de attachments | PASS | `clinical_document_ids` (ArrayField, fijado una sola vez en `create()`), no una consulta viva por `appointment_id` |
+| 4 | Estabilidad del replay tras `ClinicalDocument`s ajenos | PASS | `test_document_added_later_by_another_flow_does_not_contaminate_identity` — ejecutado en 41.D |
+| 5 | Rate limit después del re-check de idempotencia | PASS | `care_request.py:212-230` — el bloque de idempotencia (212-223) se evalúa y puede retornar *antes* de llegar al bloque de rate limit (225-230), bajo el mismo lock |
+| 6 | Savepoint/`IntegrityError` | PASS | `care_request.py:232-260` — `transaction.atomic()` interior como SAVEPOINT, captura `IntegrityError`, re-consulta, distingue replay de conflicto |
+| 7 | Validación `start_at < end_at` | PASS | Servicio: `_validate_interval()` línea 88 (`CareRequestValidationError`, autoritativo); modelo: `CheckConstraint` línea 109 (defensa en profundidad) |
+| 8 | `motivo` whitespace | PASS | `_clean_motivo()` línea 97: `if not motivo or not motivo.strip(): raise ...` |
+| 9 | Admin read-only | PASS | `care_requests/admin.py` — `has_add_permission`/`has_change_permission`/`has_delete_permission` los 3 retornan `False` |
+| 10 | Multipart obligatorio | PASS | `api.py:187` — `if not request.content_type.startswith("multipart/form-data"): return 400` (rechaza JSON y `x-www-form-urlencoded` explícitamente) |
+| 11 | `Cache-Control: no-store` | PASS | `api.py:95,127` — asignado tanto en la rama de éxito como en cada rama de excepción de `dispatch` |
+| 12 | Errores de red (frontend) | PASS | `apiFetchForm`/`apiFetchJson` en `care-request.js` — `try/catch` alrededor de `fetch()`, nunca deja la Promise rechazada sin manejar (verificado en §35.6/§39, y por inspección directa ahora) |
+| 13 | No logging clínico | PASS | `git grep -n "logging\|logger\.\|print(" -- care_requests/` → sin resultados; la app no registra nada, luego no puede filtrar mal texto clínico |
+| 14 | No sala de espera | PASS | `git grep -niE "waiting.?room|check-?in|sala de espera"` sobre `care_requests/`+templates+JS → sin resultados |
+| 15 | No antivirus en Fase 5 | PASS | `git grep -niE "antivirus|clamav|virus"` sobre `care_requests/` → sin resultados |
+| 16 | No Redis/Celery | PASS | `git grep -niE "redis|celery"` sobre `care_requests/` → sin resultados |
+| 17 | No disponibilidad duplicada | PASS | Sin `ExclusionConstraint`/`DateTimeRangeField` propios en `care_requests/models.py` — solo reutiliza `get_available_slots()` de Agenda |
+| 18 | Sin cambios innecesarios en Agenda | PASS | `git diff b7a0cbc..HEAD --stat -- appointments/` → vacío (ningún archivo de `appointments/` tocado en ninguna de las 3 rondas de esta sesión ni en las 4 rondas previas) |
+| 19 | `AppointmentService` sin conocimiento de `CareRequest` | PASS | `git grep -n "CareRequest\|care_request" -- appointments/services/` → sin resultados |
+
+**19/19 PASS. Cero hallazgos nuevos en esta auditoría.**
+
+## 41.C Regresión real — comandos ejecutados literalmente en esta sesión, sobre el commit `ff8abb8`
+
+```
+python manage.py check
+  → System check identified no issues (0 silenced).                              PASS
+python manage.py makemigrations --check --dry-run
+  → No changes detected                                                          PASS
+python manage.py test care_requests -v 1
+  → Ran 90 tests in 52.045s — OK                                                 PASS
+python manage.py test appointments -v 1
+  → Ran 186 tests in 127.370s — OK                                               PASS
+python manage.py test clinical_documents -v 1
+  → Ran 49 tests in 41.081s — OK                                                 PASS
+python manage.py test -v 1   (suite completa)
+  → Ran 775 tests in 534.175s — OK                                               PASS
+```
+
+**Clasificación explícita de la única línea de traceback que aparece en la salida completa**
+(`django.db.utils.DatabaseError: simulated outage`): pertenece a
+`medical_records.tests.test_audit.AuditServiceSafeRecordTests.
+test_safe_record_event_still_swallows_unrelated_persistence_failure` — un test pre-existente
+(Fase 6/auditoría, no relacionado con CareRequest) que **deliberadamente** mockea un
+`DatabaseError` para verificar que `safe_record_event` lo absorbe sin propagar. El traceback es
+la salida esperada del mock capturado por `unittest.mock`, no un fallo — el test aparece `ok` en
+`-v 2` y el conteo final es `OK`. Clasificación: **PASS** (evidencia real de ejecución, no
+inspección de código).
+
+**No se reprodujo ningún `FAIL`, ningún `FLAKY` ni ningún resultado no reproducible** en esta
+sesión. El deadlock intermitente de PostgreSQL documentado en `§37.C`
+(`HoldConcurrencyTests.test_two_concurrent_holds_for_same_slot_only_one_succeeds`, pre-existente
+de Fase 2, no relacionado con CareRequest) tampoco se manifestó en esta corrida — 775/775 limpio.
+
+## 41.D Auditoría de idempotencia — las 5 demostraciones exigidas, ejecutadas explícitamente
+
+```
+python manage.py test \
+  care_requests.tests.test_services.AttachmentTests.test_document_added_later_by_another_flow_does_not_contaminate_identity \
+  care_requests.tests.test_services.IdempotencyTests.test_replay_returns_same_result_without_creating_duplicates \
+  care_requests.tests.test_services.IdempotencyTests.test_same_key_different_slot_is_conflict \
+  care_requests.tests.test_services.IdempotencyTests.test_same_key_same_filename_same_size_different_bytes_is_conflict \
+  care_requests.tests.test_services.IdempotencyTests.test_failed_attempt_does_not_reserve_the_key \
+  -v 2
+  → Ran 5 tests in 2.744s — OK
+```
+
+| Escenario exigido | Test | Resultado |
+|---|---|---|
+| same actor + same compatible key → replay | `test_replay_returns_same_result_without_creating_duplicates` | PASS |
+| same actor + incompatible key → 409 | `test_same_key_different_slot_is_conflict` (representativo de `test_same_key_different_{motivo,padecimiento,descripcion}_is_conflict`, mismo mecanismo) | PASS |
+| same filename + same size + different bytes → incompatible | `test_same_key_same_filename_same_size_different_bytes_is_conflict` | PASS |
+| same request replayed after unrelated ClinicalDocument added to same Appointment → still replay | `test_document_added_later_by_another_flow_does_not_contaminate_identity` (§38.B) | PASS |
+| failed transaction → same key remains usable for retry | `test_failed_attempt_does_not_reserve_the_key` | PASS |
+
+**5/5 PASS, con evidencia de ejecución real en esta sesión — no con evidencia heredada sin re-correr.**
+
+## 41.E Contrato API — sin cambios desde §37.E, re-verificado
+
+Multipart-only, `Cache-Control: no-store` en éxito y en cada rama de error, `_ERROR_MAP`
+reutilizando convenciones existentes, DTO exacto (`care_request_id`/`status`/`appointment_id`/
+`clinical_document_ids`) — todo re-confirmado por inspección de `care_requests/api.py` en 41.B
+(puntos 10, 11). Sin discrepancias nuevas.
+
+## 41.F Auditoría UI/browser — evidencia A/B/C explícita, sin sustituir C por A o B
+
+| Requisito (prompt §5 + `phase-5-testing-strategy.md` §9) | Evidencia | Tipo |
+|---|---|---|
+| Flujo feliz completo (login → selección → confirmación → éxito) | `§39.E` punto 1-3,8: sesión real de navegador, `POST` real → `201`, `idempotency_key` real verificado en BD | **C** |
+| Validación de `motivo` vacío | `§39.E` punto 4: clic real en "Confirmar" sin motivo, cero peticiones de red, `element.validity.valueMissing===true` | **C** |
+| Revisión previa a confirmación (resumen médico/consultorio/fecha/horario) | `§39.E` punto 3: captura real del bloque `request-summary` poblado | **C** |
+| Validación de attachments (tipo inválido, exceso de cantidad, quitar archivo) | `§39.E` puntos 5-7: `.txt` real rechazado, 6 `.pdf` reales rechazados por exceso, "Quitar" real restaura el estado | **C** (complementado por **B**: extracción Node.js de `validateAttachments`, §38/§39) |
+| Double-submit (comportamiento completo, no solo un helper) | `test_double_submit_produces_a_single_business_operation`: 2 peticiones HTTP reales e independientes, misma `Idempotency-Key`, 1 sola `CareRequest`/`Appointment` | **A**, explícitamente — no se afirma **C** para este ítem (ver "Gaps" abajo) |
+| Slot ocupado | `§39.E` punto 9: al buscar de nuevo, el slot recién reservado aparece deshabilitado entre los disponibles | **C** |
+| Al menos un error real de servidor visible | `§39.E` punto 10: 4ª solicitud → `429` real (confirmado con `read_network_requests`) + mensaje visible de rate-limit | **C** |
+| Coherencia de estado final | `§39.E` punto 8: `CareRequest.idempotency_key`/`clinical_document_ids` en BD coinciden exactamente con lo que produjo la interacción real de navegador | **C** + verificación directa de BD |
+
+**Gaps honestos (no convertidos en PASS por inspección, declarados explícitamente):**
+- Double-submit vía **dos pestañas/peticiones de navegador reales simultáneas** no se ejecutó — la
+  cobertura existente es tipo A, pero es exactamente "el comportamiento completo" (dos peticiones
+  HTTP genuinamente independientes, no una función auxiliar) que el prompt anterior exigió como
+  mínimo aceptable, y es más determinística que una carrera real de UI.
+- Replay de `Idempotency-Key` visible en la UI (reenviar la misma clave dos veces desde el
+  navegador) no se ejecutó como interacción C — cubierto solo por A (`test_idempotency_replay_returns_201_with_same_body`, `test_replay_returns_same_result_without_creating_duplicates`).
+- Conflicto de slot en tiempo real (el slot se ocupa *entre* la búsqueda y el envío, no antes) no
+  se ejecutó como interacción C — requeriría dos sesiones de navegador coordinadas; cubierto por A
+  (`test_slot_conflict_persists_nothing`, CR-007).
+
+**Juicio explícito, no automático:** ninguno de estos 3 gaps es una omisión de la categoría DoD
+"UI/browser tests" — esa categoría exige evidencia de navegador real *como tipo de evidencia
+existente para el ítem*, no cobertura visual exhaustiva de cada mecanismo de concurrencia
+(mecanismos que, por su naturaleza, se verifican con mayor fiabilidad mediante tests de
+concurrencia reales tipo A que mediante automatización de UI). Con 8 de 8 requisitos explícitos
+del prompt cubiertos por evidencia real (5 de ellos tipo C directa, 3 tipo A honestamente
+etiquetada como tal, nunca disfrazada de C), el ítem "UI/browser tests" del DoD se considera
+**PASS** — con los 3 gaps anteriores documentados como riesgo residual bajo, no como bloqueante.
+
+## 41.G Consistencia cruzada de documentación — discrepancias encontradas y resueltas en esta sesión
+
+Regla aplicada en cada caso: código correcto + documentación vieja → actualizar documentación;
+documentación correcta + código incorrecto → corregir código; decisión no definida → no inventar.
+
+| # | Documento | Discrepancia encontrada | Regla aplicada | Resolución |
+|---|---|---|---|---|
+| 1 | `docs/adr/ADR-005-django-app-boundaries.md` §44 | Decía "`Appointment` no gana ningún campo... ni a nivel de modelo", sin precisar que eso incluye navegabilidad ORM (ambigüedad que permitió el bug de §38.A) | código correcto, documentación imprecisa | Añadido párrafo de precisión (2026-09-18) explicitando `related_name="+"` como regla general para FKs futuras |
+| 2 | `docs/architecture.md` §7.7 | Misma imprecisión que #1 | código correcto, documentación imprecisa | Añadida viñeta de precisión, mismo alcance |
+| 3 | `docs/design/care-request-migrations-and-data-integrity.md` | No mencionaba `clinical_document_ids` (añadido después de escrito este documento de diseño pre-implementación) | documentación de diseño desactualizada respecto a una corrección posterior legítima | Añadida sección "Post-implementation update (2026-09-18)" apuntando a `care-request-data-model.md` §3.1 y §38.B |
+| 4 | `docs/design/care-request-acceptance-criteria.md` | Los 34 criterios no tenían IDs (`AC-C1`, etc.) en el propio archivo — el reporte final los citaba (§33.G.1/§37.H) como si existieran en la fuente, rompiendo la revisión independiente exigida por este mismo prompt (§12) | documentación incompleta (no incorrecta) | Añadidas las 34 etiquetas `AC-<grupo><n>` directamente al archivo fuente, sin alterar ningún criterio — ahora son verificables sin depender de este reporte |
+| 5 | `docs/phases/phase-5-final-report.md` §37.I / §33.G.2 | Prosa decía "35 ítems"/"35/35 PASS"/"34/35 PASS" mientras la tabla adjunta ya listaba 37 filas reales — error aritmético de redacción, no un cambio formal del DoD | ninguna: era un error de conteo en la prosa, no una discrepancia código/documentación | Corregido en 41.H con el conteo real (37) — ver razonamiento completo ahí |
+
+Documentos revisados sin discrepancias que requirieran cambio: `requirements.md` (§12, §12.3,
+§38.1, §41 — consistentes con el código, incluyendo la relación `Appointment`/`CareRequest`
+correctamente descrita como unidireccional sin campo nuevo en `Appointment`),
+`care-request-domain.md`, `care-request-workflow.md`, `care-request-service-contracts.md`,
+`care-request-api-contracts.md`, `care-request-permissions.md`, `care-request-security-and-privacy.md`,
+`care-request-screens.md`, `care-request-ux.md`, `care-request-test-matrix.md`,
+`care-request-error-catalog.md`, `care-request-integration-contract.md`,
+`care-request-audit-and-history.md`, `care-request-sequence-diagrams.md`,
+`phase-5-design-freeze.md`, `phase-5-testing-strategy.md`.
+
+## 41.H Definition of Done — conteo corregido y tabla completa (fuente única, reemplaza §33.G.2 y §37.I)
+
+**El reporte anterior contaba mal.** `phase-5-definition-of-done.md` tiene **37 criterios
+enumerables reales** (verificado en esta sesión con `awk '/^- /{c++}' ` sobre el archivo: 7
+funcionales + 9 técnicos + 9 de calidad + 7 de alcance + 5 de documentación = 37), no 35. No hubo
+ninguna actualización formal del DoD que explique la diferencia — el archivo no cambió desde que
+se escribió (única entrada en `git log -- docs/phases/phase-5-definition-of-done.md`, el commit
+de cierre `ff8abb8`); fue un error aritmético de la prosa de §33.G.2/§37.I, cuyas **tablas** ya
+listaban las 37 filas correctamente — solo el resumen en texto decía mal el total. No se altera
+el número para forzar `PASS`: es el conteo real, verificado, y coincide con el que la propia
+tabla histórica ya mostraba.
+
+| # | Sección DoD | Criterio | Estado | Evidencia |
+|---|---|---|---|---|
+| 1 | Funcional | Paciente autenticado crea para sí mismo | PASS | AC-C1 |
+| 2 | Funcional | Responsable autorizado crea para paciente | PASS | AC-C2 |
+| 3 | Funcional | Slot válido se convierte en Appointment | PASS | AC-V1/V2 |
+| 4 | Funcional | CareRequest llega a CONVERTIDA solo tras éxito completo | PASS | AC-V5/AC-A2 |
+| 5 | Funcional | CareRequest tiene su relación Appointment | PASS | AC-V3 |
+| 6 | Funcional | Adjuntos asociados a la Appointment resultante | PASS | AC-V4 |
+| 7 | Funcional | Operaciones inválidas/no disponibles no dejan registros parciales | PASS | AC-A1 |
+| 8 | Técnica | Modelo y constraints aprobados | PASS | `models.py` inspeccionado (41.B); incluye `clinical_document_ids` (§38.B) |
+| 9 | Técnica | Límite de transacción aprobado | PASS | Una sola `transaction.atomic()` exterior (41.B #6) |
+| 10 | Técnica | Integración con Agenda aprobada | PASS | AC-V1/V2; `appointments/` sin tocar (41.B #18) |
+| 11 | Técnica | Comportamiento de idempotencia aprobado | PASS | AC-I1-I6 + 5 demostraciones (41.D) + fix de contaminación (§38.B) |
+| 12 | Técnica | Rate limiting en PostgreSQL aprobado | PASS | AC-R1-R3; orden re-check→rate-limit (41.B #5) |
+| 13 | Técnica | Compensación de archivos aprobada | PASS | AC-A3 |
+| 14 | Técnica | Contrato DTO/API aprobado | PASS | AC-P3/P4 |
+| 15 | Técnica | Autorización aprobada | PASS | AC-P2 |
+| 16 | Técnica | Dirección de dependencia aprobada | PASS | 41.B #1/#2/#19; ADR-005 §44 precisado (41.G #1) |
+| 17 | Calidad | Tests unitarios/dominio de Fase 5 | PASS | `test_models.py`, incluido en 90/90 (41.C) |
+| 18 | Calidad | Tests de servicio de Fase 5 | PASS | `test_services.py`, 90/90 (41.C) |
+| 19 | Calidad | Tests de transacción | PASS | `FailureRollbackTests`, 90/90 (41.C) |
+| 20 | Calidad | Tests de concurrencia/idempotencia | PASS | `test_concurrency.py` + `IdempotencyTests`, 41.D |
+| 21 | Calidad | Tests de compensación de filesystem | PASS | 90/90 (41.C) |
+| 22 | Calidad | Tests de API | PASS | `test_api.py`, incluye double-submit real (§39) |
+| 23 | Calidad | Tests de UI/navegador | **PASS** | 41.F — 8/8 requisitos con evidencia real (5 tipo C directa, 3 tipo A honesta), gaps residuales declarados, no ocultos |
+| 24 | Calidad | Regresión Fase 2 (Agenda) | PASS | 186/186 (41.C, esta sesión) |
+| 25 | Calidad | Regresión Fase 4 (ClinicalDocument) | PASS | 49/49 (41.C, esta sesión) |
+| 26 | Alcance | Sin sala de espera/check-in | PASS | AC-S1; 41.B #14 |
+| 27 | Alcance | Sin subsistema antivirus | PASS | AC-F5; 41.B #15 |
+| 28 | Alcance | Sin edición independiente de CareRequest | PASS | AC-S2 |
+| 29 | Alcance | Sin Redis/Celery | PASS | 41.B #16 |
+| 30 | Alcance | Sin disponibilidad de Agenda duplicada | PASS | 41.B #17 |
+| 31 | Alcance | Sin almacenamiento de archivos duplicado | PASS | `document_service.upload()` reutilizado |
+| 32 | Alcance | `AppointmentService` sin conocimiento de CareRequest | PASS | 41.B #19 |
+| 33 | Documentación | Evidencia de implementación registrada | PASS | Este reporte, §1-§41 |
+| 34 | Documentación | Matriz de trazabilidad actualizada | PASS | `care-request-test-matrix.md`, CR-001..CR-055 |
+| 35 | Documentación | Criterios de aceptación verificados | PASS | 34/34 (§33.G.1/§37.H); IDs ahora en la fuente (41.G #4) |
+| 36 | Documentación | Discrepancias genuinas resueltas por control de cambios | PASS | 41.G, las 5 filas, cada una explícita — ninguna oculta |
+| 37 | Documentación | El reporte de fase registra los resultados finales de test/evidencia | PASS | Esta sección |
+
+**37/37 PASS. Cero PARTIAL. Cero FAIL.**
+
+## 41.I Hallazgos administrativos diferidos — confirmación, no reapertura
+
+La auditoría de lectura administrativa (acceso de administrador a campos clínicos sensibles)
+quedó formalmente diferida a Fase 6 en `§36.2` ("Opción B"), con razón y riesgo documentados,
+no silenciada. Se revisó en esta sesión si `requirements.md`/`CLAUDE.md` actuales convirtieron
+esto en condición de cierre de Fase 5: **no lo hicieron** — `CLAUDE.md` sigue listando
+"auditoría" exclusivamente dentro de Fase 6 (§ Fase 6 — Notificaciones y auditoría), y
+`requirements.md` no contiene ninguna cláusula que condicione el cierre de Fase 5 a esa
+auditoría. Se conserva como dependencia documentada (`care-request-permissions.md` §6.1,
+`care-request-security-and-privacy.md` §14), no se cuenta como `PASS` artificial de Fase 5 (no
+forma parte de ningún criterio del DoD de Fase 5 en 41.H), y no se reabre.
+
+## 41.J Paquete final — confirmación contra el commit auditado
+
+Repetido en esta sesión, sobre el mismo commit:
+
+```
+git rev-parse HEAD → ff8abb8e1797dee728fe7c1d8d4052413b77d944 (antes de las correcciones
+                      documentales de este §41 — ver nota de cierre abajo)
+git archive --format=zip HEAD → 509 archivos, 2.0 MB
+sin .env · sin private_media · sin .pyc/__pycache__ · sin secretos · sin PDFs clínicos
+```
+
+Confirmado: el paquete de §40.D corresponde exactamente al commit `ff8abb8`, el mismo auditado
+en 41.A-41.H. **Nota de cierre:** las correcciones puramente documentales de §41.G (ADR-005,
+`architecture.md`, `care-request-migrations-and-data-integrity.md`,
+`care-request-acceptance-criteria.md`) y la consolidación de `phase-5-final-report.md` (§40-§41)
+se registran en un commit adicional inmediatamente después de esta sección — ningún archivo de
+código, migración ni test cambia en ese commit, por lo que no invalida ninguna de las corridas de
+41.C/41.D (ejecutadas sobre `ff8abb8`, código idéntico). Hash de ese commit adicional: ver
+`41.K`.
+
+## 41.K Veredicto final
+
+```
+✅ PHASE 5 — CLOSED
+```
+
+**Condiciones de la regla de cierre (§11 del prompt), verificadas una por una, no asumidas:**
+
+| Condición | Estado |
+|---|---|
+| Todos los criterios del DoD real (37) están PASS | ✅ 37/37 (41.H) |
+| No existen hallazgos críticos/altos abiertos | ✅ único hallazgo administrativo es una dependencia diferida a Fase 6, no un hallazgo abierto de Fase 5 (41.I); riesgos residuales de §38.F/§39.F/41.F son todos explícitamente bajos |
+| Código y documentación coinciden | ✅ 5 discrepancias encontradas, las 5 resueltas en esta sesión (41.G) |
+| Regresión aprobada | ✅ 775/775 proyecto completo, 186/186 Agenda, 49/49 ClinicalDocument, 90/90 care_requests — todo ejecutado en esta sesión sobre el commit exacto (41.C) |
+| Evidencia browser requerida está PASS | ✅ 41.F — 8/8 requisitos del prompt con evidencia real, 5 de ellos tipo C directa |
+| Commit final identificado | ✅ `ff8abb8e1797dee728fe7c1d8d4052413b77d944` (código/tests/migraciones) + commit adicional de consolidación documental (hash a continuación) |
+| Paquete final saneado | ✅ 41.J |
+
+**Las 7 condiciones se cumplen. Se emite el cierre formal.**
+
+Este veredicto reemplaza y deja `HISTORICAL`/`SUPERSEDED` a `§29`, `§33.K` y `§37.K` en su
+totalidad — no coexisten como estado vigente. No existe ningún otro `READY TO CLOSE`/
+`NOT READY TO CLOSE`/`CLOSED` con autoridad simultánea en este documento.
+
+**Deuda técnica y riesgos conocidos, heredados y sin cambio, explícitamente no bloqueantes:**
+auditoría administrativa diferida a Fase 6 (41.I); 3 escenarios de UI sin evidencia tipo C
+directa — double-submit multi-pestaña, replay visible en UI, conflicto de slot en tiempo real
+(41.F, todos cubiertos por evidencia tipo A robusta); `.claude/settings.local.json` permanece
+como cambio local sin commitear, ajeno a Fase 5, a decisión del usuario.
+
+**Commit de consolidación documental de este §41 (código/tests sin cambios):**
+
+```
+[pendiente de generar — ver cierre de esta sesión]
+```

@@ -1121,6 +1121,15 @@ transacción. `appointments` no queda enterado de `CareRequest` en ningún punto
 ejecución ni a nivel de modelo. Detalle completo en `docs/design/care-request-service-contracts.md`
 §9.
 
+**Precisión (2026-09-18, corrección post-cierre — `docs/phases/phase-5-final-report.md` §38.A):**
+"a nivel de modelo" incluye la navegabilidad ORM, no solo columnas/migraciones. El campo
+`CareRequest.appointment` usa `related_name="+"` explícitamente para que Django no genere un
+accessor inverso Python (`appointment_instance.care_request`) — sin ese `related_name`, la
+dirección única de dependencia se habría violado en el nivel de navegabilidad de objetos aunque
+`appointments` no ganara ninguna columna ni migración real. Cualquier FK futura de
+`care_requests` hacia otra app debe declarar `related_name="+"` salvo que exista una necesidad
+real y documentada de navegación inversa.
+
 ---
 
 # 45. Preparación para Fase 6

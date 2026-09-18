@@ -56,3 +56,14 @@ No migration should alter existing F2/F4 data semantics without an explicit appr
 ## Data-integrity principle
 
 Database constraints provide defensive protection, while cross-table business rules remain in service/application logic.
+
+## Post-implementation update (2026-09-18)
+
+A field not anticipated by this pre-implementation design note was added after a domain audit:
+`clinical_document_ids` (`ArrayField(PositiveBigIntegerField())`), added via
+`care_requests/migrations/0002_...`. It is a logical-reference snapshot of the attachments
+created at conversion time, not a new relation to `ClinicalDocument` (the "No new
+ClinicalDocument relation" rule above still holds — no FK/`ManyToManyField` was added). Full
+rationale in `care-request-data-model.md` §3.1 and `phase-5-final-report.md` §38.B. The same
+migration also changed `CareRequest.appointment`'s `related_name` to `"+"` (no schema impact) —
+see §38.A and ADR-005 §44.
