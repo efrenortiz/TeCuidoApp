@@ -2745,3 +2745,14 @@ lo anterior quedan como historial — ninguna sección posterior a esta contradi
 `fase-5-closed`** (convención existente, no aplicada en esta sesión — ver `§43.E`; queda como
 acción operativa posterior a este reporte, a decisión del usuario, no una condición de este
 cierre).
+
+**Nota de auto-referencia final:** el contenido de §44 tal como existía hasta este punto se
+commiteó como `b3c27cf590a523e848a0b45e5eef9fcf32a3dc2d` — el `HEAD` inmediatamente posterior a
+`dbf8b67` citado como "commit auditado" en 44.A/44.G/44.L. Esto **no invalida** la auditoría: los
+comandos de 44.B-44.D/44.K se ejecutaron sobre el árbol de código/tests/migraciones de `dbf8b67`,
+que es idéntico al de `b3c27cf` (esta última diferencia es, otra vez, solo la propia
+autorreferencia del hash dentro de este documento — ningún archivo de `care_requests/`,
+`appointments/`, `clinical_documents/` ni ninguna migración cambia entre ambos). Cualquier lector
+o auditoría posterior debe tratar `b3c27cf` (o el que `git rev-parse HEAD` devuelva en ese
+momento) como el `HEAD` real, y confirmar con un `git diff dbf8b67..HEAD -- '*.py' '**/migrations/*'`
+vacío antes de asumir que la evidencia de esta sección sigue siendo válida sin re-ejecutarla.
