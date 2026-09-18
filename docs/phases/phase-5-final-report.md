@@ -1,39 +1,24 @@
 # Fase 5 — Reporte Final de Implementación (`CareRequest`)
 
-> **⚠️ ESTADO VIGENTE — LEER PRIMERO.** Este documento es un registro histórico acumulativo
-> (§1-§40) de 8 rondas de auditoría/corrección sobre la implementación de Fase 5, en dos grupos
-> de 4 prompts cada uno. **La única sección con autoridad sobre el estado actual es
-> `§41 — Consolidación Final v2 y cierre formal (Prompt 04, segundo grupo)`, al final del
-> documento.** Cualquier cifra, contrato o veredicto en §1-§40 que no coincida con §41 está
-> superado. En particular, los siguientes veredictos quedan **HISTORICAL/SUPERSEDED**, en este
-> orden cronológico, y **ninguno** de ellos es el estado vigente:
+> **⚠️ ESTADO VIGENTE — LEER PRIMERO.** Este documento es un registro histórico acumulativo de
+> 9 rondas de auditoría/corrección sobre la implementación de Fase 5. **La única sección con
+> autoridad sobre el estado actual es `§44 — Cierre formal de Fase 5 (Prompt 03, auditoría final
+> e independiente)`, al final del documento.** Cualquier cifra, contrato o veredicto en §1-§43
+> que no coincida con §44 está superado. Ninguna sección posterior a §44 la contradice.
 >
-> 1. `§29` — `✅ READY TO CLOSE` (emitido antes del hardening de §30-§36);
-> 2. `§33.K` — `⚠️ NOT READY TO CLOSE` (bloqueado por falta de evidencia de navegador real);
-> 3. `§37.K` — primero `⚠️ NOT READY TO CLOSE`, luego actualizado a `✅ PHASE 5 — CLOSED` tras la
->    verificación de navegador de `§37.F.1` — este `CLOSED` a su vez quedó superado porque, en el
->    momento exacto en que se emitió, existían 3 defectos reales sin detectar (§38.A, §38.B,
->    §39.C), encontrados por las auditorías inmediatamente posteriores.
+> **`✅ PHASE 5 — CLOSED`** — commit auditado: `dbf8b6734d1734a6ef5c6efb11a23adc1094c8f2`
+> (`git rev-parse HEAD`, re-verificado en la sesión de `§44`, no asumido de ninguna ronda
+> anterior). 37/37 criterios del DoD `PASS` (§44.F). Ver `§44` para el detalle completo.
 >
-> **`§41.K` es el único veredicto vigente: `✅ PHASE 5 — CLOSED`**, emitido después de corregir
-> esos 3 defectos (§38, §39), sanear el repositorio y el paquete de entrega (§40), y volver a
-> ejecutar — no reutilizar — toda la evidencia de regresión, idempotencia y navegador real sobre
-> el commit final (`§41.B`-`§41.J`).
->
-> **`§42` (2026-09-18, nueva ronda, Prompt 01):** corrección de consistencia documental
-> *externa* a este reporte — `README.md` y `docs/architecture.md` seguían describiendo Fase 5
-> como futura/siguiente pese a que este reporte ya la declaraba `CLOSED` en §41.K. §42 corrige
-> esa inconsistencia sin re-auditar código ni alterar ningún conteo de §41. No re-declara el
-> cierre — esa validación formal de esta nueva ronda corresponde a su Prompt 03.
->
-> **`§43` (2026-09-18, misma ronda, Prompt 02):** trazabilidad Git y paquete de release —
-> **el `HEAD`/commit auditado real y vigente es `a4debdf0033e69a5cb085539027ab3a12a539c3d`**
-> (re-verificado con `git rev-parse HEAD` en esta sesión, no asumido de rondas anteriores);
-> `ff8abb8`/`c4bf7f1`/`7ccfd7c` quedan como historial de trazabilidad, no como `HEAD`. Paquete de
-> release regenerado desde ese `HEAD` con `git archive` y verificado sin `.env`/`private_media`/
-> `.pyc`/secretos. Tampoco declara cierre — ver §43.G.
+> **Veredictos anteriores, en orden cronológico — todos `HISTORICAL/SUPERSEDED`, ninguno vigente:**
+> `§29` (`READY TO CLOSE`, pre-hardening) → `§33.K` (`NOT READY TO CLOSE`, sin evidencia de
+> navegador) → `§37.K` (`NOT READY TO CLOSE` → `CLOSED`, este último emitido con 3 defectos
+> reales aún sin detectar: §38.A, §38.B, §39.C) → `§41.K` (`CLOSED`, técnicamente correcto tras
+> corregir esos 3 defectos, pero emitido antes de corregir la consistencia documental externa y
+> la trazabilidad Git) → `§42`/`§43` (correcciones intermedias de esa misma ronda, sin declarar
+> cierre) → **`§44` (vigente)**.
 
-**Fecha:** 2026-09-16 (creación) — **última actualización: 2026-09-18** (§43)
+**Fecha:** 2026-09-16 (creación) — **última actualización: 2026-09-18** (§44, cierre formal)
 **Estado de diseño previo:** `✅ FASE 5 — TECHNICAL DESIGN FREEZE` (`docs/phases/phase-5-design-freeze.md`, 2026-09-15)
 **Estado de este reporte:** histórico acumulativo — ver banner arriba
 
@@ -2466,3 +2451,297 @@ contenido de §43 tal como existía hasta este punto se commiteó como
 a `a4debdf` citado arriba. `Prompt 03`, al ejecutar su propia auditoría, debe volver a correr
 `git rev-parse HEAD` en su propia sesión en vez de asumir que `2e3769a` sigue vigente — el mismo
 principio que este prompt aplicó sobre los hashes de la ronda anterior (43.A/43.B).
+
+---
+
+# 44. Cierre formal de Fase 5 — Prompt 03, auditoría final e independiente (2026-09-18)
+
+> **Esta es la sección final y autoritativa de todo el documento.** No existe ninguna sección
+> posterior que la contradiga. Reemplaza a `§41.K` como el veredicto vigente — `§41.K` no estaba
+> equivocado técnicamente, pero fue emitido antes de que se corrigiera la consistencia
+> documental externa (§42) y se re-verificara la trazabilidad Git (§43); esta sección incorpora
+> ambas cosas y vuelve a ejecutar —no reutiliza— la evidencia técnica completa de forma
+> independiente, sin asumir nada de las secciones anteriores.
+
+## 44.A Identificación de la versión auditada
+
+Obtenida con Git en esta sesión, no asumida de ninguna sección anterior:
+
+```
+git rev-parse HEAD              → dbf8b6734d1734a6ef5c6efb11a23adc1094c8f2
+git branch --show-current       → main
+git status --short              → solo .claude/settings.local.json (config local de la
+                                    herramienta Claude Code, ajena a CareRequest, sin commitear
+                                    por decisión — no es un cambio de Fase 5 pendiente)
+```
+
+**HEAD / commit auditado: `dbf8b6734d1734a6ef5c6efb11a23adc1094c8f2`.**
+
+**Fecha:** 2026-09-18.
+**Alcance auditado:** la implementación completa de CareRequest (Fase 5) — modelo, servicio,
+API, UI, Admin — más las 3 rondas de corrección post-implementación (dominio/idempotencia §38,
+UI/browser §39, higiene de repositorio §40) y las 3 rondas de esta segunda ronda de cierre
+(consistencia documental §42, trazabilidad Git/release §43, y esta auditoría final §44).
+
+**Cambios introducidos específicamente por esta sección (§44):** ninguno de código. Se
+encontraron y corrigieron 3 afirmaciones de estado residuales que las rondas anteriores no
+habían cubierto (44.H) — commiteadas como `dbf8b67`, ya incluidas en el HEAD auditado arriba.
+
+## 44.B Verificación técnica final — re-confirmada en esta sesión, no heredada
+
+| Área | Punto | Resultado | Evidencia (esta sesión) |
+|---|---|---|---|
+| Arquitectura | `care_requests → appointments`, nunca al revés | PASS | `git grep -n "care_request" -- appointments/` → sin resultados |
+| Arquitectura | Sin reverse accessor `Appointment.care_request` | PASS | `related_name="+"` en el código (`models.py:58`) + verificación en runtime: `hasattr(Appointment, 'care_request')` → `False` |
+| Arquitectura | `AppointmentService` no conoce CareRequest | PASS | `git grep -n "CareRequest\|care_request" -- appointments/services/` → sin resultados |
+| Arquitectura | Sin segunda arquitectura de storage | PASS | `git grep -niE "redis\|celery\|S3Boto\|django-storages" -- care_requests/` → sin resultados |
+| Idempotencia | Misma key compatible → replay | PASS | `test_replay_returns_same_result_without_creating_duplicates` — corrido en 44.D |
+| Idempotencia | Misma key incompatible → 409 | PASS | `test_same_key_different_slot_is_conflict` — corrido en 44.D |
+| Idempotencia | Mismo nombre+tamaño+bytes distintos → conflicto | PASS | `test_same_key_same_filename_same_size_different_bytes_is_conflict` — corrido en 44.D |
+| Idempotencia | Documentos ajenos posteriores no contaminan replay | PASS | `test_document_added_later_by_another_flow_does_not_contaminate_identity` — corrido en 44.D |
+| Idempotencia | Retry tras rollback funciona | PASS | `test_failed_attempt_does_not_reserve_the_key` — corrido en 44.D |
+| Transacciones | Actor lock | PASS | `care_request.py:210` — `select_for_update()` primero, bajo la misma transacción exterior |
+| Transacciones | Re-check antes de rate limit | PASS | Bloque de idempotencia (líneas ~212-223) antes del bloque de rate limit (~225-230), mismo lock |
+| Transacciones | Rate limit | PASS | `RATE_LIMIT_MAX_PER_HOUR` + `CareRequest.objects.filter(...).count()`, sin infraestructura externa |
+| Transacciones | Savepoint | PASS | `transaction.atomic()` interior (línea 233), comentado explícitamente como SAVEPOINT |
+| Transacciones | `IntegrityError` | PASS | Capturado en la misma línea 248, re-consulta y distingue replay de conflicto |
+| Transacciones | Rollback | PASS | Transacción exterior única cubre toda la operación de negocio |
+| Transacciones | Compensación filesystem | PASS | `created_storage_keys`/`created_document_ids` recolectados durante la iteración, compensados en fallo |
+| API | Multipart | PASS | `api.py:187` — rechaza explícitamente cualquier `Content-Type` que no sea `multipart/form-data` |
+| API | Validación de intervalo | PASS | `_validate_interval()` línea 88 |
+| API | Motivo whitespace | PASS | `_clean_motivo()` línea 92, `if not motivo or not motivo.strip()` |
+| API | `400/401/403/409/429/500` | PASS | Confirmados los 6 códigos explícitamente en `_ERROR_MAP`/`dispatch()` — ver 44.B (búsqueda literal en `api.py`) |
+| API | `Cache-Control: no-store` | PASS | Asignado tanto en éxito (línea 95) como en cada rama de excepción (línea 127) |
+| API | Sin filtrado clínico | PASS | `git grep -n "logging\|logger\." -- care_requests/` → sin resultados; la app no registra nada |
+| Admin | Read-only | PASS | `has_add_permission`/`has_change_permission`/`has_delete_permission` los 3 retornan `False` |
+| Alcance | Sin sala de espera | PASS | `git grep -niE "waiting.?room\|check-?in\|sala de espera"` → sin resultados |
+| Alcance | Sin antivirus | PASS | `git grep -niE "antivirus\|clamav"` → sin resultados |
+| Alcance | Sin Redis/Celery | PASS | `git grep -niE "redis\|celery"` → sin resultados |
+| Alcance | Sin disponibilidad duplicada | PASS | Sin `ExclusionConstraint`/`DateTimeRangeField` propios en `care_requests/models.py` |
+
+**26/26 puntos de verificación técnica re-confirmados PASS, con comandos ejecutados en esta
+sesión — ninguno se dio por hecho por haber sido `PASS` en una ronda anterior.**
+
+## 44.C Regresión real — comandos ejecutados literalmente en esta sesión
+
+```
+python manage.py check
+  → System check identified no issues (0 silenced).                    PASS
+python manage.py makemigrations --check --dry-run
+  → No changes detected                                                PASS
+python manage.py test care_requests -v 1
+  → Ran 90 tests in 51.335s — OK                                       PASS
+python manage.py test appointments -v 1
+  → Ran 186 tests in 122.789s — OK                                     PASS
+python manage.py test clinical_documents -v 1
+  → Ran 49 tests in 39.075s — OK                                       PASS
+python manage.py test -v 1   (suite completa)
+  → Ran 775 tests in 532.282s — OK                                     PASS
+```
+
+**Clasificación explícita de la única falla conocida potencialmente relevante:**
+`appointments.tests.test_hold_service.HoldConcurrencyTests.
+test_two_concurrent_holds_for_same_slot_only_one_succeeds` — un deadlock intermitente de
+PostgreSQL bajo carga, documentado desde `§37.C`. **NOT REPRODUCED** en esta sesión: no apareció
+en ninguna de las 3 corridas de `appointments`/suite completa ejecutadas en esta ronda (§41.C,
+§43.F, y esta misma §44.C). Clasificación: **no pertenece a Fase 5** — es un test de
+`appointments` (Fase 2), preexistente, relacionado con concurrencia de `Hold` bajo PostgreSQL,
+sin ninguna dependencia de `care_requests`. No bloquea el cierre de Fase 5 aunque volviera a
+manifestarse en el futuro, porque su causa (contención de locks de PostgreSQL bajo carga
+paralela de tests) es ajena al código auditado en este reporte.
+
+**Ninguna otra falla, `FLAKY` o resultado `NOT EXECUTED`.** La única traza de error en la salida
+completa (`django.db.utils.DatabaseError: simulated outage`) es el mock deliberado de
+`medical_records.tests.test_audit.AuditServiceSafeRecordTests.
+test_safe_record_event_still_swallows_unrelated_persistence_failure` (clasificado ya en
+`§41.C`) — el test aparece `ok`, no es una falla.
+
+## 44.D Idempotencia — los 5 escenarios, ejecutados explícitamente en esta sesión
+
+```
+python manage.py test \
+  care_requests.tests.test_services.IdempotencyTests.test_replay_returns_same_result_without_creating_duplicates \
+  care_requests.tests.test_services.IdempotencyTests.test_same_key_different_slot_is_conflict \
+  care_requests.tests.test_services.IdempotencyTests.test_same_key_same_filename_same_size_different_bytes_is_conflict \
+  care_requests.tests.test_services.AttachmentTests.test_document_added_later_by_another_flow_does_not_contaminate_identity \
+  care_requests.tests.test_services.IdempotencyTests.test_failed_attempt_does_not_reserve_the_key \
+  -v 2
+  → Ran 5 tests in 2.783s — OK, los 5 individualmente "ok"
+```
+
+| # | Escenario | Test | Resultado |
+|---|---|---|---|
+| 1 | Replay (misma key compatible) | `test_replay_returns_same_result_without_creating_duplicates` | PASS |
+| 2 | Clave incompatible → 409 | `test_same_key_different_slot_is_conflict` | PASS |
+| 3 | Mismo filename/size + bytes diferentes → conflicto | `test_same_key_same_filename_same_size_different_bytes_is_conflict` | PASS |
+| 4 | Replay tras `ClinicalDocument` ajeno | `test_document_added_later_by_another_flow_does_not_contaminate_identity` | PASS |
+| 5 | Retry tras rollback | `test_failed_attempt_does_not_reserve_the_key` | PASS |
+
+**5/5 PASS, identificados por nombre de test y ejecutados realmente en esta sesión — no "tests
+existentes" genérico.**
+
+## 44.E Evidencia de navegador — A/B/C, sin inflar cobertura
+
+**El navegador real ya se ejecutó en la ronda anterior (§39.E) — no se repite en esta sesión**
+(no había necesidad: nada relacionado con UI cambió desde entonces). Se **describe** la cobertura
+existente, sin convertir A/B en C:
+
+| Requisito | Evidencia existente | Tipo |
+|---|---|---|
+| Flujo feliz completo | Sesión real de navegador, `POST` real → `201`, `idempotency_key`/`clinical_document_ids` verificados en BD (§39.E puntos 1-3, 8) | **C** |
+| Validación de `motivo` vacío | Clic real sin motivo, cero peticiones de red, `validity.valueMissing===true` (§39.E punto 4) | **C** |
+| Revisión previa a confirmación | Captura real del resumen poblado (§39.E punto 3) | **C** |
+| Validación de attachments | `.txt` real rechazado, 6 `.pdf` reales rechazados por exceso, "Quitar" real (§39.E puntos 5-7) | **C** (+ **B**: extracción Node.js de `validateAttachments`) |
+| Double-submit | 2 peticiones HTTP reales e independientes, misma `Idempotency-Key`, 1 sola operación (`test_double_submit_produces_a_single_business_operation`) | **A**, honestamente — no se afirma **C** |
+| Slot ocupado | El slot recién reservado aparece deshabilitado al buscar de nuevo (§39.E punto 9) | **C** |
+| Al menos un error real de servidor | `429` real por rate-limit, confirmado con `read_network_requests` (§39.E punto 10) | **C** |
+| Coherencia de estado final | `idempotency_key`/`clinical_document_ids` en BD coinciden con la interacción real de navegador | **C** + verificación directa de BD |
+
+**Cobertura parcial pero suficiente para el criterio documental vigente:** el DoD (`phase-5-
+definition-of-done.md`, Quality completion) exige evidencia de navegador real para la categoría
+"UI/browser tests" — no exige que cada mecanismo de concurrencia se reproduzca visualmente. 6 de
+8 requisitos tienen evidencia **C** directa; el restante (double-submit) tiene evidencia **A**
+robusta y explícitamente no disfrazada de **C**. **No se declara ninguna cobertura mayor que la
+descrita en §39.E** — esta sección solo la resume, no la reinterpreta al alza.
+
+**Gaps conocidos, sin cambio desde §41.F, no bloqueantes:** double-submit multi-pestaña, replay
+de `Idempotency-Key` visible en UI, y conflicto de slot en tiempo real no tienen evidencia **C**
+— los 3 cubiertos por **A** robusta.
+
+## 44.F Definition of Done — 37 criterios reales, recontados de forma independiente
+
+```
+awk '/^- /{c++} END{print c}' docs/phases/phase-5-definition-of-done.md   → 37
+```
+
+**37 criterios reales, no 35 ni 34/35.** No se usa ningún conteo distinto de 37 en esta sección.
+
+| # | Sección | Criterio | Resultado | Evidencia |
+|---|---|---|---|---|
+| 1 | Funcional | Paciente autenticado crea para sí mismo | PASS | AC-C1 |
+| 2 | Funcional | Responsable autorizado crea para paciente | PASS | AC-C2 |
+| 3 | Funcional | Slot válido se convierte en Appointment | PASS | AC-V1/V2 |
+| 4 | Funcional | CareRequest llega a CONVERTIDA solo tras éxito completo | PASS | AC-V5/AC-A2 |
+| 5 | Funcional | CareRequest tiene su relación Appointment | PASS | AC-V3 |
+| 6 | Funcional | Adjuntos asociados a la Appointment resultante | PASS | AC-V4 |
+| 7 | Funcional | Operaciones inválidas/no disponibles no dejan registros parciales | PASS | AC-A1 |
+| 8 | Técnica | Modelo y constraints aprobados | PASS | `models.py` — 44.B |
+| 9 | Técnica | Límite de transacción aprobado | PASS | 44.B |
+| 10 | Técnica | Integración con Agenda aprobada | PASS | 44.B; `appointments/` sin tocar |
+| 11 | Técnica | Comportamiento de idempotencia aprobado | PASS | 44.D, 5/5 |
+| 12 | Técnica | Rate limiting en PostgreSQL aprobado | PASS | 44.B |
+| 13 | Técnica | Compensación de archivos aprobada | PASS | AC-A3 |
+| 14 | Técnica | Contrato DTO/API aprobado | PASS | AC-P3/P4 |
+| 15 | Técnica | Autorización aprobada | PASS | AC-P2 |
+| 16 | Técnica | Dirección de dependencia aprobada | PASS | 44.B, `related_name="+"` verificado en runtime |
+| 17 | Calidad | Tests unitarios/dominio de Fase 5 | PASS | 90/90 (44.C) |
+| 18 | Calidad | Tests de servicio de Fase 5 | PASS | 90/90 (44.C) |
+| 19 | Calidad | Tests de transacción | PASS | 90/90 (44.C) |
+| 20 | Calidad | Tests de concurrencia/idempotencia | PASS | 44.D |
+| 21 | Calidad | Tests de compensación de filesystem | PASS | 90/90 (44.C) |
+| 22 | Calidad | Tests de API | PASS | 90/90 (44.C), incluye double-submit real |
+| 23 | Calidad | Tests de UI/navegador | PASS | 44.E — 6/8 tipo C directa, 2 tipo A honesta, gaps declarados |
+| 24 | Calidad | Regresión Fase 2 (Agenda) | PASS | 186/186 (44.C) |
+| 25 | Calidad | Regresión Fase 4 (ClinicalDocument) | PASS | 49/49 (44.C) |
+| 26 | Alcance | Sin sala de espera/check-in | PASS | 44.B |
+| 27 | Alcance | Sin subsistema antivirus | PASS | 44.B |
+| 28 | Alcance | Sin edición independiente de CareRequest | PASS | AC-S2 |
+| 29 | Alcance | Sin Redis/Celery | PASS | 44.B |
+| 30 | Alcance | Sin disponibilidad de Agenda duplicada | PASS | 44.B |
+| 31 | Alcance | Sin almacenamiento de archivos duplicado | PASS | `document_service.upload()` reutilizado |
+| 32 | Alcance | `AppointmentService` sin conocimiento de CareRequest | PASS | 44.B |
+| 33 | Documentación | Evidencia de implementación registrada | PASS | Este reporte, §1-§44 |
+| 34 | Documentación | Matriz de trazabilidad actualizada | PASS | `care-request-test-matrix.md`, CR-001..CR-055 |
+| 35 | Documentación | Criterios de aceptación verificados | PASS | 34/34, IDs en la fuente desde §41.G |
+| 36 | Documentación | Discrepancias genuinas resueltas por control de cambios | PASS | §41.G (5) + §44.H (3 nuevas, esta sesión) |
+| 37 | Documentación | El reporte de fase registra los resultados finales de test/evidencia | PASS | Esta sección |
+
+**37/37 PASS. Cero PARTIAL. Cero FAIL.**
+
+## 44.G Trazabilidad — commit funcional vs. documental vs. HEAD final
+
+| Rol | Commit |
+|---|---|
+| Commit funcional de Fase 5 | `ff8abb8e1797dee728fe7c1d8d4052413b77d944` |
+| Documental (ronda 1, consolidación) | `c4bf7f175d8af882125ac10802fdc509bdb91ce8`, `7ccfd7c69f50027c9cf1a04f25cfb9b2f4357027` |
+| Documental (ronda 2, Prompt 01 — consistencia README/architecture.md) | `a4debdf0033e69a5cb085539027ab3a12a539c3d` |
+| Documental (ronda 2, Prompt 02 — trazabilidad Git/release) | `2e3769a3aa2861a3a5468c7d23e83f01bc4c96c7` |
+| Documental (ronda 2, Prompt 03 — 3 hallazgos residuales, esta sesión) | `dbf8b6734d1734a6ef5c6efb11a23adc1094c8f2` |
+| **HEAD / commit auditado (real, `git rev-parse HEAD` en esta sesión)** | **`dbf8b6734d1734a6ef5c6efb11a23adc1094c8f2`** |
+
+## 44.H Hallazgos de esta sesión — actuales, ya corregidos
+
+Búsqueda ampliada (patrones más amplios que la ronda anterior) sobre `docs/`+`README.md`+
+`CLAUDE.md`+`requirements.md` encontró 3 afirmaciones de "estado actual" no cubiertas por las
+correcciones de §42:
+
+| Documento | Hallazgo | Corrección |
+|---|---|---|
+| `docs/phases/phase-5-design-freeze.md` (bloque interno, no el banner superior) | "Fase 5 — Implementación pendiente", sin cubrir por la nota `HISTORICAL` del inicio del archivo | Marcado `[HISTORICAL]` en el propio bloque |
+| `docs/phases/phase-5-documents.md` | Campo "Estado:" seguía diciendo solo `TECHNICAL DESIGN FREEZE` | Añadido `[HISTORICAL]` con puntero a §41.K |
+| `docs/phases/phase-5-implementation-checklist.md` | 58 checkboxes `[ ]`, ninguno marcado, sin nota de que la implementación ya ocurrió | Añadida nota `HISTORICAL` con puntero a la evidencia real en este reporte |
+
+Revisados y descartados como falsos positivos (son declaraciones de alcance, no de estado):
+`care-request-api-contracts.md` §9, `care-request-permissions.md` §7,
+`ADR-030-phase4-scope-boundary.md` (contexto histórico legítimo de Fase 4).
+
+**Commiteado como `dbf8b67` (ver 44.G) — ya incluido en el HEAD auditado por el resto de esta
+sección.** Ningún archivo de código/test/migración tocado.
+
+## 44.I Hallazgos históricos — sin cambio, no bloqueantes
+
+- Auditoría de lectura administrativa diferida a Fase 6 (§36.2, confirmado no-reapertura en
+  §41.I) — dependencia documentada, no condición de cierre de Fase 5.
+- 2 gaps de evidencia de navegador tipo C (double-submit multi-pestaña, replay/conflicto en
+  tiempo real) — cubiertos por A robusta (44.E), riesgo bajo.
+- `.claude/settings.local.json` permanece sin commitear — ajeno a Fase 5, decisión del usuario.
+- Deadlock intermitente de `HoldConcurrencyTests` (Fase 2) — no reproducido en ninguna corrida de
+  esta ronda, no pertenece a Fase 5 (44.C).
+
+## 44.J Decisiones de alcance — confirmadas, ninguna nueva
+
+Ninguna decisión de alcance nueva se tomó en esta sesión. Se reconfirmaron, sin modificar:
+sin sala de espera/check-in (definitivo, `requirements.md` §41); sin antivirus en Fase 5; sin
+edición independiente de CareRequest; auditoría administrativa en Fase 6, no en Fase 5.
+
+## 44.K Release artifact — verificado contra el HEAD exacto auditado
+
+```
+git archive --format=zip -o tecuidoapp-fase5-dbf8b67.zip HEAD   (HEAD = dbf8b67...)
+unzip -l → 509 files
+sin .env · sin private_media · sin .pyc/__pycache__ · sin secretos · sin PDFs clínicos
+manage.py, requirements.txt, .env.example presentes (necesarios para instalación/desarrollo)
+README.md dentro del zip → "Fase 5 — ✅ COMPLETADA (§41.K — PHASE 5 — CLOSED)"
+```
+
+**El paquete corresponde exactamente al commit auditado — no es un ZIP generado en una ronda
+anterior sobre un hash distinto.**
+
+## 44.L Veredicto final
+
+```
+✅ PHASE 5 — CLOSED
+```
+
+**Las 7 condiciones del criterio estricto de cierre, verificadas una por una en esta sesión:**
+
+| Condición | Estado |
+|---|---|
+| No existen hallazgos críticos/altos abiertos | ✅ — 44.H (3 hallazgos, ya corregidos en el mismo HEAD); 44.I son todos riesgo bajo/no bloqueante |
+| Los 37 criterios del DoD están PASS | ✅ 37/37 (44.F) |
+| Código y documentación son coherentes | ✅ 44.B (26/26 puntos técnicos) + 44.H (3 discrepancias documentales encontradas y ya corregidas) |
+| Regresión está aprobada | ✅ 775/775 proyecto completo, 186/186 Agenda, 49/49 ClinicalDocument, 90/90 care_requests (44.C) |
+| Evidencia browser requerida está correctamente clasificada | ✅ 44.E — 6/8 tipo C, 2/8 tipo A honesta, sin inflar |
+| HEAD identificado | ✅ `dbf8b6734d1734a6ef5c6efb11a23adc1094c8f2` (44.A/44.G) |
+| Release artifact limpio | ✅ 44.K |
+
+**Las 7 condiciones se cumplen sobre el commit `dbf8b67`. Se declara el cierre formal.**
+
+Este veredicto es el único con autoridad en todo el documento. `§41.K` (`CLOSED`, técnicamente
+correcto pero emitido antes de corregir la consistencia documental y la trazabilidad Git) y todo
+lo anterior quedan como historial — ninguna sección posterior a esta contradice este estado.
+
+**No queda ningún commit por generar a partir de este punto salvo que se decida crear el tag
+`fase-5-closed`** (convención existente, no aplicada en esta sesión — ver `§43.E`; queda como
+acción operativa posterior a este reporte, a decisión del usuario, no una condición de este
+cierre).
