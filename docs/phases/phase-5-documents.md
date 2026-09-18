@@ -1,7 +1,9 @@
 # Fase 5 — Paquete funcional de `CareRequest`
 
-**Estado:** diseño técnico cerrado (`TECHNICAL DESIGN FREEZE`)
-**Fecha de referencia:** 2026-09-15
+**Estado:** diseño técnico cerrado (`TECHNICAL DESIGN FREEZE`) — **`[HISTORICAL]`**: Fase 5 ya
+fue implementada, auditada y formalmente cerrada; ver `docs/phases/phase-5-final-report.md`
+§41.K (`PHASE 5 — CLOSED`) para el estado actual, no este campo.
+**Fecha de referencia:** 2026-09-15 (fecha de este documento; no es la fecha de estado actual)
 
 ## 1. Propósito
 

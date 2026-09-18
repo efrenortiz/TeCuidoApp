@@ -1,5 +1,13 @@
 # Fase 5 — Implementation Checklist
 
+**HISTORICAL (2026-09-18):** this is the pre-implementation planning checklist; its `[ ]`
+checkboxes were never updated during/after implementation and must not be read as "still
+pending" — Fase 5 has since been implemented, audited, and formally closed. Every item below has
+concrete, evidenced verification in `docs/phases/phase-5-final-report.md` (§2/§41.B "Auditoría
+final del código", §41.C-§41.D regression/idempotency evidence, §41.H the 37-criteria DoD table)
+— that report, not the checkbox state here, is the authoritative record of what was verified.
+This file is kept as the original planning artifact, not maintained as a live tracker.
+
 ## Pre-implementation
 
 - [ ] Technical Design Freeze approved.

@@ -322,12 +322,15 @@ tocarlos.
 ```
 
 **Estado del proyecto tras este freeze** (no confundir con cierre de fase ni con
-implementación):
+implementación) — **`[HISTORICAL]`, válido únicamente en la fecha de este documento
+(2026-09-14); ver la nota `HISTORICAL` al inicio de este archivo y
+`docs/phases/phase-5-final-report.md` §41.K para el estado actual (`PHASE 5 — CLOSED`)**:
 
 ```text
 Fase 5 — Diseño técnico cerrado
-Fase 5 — Implementación pendiente
+Fase 5 — Implementación pendiente   [HISTORICAL — implementada y cerrada desde 2026-09-18]
 ```
 
 No se implementó código, no se crearon migraciones, no se modificaron servicios ni APIs
-existentes, y no se tocó infraestructura como parte de esta revisión.
+existentes, y no se tocó infraestructura como parte de esta revisión (de nuevo: esto describe
+exclusivamente el alcance de este documento de Design Freeze, no el estado actual del proyecto).
