@@ -2222,5 +2222,18 @@ como cambio local sin commitear, ajeno a Fase 5, a decisión del usuario.
 **Commit de consolidación documental de este §41 (código/tests sin cambios):**
 
 ```
-[pendiente de generar — ver cierre de esta sesión]
+c4bf7f175d8af882125ac10802fdc509bdb91ce8
+"Fase 5: final closing audit — consolidate report, fix AC-ID traceability, close phase"
+5 files changed, 489 insertions(+), 65 deletions(-)
+(docs/adr/ADR-005-django-app-boundaries.md, docs/architecture.md,
+ docs/design/care-request-acceptance-criteria.md,
+ docs/design/care-request-migrations-and-data-integrity.md,
+ docs/phases/phase-5-final-report.md — ningún archivo de código/test/migración)
 ```
+
+**Los dos commits que juntos representan el estado cerrado de Fase 5:**
+`ff8abb8e1797dee728fe7c1d8d4052413b77d944` (código, tests, migraciones, UI, documentación de
+diseño de las 3 rondas de corrección) + `c4bf7f175d8af882125ac10802fdc509bdb91ce8` (consolidación
+final y correcciones de trazabilidad documental, sin tocar código). La regresión de 41.C/41.D se
+ejecutó sobre el primero; el segundo no la invalida porque no modifica ningún archivo `.py`/
+migración/test — verificado (`git diff --stat` del segundo commit, arriba, no incluye ninguno).
