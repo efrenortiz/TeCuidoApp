@@ -431,15 +431,93 @@ independientes).
 
 ## 7.7 `care_requests`
 
+**Principio de orquestación (2026-09-15, `docs/design/care-request-service-contracts.md`):**
+
+> `CareRequest` orquesta; Agenda reserva; `Appointment` representa la cita; `ClinicalDocument`
+> gestiona los archivos.
+
+`CareRequestService` invoca directamente `appointments.services.hold.create_hold` y
+`appointments.services.appointment.create_appointment_from_hold` (firmas existentes, sin
+wrapper) dentro de su propia transacción exterior — esos `atomic()` ya existentes se anidan
+como SAVEPOINT (mismo mecanismo que ADR-027). **Opción B (D7), FK invertida (decisión de cierre
+2026-09-15):** `AppointmentService` no conoce `CareRequest` ni cambia su firma; la relación es
+propiedad de `CareRequest` — `CareRequest.appointment` (`OneToOneField` opcional hacia
+`Appointment`) se asigna desde `CareRequestService` después de crear la `Appointment`, dentro de
+la misma transacción. `Appointment` no gana ningún campo ni migración: `appointments` permanece
+completamente ajena a `care_requests`, ni siquiera a nivel de modelo. Ningún contrato ni código
+de `appointments`/`clinical_documents` se modifica para dar cabida a Fase 5.
+
 Responsabilidad futura (Fase 5):
 
-- solicitudes de atención;
-- archivos relacionados;
-- estados;
-- conversión a cita — cuando se construya, será un origen **alternativo y opcional** de
-  `Appointment`, no un requisito previo. `appointments` (Fase 2) no depende de esta app.
+- solicitudes de atención: el paciente/responsable selecciona médico, fecha y hora concretos —
+  no es una solicitud abierta ni queda pendiente de aprobación/revisión médica
+  (`requirements.md` §12, decisión de dominio 2026-09-14). La fecha/hora se toma de un slot ya
+  generado por `appointments.services.availability.get_available_slots(*, actor, doctor,
+  clinic, date)` (mismo formato `{start, end, status}` que ya consume el frontend de Agenda) —
+  `CareRequest` reutiliza ese `start`/`end` tal cual, sin calcular duración por su cuenta
+  (`docs/design/care-request-service-contracts.md` §3);
+- archivos relacionados — reutilizan `ClinicalDocument`/almacenamiento privado de Fase 4 **sin
+  modificarlo**: mismos tipos (PDF/JPEG/PNG) y mismo límite único de tamaño
+  (`CLINICAL_DOCUMENTS_MAX_UPLOAD_SIZE_BYTES`) que ya soporta `clinical_documents.services.storage`
+  (decisión de cierre 2026-09-14, `requirements.md` §12.2). Único elemento nuevo: máximo 5
+  archivos por `CareRequest`, resuelto en la capa de `care_requests` invocando `upload()`
+  repetidamente, sin tocar `clinical_documents`. Se crean **después** de la `Appointment` (y
+  después de asignar `CareRequest.appointment`, §9 del contrato de servicio) y se asocian a ella
+  mediante la FK `ClinicalDocument.appointment` que **ya existe** hoy — no se agrega una FK nueva
+  `ClinicalDocument → CareRequest` (`care-request-service-contracts.md` §12);
+- límite de creación: máximo 3 `CareRequest` por **actor autenticado** (el `User` que crea la
+  solicitud — paciente o responsable; no por paciente destino, para que un responsable con
+  varios pacientes no eluda el límite repartiendo solicitudes entre ellos) en ventana móvil de 1
+  hora, implementado con PostgreSQL — sin Redis, Celery ni infraestructura adicional para esta
+  regla. Concurrencia resuelta con `select_for_update()` sobre la fila del `User` actor (no la de
+  `Patient`) antes de contar y crear, dentro de la misma transacción — mismo patrón ya usado en
+  `create_version`/`void_or_inactivate` de Fase 4 (`requirements.md` §12.3);
+- estados: `NUEVA → CONVERTIDA` (confirmado, `requirements.md` §12.1); una `CareRequest`
+  `CONVERTIDA` permanece así aunque la `Appointment` resultante cambie de estado después — la
+  cancelación pertenece exclusivamente al ciclo de vida de `Appointment`. Si la validación de
+  Agenda Fase 2 falla al confirmar, la operación completa falla de forma atómica: no se
+  persiste `CareRequest` ni `Appointment` (confirmado, `requirements.md` §12.1) — `CareRequest`
+  no es un historial de intentos fallidos;
+- creación de `Appointment` **automática e inmediata** cuando la solicitud cumple las reglas de
+  Agenda de Fase 2 (single source of truth para la reserva, sin lógica duplicada) — origen
+  **alternativo y opcional** de `Appointment`, no un requisito previo. `appointments` (Fase 2) no
+  depende de esta app — ni en tiempo de ejecución ni a nivel de modelo/FK; `care_requests` sí
+  invoca un caso de uso de `appointments` para crear la cita (ADR-005 §12/§44), nunca al revés;
+- idempotencia opcional (`Idempotency-Key`). **Orden autoritativo (corregido 2026-09-15):**
+  `select_for_update()` sobre la fila del `User` actor se adquiere **primero**, dentro de la
+  transacción exterior; el re-check de idempotencia (¿ya existe `CareRequest` con `(created_by,
+  idempotency_key)`?) ocurre bajo ese lock, **antes** del rate limit — el mismo lock sirve para
+  ambos, sin adquirir uno segundo. Razón: adquirir el lock antes del re-check impide que dos
+  transacciones concurrentes lean "no existe" a la vez; una repetición legítima nunca debe
+  rechazarse por rate limit solo porque otra petición con la misma clave ya creó la
+  `CareRequest`. El `UniqueConstraint` parcial sobre `(created_by, idempotency_key)` + captura de
+  `IntegrityError` en SAVEPOINT propio (mismo patrón que `reschedule_appointment`) se conserva
+  como defensa en profundidad, ya no como el mecanismo que determina el resultado. La clave **no**
+  se propaga a `create_appointment_from_hold` — ese servicio se invoca con `idempotency_key=""`,
+  porque la clave del cliente pertenece exclusivamente al namespace de `CareRequest`; compartirla
+  con el namespace independiente de `Appointment` podría colisionar con una reserva directa no
+  relacionada del mismo actor (`docs/design/care-request-service-contracts.md` §7/§11/§13/§14);
+- modelo de datos completo (campos, constraints, nulls/defaults) en
+  `docs/design/care-request-data-model.md`;
+- contrato API mínimo (endpoint, autenticación, entrada, DTO de salida, mapeo de errores —
+  reutilizando `_ERROR_MAP`/`JsonApiView` ya existentes, sin DRF) en
+  `docs/design/care-request-service-contracts.md` §17;
+- valor de retorno: `CareRequestService.create` devuelve un DTO explícito
+  (`CareRequestResult`: ids de `CareRequest`/`Appointment`/`ClinicalDocument` + estado), no la
+  instancia ORM — única excepción a como el resto de los servicios del proyecto devuelven su
+  resultado, justificada porque esta operación abarca varias entidades a la vez
+  (`care-request-service-contracts.md` §16).
 
 Debe permanecer como Django app dentro del mismo proyecto.
+
+**`CareRequest` tendrá una FK `OneToOneField` opcional/nullable hacia `Appointment`**
+(`CareRequest.appointment`, `on_delete=PROTECT`; confirmado, `requirements.md` §13,
+`docs/design/care-request-data-model.md` §3) exclusivamente para trazabilidad del origen — nunca
+convierte a `Appointment` en requisito para crear `CareRequest`, ni viceversa. La relación vive
+del lado de `CareRequest`, no de `Appointment` — `Appointment` no gana ningún campo.
+
+No incluye sala de espera/check-in — decisión definitiva de alcance del sistema
+(`requirements.md` §41), no exclusiva de esta app.
 
 **No forma parte de la Fase 1 ni de la Fase 2.**
 

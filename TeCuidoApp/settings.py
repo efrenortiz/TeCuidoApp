@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     'prescriptions',
     'study_orders',
     'clinical_documents',
+    'care_requests',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'

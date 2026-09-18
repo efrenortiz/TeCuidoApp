@@ -216,8 +216,10 @@ Incluye:
 - conversión a cita;
 - dashboard médico;
 - dashboard paciente/responsable;
-- sala de espera;
 - búsqueda.
+
+Sala de espera/check-in **no** forma parte del alcance de TeCuidoApp (decisión definitiva,
+`requirements.md` §41) — no incluir en ninguna fase.
 
 ## Fase 6 — Notificaciones y auditoría
 

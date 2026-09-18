@@ -352,8 +352,9 @@ Prioridad:
 3. Próximas citas
 ```
 
-"Pacientes en espera" queda pendiente de diseño — Fase 2 no dejó check-in ni un estado
-`WAITING` de los que depender (§33); no debe construirse hasta que exista esa decisión.
+"Pacientes en espera" **no se construye** — decisión definitiva (`requirements.md` §41,
+2026-09-14): sala de espera/check-in no forma parte de TeCuidoApp, en ninguna fase. No existe un
+estado `WAITING` del que depender (§33) ni se creará.
 
 No convertirlo en una colección de métricas sin utilidad operacional.
 
@@ -687,17 +688,17 @@ asignado, desde `SCHEDULED`, desde el minuto 1 posterior al horario programado.
 
 ---
 
-## 34. Sala de espera — pendiente de diseño
+## 34. Sala de espera — fuera de alcance definitivo
 
-Fase 2 no introdujo check-in ni un estado `WAITING`: nadie registra que el paciente "llegó",
-así que no existe una lista de pacientes en espera que la UI pueda construir todavía. Lo que
-sí existe es **"Iniciar consulta"** (§14, §33): el médico verifica la presencia del paciente
-de forma presencial y ejecuta `SCHEDULED → IN_CONSULTATION` directamente, sin un paso
-intermedio de "llegó"/"en espera".
+Fase 2 no introdujo check-in ni un estado `WAITING`: nadie registra que el paciente "llegó". Lo
+que existe es **"Iniciar consulta"** (§14, §33): el médico verifica la presencia del paciente de
+forma presencial y ejecuta `SCHEDULED → IN_CONSULTATION` directamente, sin un paso intermedio de
+"llegó"/"en espera".
 
-Una sala de espera real requiere su propia decisión funcional explícita (candidata a Fase 5,
-`requirements.md` §41) — no debe construirse infiriendo un mecanismo de check-in que no fue
-decidido.
+**Decisión definitiva (`requirements.md` §41, 2026-09-14):** la sala de espera/check-in no será
+implementada en TeCuidoApp — ni en Fase 5 ni en ninguna fase posterior. No es candidata a
+ninguna fase futura; no debe construirse un estado `WAITING`, una cola de pacientes, ni
+pantallas, permisos o alertas asociadas.
 
 ---
 

@@ -1309,10 +1309,11 @@ Document Permission
 ```text
 CareRequest
 Dashboard
-Waiting Room
 ```
 
-Cada recurso deberá definir su propia política.
+Cada recurso deberá definir su propia política. `Waiting Room` se retira de este listado:
+decisión definitiva (`requirements.md` §41, 2026-09-14) — sala de espera/check-in no será
+implementada en TeCuidoApp, por lo que no requiere política de permisos propia.
 
 ---
 

@@ -655,14 +655,23 @@ aparezca aquí; esta lista sigue siendo solo inventario de pantallas, no especif
 ## 9.4 Fase 5 — CareRequest y operación
 
 - Dashboard médico real (Design System §29, UI Guidelines §14): agenda del día (estados reales
-  de `Appointment`, §9.1) → alertas operativas → próximas citas. "Pacientes en espera" queda
-  **pendiente de diseño** — Fase 2 no dejó check-in ni un estado `WAITING` de los que depender
-  (`requirements.md` §41, Fase 5); no debe asumirse resuelto.
+  de `Appointment`, §9.1) → alertas operativas → próximas citas. "Pacientes en espera" no se
+  construye — decisión definitiva, sala de espera/check-in fuera de alcance del sistema
+  (`requirements.md` §41).
 - Dashboard paciente/responsable real (Design System §30, UI Guidelines §15-16): próxima
   cita → mis citas → mis documentos
-- CareRequest: solicitud de atención, con conversión opcional a cita — un origen alternativo
-  que coexiste con la reserva directa de Fase 2, nunca la reemplaza ni la condiciona
-  (`requirements.md` §12).
+- CareRequest: flujo de un solo tramo — (1) seleccionar médico, (2) seleccionar fecha,
+  (3) seleccionar hora, (4) confirmar, (5) recibir el resultado de la operación
+  (`Appointment` creada, o fallo sin nada persistido si el espacio dejó de estar disponible
+  entre la consulta y la confirmación — `requirements.md` §12.1). No existe una pantalla
+  posterior de espera a revisión del médico. Creación automática e inmediata de `Appointment`
+  al cumplir las reglas de Agenda de Fase 2 — sin aprobación ni revisión médica; adjuntos limitados
+  a PDF/JPEG/PNG y máximo 5 archivos por solicitud, mismos tipos y tamaño que `ClinicalDocument`
+  ya soporta (`requirements.md` §12.2). El formulario de solicitud debe poder rechazar una
+  nueva `CareRequest` cuando el paciente ya alcanzó el límite de 3 solicitudes en la última hora
+  (`requirements.md` §12.3), comunicándolo como resultado de la operación (no como una pantalla
+  de espera). Origen alternativo que coexiste con la reserva directa de Fase 2, nunca la
+  reemplaza ni la condiciona (`requirements.md` §12).
 - Búsqueda global
 
 ## 9.5 Fase 6 — Notificaciones y auditoría

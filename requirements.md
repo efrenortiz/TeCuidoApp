@@ -646,20 +646,58 @@ Fase 2 crea `Appointment` de forma directa, sin solicitud ni confirmación poste
 `docs/phases/phase-2-agenda.md` §6). Esta sección describe el módulo tal como se construirá
 cuando le toque su fase; no debe leerse como una dependencia de la agenda de Fase 2.
 
+**Contrato técnico de servicio (2026-09-15):** el flujo `CareRequest → Hold → Appointment`,
+la transacción única, la delegación completa a los servicios ya existentes de Agenda/Fase 4, y
+la idempotencia de la operación completa quedan detallados en
+`docs/design/care-request-service-contracts.md` — ese documento no cambia ninguna decisión
+funcional de esta sección, solo el "cómo" a nivel de servicio.
+
+**Decisión de dominio (2026-09-14) — supera cualquier lectura anterior en conflicto:**
+`CareRequest` **no** es una solicitud que espera aprobación, revisión o autorización por parte
+del médico. Es el mecanismo mediante el cual un paciente o un responsable autorizado solicita
+**directamente** una cita para un médico, fecha y hora específicos:
+
+```text
+Paciente/Responsable selecciona médico + fecha + hora
+        ↓
+CareRequest (operación de solicitud)
+        ↓
+Validación contra las reglas de Agenda de Fase 2 (§13-§21 — single source of
+verdad para la reserva; no se duplica esa lógica, ver `docs/design/booking-and-concurrency.md`)
+        ↓
+No cumple reglas → no se crea Appointment (respuesta inmediata; CareRequest no
+queda "pendiente de revisión")
+        │
+Cumple reglas → se crea Appointment automáticamente, sin intervención humana intermedia
+```
+
+No existe un paso conceptual de aprobación médica, revisión manual, bandeja de solicitudes
+pendientes para el médico, conversión manual ni asignación posterior por personal
+administrativo. La disponibilidad mostrada en interfaz no constituye una reserva — la
+validación definitiva ocurre en servidor, en el momento de confirmar la operación, reutilizando
+los mecanismos de concurrencia y atomicidad ya establecidos en Fase 2 (hold, transacción de
+reserva — ADR-006), sin introducir una arquitectura de reservas ni un motor de disponibilidad
+nuevo.
+
 TeCuidoApp debe incluir un módulo funcional denominado **CareRequest**.
 
-CareRequest representa una solicitud de atención iniciada por el paciente o responsable y es independiente de la cita definitiva.
+CareRequest es el origen/operación mediante la cual un paciente o responsable inicia
+directamente la reserva de una cita concreta. `Appointment` sigue siendo la entidad que
+representa la cita efectiva — `CareRequest` no la sustituye ni se convierte en un segundo
+sistema de agenda.
 
 La solicitud debe incluir:
 
 - Paciente relacionado.
 - Responsable que realiza la solicitud, cuando aplique.
-- Fecha y hora de creación.
+- Médico, fecha y hora solicitados — la reserva concreta que se pide, no una solicitud abierta
+  ("quiero una cita con este médico, en esta fecha y a esta hora").
+- Fecha y hora de creación de la solicitud.
 - Motivo de la solicitud.
 - Padecimiento o síntoma reportado.
 - Descripción libre del problema.
 - Archivos adjuntos.
-- Estado de la solicitud.
+- Estado de la solicitud (`NUEVA`/`CONVERTIDA` — ver §12.1).
 - Fecha y hora de actualización.
 
 Ejemplos de archivos:
@@ -669,24 +707,154 @@ Ejemplos de archivos:
 - Fotografía.
 - Documento clínico.
 
-Cuando se implemente (Fase 5), la solicitud podrá convertirse posteriormente en una cita —
-como un **origen alternativo y opcional** de creación de `Appointment`, coexistiendo con la
-reserva directa de Fase 2, nunca reemplazándola ni condicionándola.
+**Decisión confirmada (2026-09-14):** los archivos adjuntos de CareRequest utilizan la
+infraestructura de `ClinicalDocument` y el almacenamiento privado ya establecidos en Fase 4
+(ADR-025/ADR-026) — no se crea un mecanismo paralelo de archivos. Separación conceptual:
+`CareRequest` representa la solicitud de cita; `ClinicalDocument` representa/gestiona el
+documento adjunto. Tipos permitidos, límites de tamaño/cantidad y controles de seguridad en
+§12.2.
+
+Cuando todas las reglas de Agenda de Fase 2 se cumplen, la creación de `Appointment` es
+**automática e inmediata** — no una conversión posterior ni una acción independiente que alguien
+deba ejecutar.
 
 ## 12.1 Estados de CareRequest
 
-Como mínimo:
+**Decisión confirmada (2026-09-14) — reemplaza la lista original de este documento:**
 
-- Nueva.
-- En revisión.
-- Atendida.
-- Convertida en cita.
-- Cancelada.
-- Cerrada.
+```text
+CareRequest:
+    NUEVA → CONVERTIDA
+```
 
-La aplicación no debe efectuar diagnóstico automático sobre el contenido de CareRequest.
+- **`NUEVA`**: representa la CareRequest durante la operación de solicitud. No significa
+  pendiente de aprobación, pendiente de revisión ni pendiente de autorización — es el estado
+  transitorio mientras se ejecuta la validación contra Agenda Fase 2 (§12).
+- **`CONVERTIDA`**: la operación concluyó correctamente y la `Appointment` fue creada. Una
+  CareRequest `CONVERTIDA` **permanece así** aunque la `Appointment` resultante cambie
+  posteriormente de estado (incluida su cancelación) — la cancelación pertenece exclusivamente
+  al ciclo de vida de `Appointment` (§13.1), nunca al de `CareRequest`. No existe
+  `CareRequest = CANCELADA` como parte de este workflow.
 
-El médico debe decidir clínicamente la atención apropiada.
+Los estados `En revisión`, `Atendida` y `Cerrada` de versiones anteriores de este documento
+**quedan eliminados** del modelo conceptual de CareRequest — presuponían un paso de
+revisión/atención/cierre manual que ya no existe. No se sustituyen por estados nuevos
+(`REJECTED`, `EXPIRED`, `WAITING`, etc.); el workflow confirmado es exactamente el de arriba.
+
+**Decisión confirmada (2026-09-14) — fallo de la reserva:** si al momento de confirmar la
+operación ya no se cumplen las reglas de Agenda de Fase 2 (p. ej. el espacio dejó de estar
+disponible entre la consulta de UI y la confirmación), la operación completa falla de forma
+atómica: **no se persiste ninguna fila de `CareRequest` ni de `Appointment`**. `CareRequest` no
+funciona como historial de intentos fallidos — no existe un estado que represente el fallo
+(ni `NUEVA` permanece registrada, ni se inventa uno nuevo). El flujo confirmado es exclusivamente
+binario:
+
+```text
+Éxito: CareRequest NUEVA → CONVERTIDA, + Appointment creada
+Fallo: la validación no pasa → ninguna entidad queda persistida
+```
+
+**Decisión confirmada (2026-09-14):** `CareRequest` no realiza diagnóstico automático, no realiza
+triage clínico automático y no genera recomendaciones clínicas automáticas sobre su contenido —
+se mantiene como mecanismo de solicitud/gestión administrativa de atención, no como una capa de
+decisión clínica.
+
+El médico decide clínicamente la atención apropiada durante la consulta ya reservada — esto
+describe juicio clínico durante el encuentro (Fase 3, `ClinicalEncounter`), no una revisión
+previa que autorice o rechace la cita: la `Appointment` ya existe una vez creada.
+
+## 12.2 Archivos adjuntos — tipos, límites y seguridad
+
+**Decisión de cierre (2026-09-14) — resuelve la contradicción señalada en la revisión final de
+diseño de Fase 5:** `CareRequest` se acota exactamente a los tipos y al límite de tamaño que
+`ClinicalDocument` ya soporta hoy (`clinical_documents/services/storage.py`), sin extender ni
+modificar esa infraestructura. La versión anterior de esta sección incluía tipos (`.webp`,
+`.docx`, `.xlsx`, `.txt`) y una tabla de límites por tipo/acumulado que excedían lo ya
+implementado en Fase 4 — quedan retirados. El único elemento nuevo específico de `CareRequest`
+(cantidad máxima de archivos por solicitud) se resuelve en la propia capa de `CareRequest`
+(llamando a `ClinicalDocumentService.upload()` hasta el máximo permitido, una vez por archivo),
+sin tocar `clinical_documents.services.storage`.
+
+### Tipos de archivo permitidos
+
+Exactamente los mismos que `ClinicalDocument` ya soporta — ninguno adicional:
+
+| Extensión | MIME |
+|---|---|
+| `.pdf` | `application/pdf` |
+| `.jpg`, `.jpeg` | `image/jpeg` |
+| `.png` | `image/png` |
+
+Quedan explícitamente fuera de Fase 5: `.webp`, `.docx`, `.xlsx`, `.txt`, `.dcm`/DICOM, `.zip`,
+video (`.mp4`/`.webm`/etc.), `.doc`, `.xls`, `.exe`, `.dll`. Habilitar un tipo adicional requiere
+extender `ClinicalDocument` (Fase 4) de forma explícita, con su propia decisión y, si corresponde,
+ADR — no se habilita implícitamente desde Fase 5.
+
+### Cantidad y tamaño
+
+- Máximo **5 archivos** por `CareRequest` — límite propio de `CareRequest` (no existe en
+  `ClinicalDocument`, que valida un archivo por llamada); se aplica invocando `upload()` hasta 5
+  veces, sin cambios en `ClinicalDocument`.
+- Tamaño máximo por archivo: el límite único ya vigente en `ClinicalDocument`
+  (`CLINICAL_DOCUMENTS_MAX_UPLOAD_SIZE_BYTES`, 10 MB por defecto) — no se define una tabla de
+  límites por tipo ni un tope acumulado independiente. El máximo de 5 archivos ya acota el peor
+  caso (5 × 10 MB = 50 MB); si en el futuro se necesita un tope acumulado menor, es un ajuste
+  aditivo simple en la capa de `CareRequest`, no un rediseño.
+
+### Seguridad de archivos
+
+- **Validación server-side**: nunca confiar únicamente en la extensión declarada ni en el MIME
+  reportado por el cliente — debe validarse el contenido real del archivo (mismo criterio que
+  `clinical_documents.services.storage` de Fase 4).
+- **Nombre interno**: los archivos se almacenan con un identificador interno basado en UUID.
+- **Sanitización**: el nombre original del archivo nunca se usa directamente como ruta de
+  almacenamiento.
+- **Doble extensión**: debe rechazarse cualquier intento como `archivo.pdf.exe`,
+  `imagen.jpg.php`, `imagen.png.js`.
+- **Archivos peligrosos**: deben rechazarse ejecutables, scripts, HTML/SVG y cualquier tipo no
+  incluido en la tabla de tipos permitidos.
+- **Antivirus**: **decisión confirmada (2026-09-14) — eliminado del alcance de Fase 5.** No se
+  utiliza ClamAV ni ningún otro proveedor o servicio externo de análisis antivirus. No debe
+  aparecer como requisito pendiente ni como implementación futura dentro de esta fase — los
+  controles que sí aplican son los del resto de esta lista (validación real de contenido/MIME,
+  extensión, límites, sanitización, UUID, bloqueo de doble extensión y de tipos peligrosos).
+
+## 12.3 Límite de creación de CareRequests (rate limiting)
+
+**Decisión confirmada (2026-09-14) — corrige el alcance documentado previamente como "3 intentos
+de carga de archivos por hora":** el límite de frecuencia aplica a la **creación de
+`CareRequest`**, no específicamente a la carga de archivos:
+
+> Máximo **3 `CareRequest` por actor autenticado** dentro de una **ventana móvil de 1 hora**.
+
+- **Decisión de cierre (2026-09-14) — resuelve la ambigüedad de a quién se le cuenta el límite,
+  señalada en la revisión final de diseño:** el límite se cuenta por **actor autenticado** — el
+  `User` que crea la `CareRequest` (el propio paciente cuando solicita para sí mismo, o el
+  responsable cuando solicita para un paciente relacionado) — **no** por paciente destino. Un
+  responsable que gestiona varios pacientes comparte un único cupo de 3/hora entre todos ellos,
+  en lugar de tener 3 por cada paciente que administra; así repartir solicitudes entre distintos
+  pacientes relacionados no sirve para eludir el límite. Cuando el paciente solicita para sí
+  mismo, actor y paciente destino coinciden, así que este caso no cambia.
+- Implementación mediante **PostgreSQL** (conteo de filas de `CareRequest` creadas por ese actor
+  dentro de la ventana de 1 hora): decisión deliberada para no introducir infraestructura nueva —
+  sin Redis, sin Celery, sin colas ni servicios adicionales (coherente con el principio de
+  simplicidad de infraestructura ya aplicado en Fase 4/ADR-027).
+- La regla funcional: contar los `CareRequest` creados por ese actor en la última hora antes de
+  aceptar una nueva solicitud; si ya existen 3, rechazar la nueva.
+
+**Decisión de cierre (2026-09-14) — resuelve la ambigüedad de concurrencia señalada en la
+revisión final de diseño:** el conteo y la creación deben ejecutarse dentro de la misma
+transacción, serializados mediante `select_for_update()` sobre la fila del **`User` actor**
+(no sobre la fila del `Patient` destino, ya que el actor puede ser un responsable distinto del
+paciente — ver punto anterior). Esto evita que dos solicitudes casi simultáneas del mismo actor
+cuenten "2 previas" cada una y ambas pasen, dejando 4 — la segunda transacción concurrente espera
+a que la primera confirme (o revierta) y ve el conteo ya actualizado. No es un mecanismo nuevo: es
+el mismo patrón ya usado en `PrescriptionService.create_version`,
+`StudyOrderService.create_version` y `ClinicalDocumentService.create_version`/`void_or_inactivate`
+(bloquear con `select_for_update()` la fila en disputa antes de mutar), aplicado aquí sobre la
+fila del actor en lugar de la entidad que se está versionando. Solicitudes de actores distintos no
+se bloquean entre sí — cada una toma el lock de su propia fila. Sigue sin requerir Redis, Celery
+ni ninguna infraestructura nueva.
 
 ---
 
@@ -710,8 +878,16 @@ Debe asociarse como mínimo con:
 - Estado.
 - Fechas de creación y modificación.
 
-`CareRequest` **no** es un campo obligatorio ni un requisito previo de `Appointment` en Fase
-2 — cuando `CareRequest` se implemente (Fase 5), la relación entre ambos será opcional (§12).
+`Appointment` **no** tiene ningún campo relacionado con `CareRequest`.
+**Decisión confirmada (2026-09-15) — reemplaza la de 2026-09-14:** la relación entre ambos vive
+del lado de `CareRequest`, no de `Appointment` — `CareRequest.appointment`
+(`OneToOneField`, opcional/nullable) es quien referencia a `Appointment`, nunca al revés. Esto
+significa que el modelo de `Appointment` (Fase 2) no requiere ningún campo, migración ni cambio
+para dar cabida a Fase 5 — `appointments` permanece completamente ajena a `care_requests`, ni
+siquiera a nivel de modelo. Una `Appointment` puede existir (1) referenciada por una
+`CareRequest`, o (2) creada directamente mediante Agenda (Fase 2) sin que ninguna `CareRequest`
+la referencie — por eso la relación es opcional del lado de `CareRequest`, nunca obligatoria ni
+para `Appointment` ni para `CareRequest` (ver §12).
 
 Debe distinguirse claramente:
 
@@ -1093,9 +1269,13 @@ El médico debe disponer de un panel principal con:
 
 ### Alertas operativas
 
-- Nuevas solicitudes CareRequest (cuando esa app exista, Fase 5).
 - Documentos nuevos.
 - Otras alertas relevantes.
+
+**Ajuste (2026-09-14):** no debe existir una bandeja de CareRequests pendientes de aprobación
+(§12, decisión de dominio) — una `CareRequest` válida ya produjo su `Appointment`, que aparece
+directamente en la "Agenda del día" de arriba. No hay una alerta operativa distinta para
+"solicitud nueva sin atender".
 
 ### Próximas citas
 
@@ -1577,16 +1757,18 @@ Especificación funcional aprobada 2026-09-11, ver `docs/phases/phase-3-clinical
 
 ## Fase 5 — CareRequest y operación
 
-- Solicitudes de atención.
-- Conversión de CareRequest a cita (origen alternativo y opcional, no reemplaza ni condiciona
-  la reserva directa de Fase 2 — §12).
+- Solicitudes de atención: creación automática e inmediata de `Appointment` cuando la solicitud
+  cumple las reglas de Agenda de Fase 2, sin aprobación ni revisión manual — origen alternativo
+  y opcional, no reemplaza ni condiciona la reserva directa de Fase 2 (§12).
 - Dashboard médico.
 - Dashboard paciente/responsable.
-- Sala de espera — **pendiente de diseño**: Fase 2 no introdujo check-in ni un estado
-  `WAITING` (§16), así que esta funcionalidad no puede asumir que esos mecanismos ya existen;
-  requiere su propia decisión funcional explícita cuando le toque su fase, no debe inferirse
-  del modelo de Fase 2.
 - Búsqueda.
+
+**Decisión definitiva (2026-09-14):** la funcionalidad de sala de espera, check-in y "pacientes
+en espera" **no será implementada en TeCuidoApp** — ni en Fase 5 ni en ninguna fase posterior.
+No es "pendiente" ni "futura": queda fuera de alcance definitivo del sistema. No debe crearse un
+estado `WAITING`, un estado `CHECKED_IN`, una cola de pacientes, un modelo de sala de espera, ni
+permisos, pantallas o alertas asociadas.
 
 ## Fase 6 — Notificaciones y auditoría
 

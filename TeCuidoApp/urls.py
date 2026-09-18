@@ -29,9 +29,11 @@ urlpatterns = [
     path('api/v1/clinical/', include('prescriptions.urls')),
     path('api/v1/clinical/', include('study_orders.urls')),
     path('api/v1/clinical/', include('clinical_documents.urls')),
+    path('api/v1/', include('care_requests.urls')),
     path('agenda/', include('appointments.urls_ui')),
     path('clinica/', include('medical_records.urls_ui')),
     path('clinica/', include('prescriptions.urls_ui')),
     path('clinica/', include('study_orders.urls_ui')),
     path('clinica/', include('clinical_documents.urls_ui')),
+    path('solicitudes/', include('care_requests.urls_ui')),
 ]

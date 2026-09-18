@@ -719,9 +719,9 @@ Alertas operativas
 Próximas citas
 ```
 
-"Pacientes en espera" queda **pendiente de diseño**: Fase 2 no introdujo check-in ni un
-estado `WAITING` de `Appointment` (`docs/phases/phase-2-agenda.md` §9) — no debe asumirse ni
-construirse hasta que exista una decisión funcional explícita para esa vista.
+"Pacientes en espera" **no se construye**: decisión definitiva (`requirements.md` §41,
+2026-09-14) — sala de espera/check-in no forma parte de TeCuidoApp en ninguna fase. No existe,
+ni existirá, un estado `WAITING` de `Appointment` (`docs/phases/phase-2-agenda.md` §9).
 
 La información que requiere una acción inmediata debe tener mayor jerarquía.
 

@@ -41,7 +41,8 @@
       <dt class="data-list__label">Responsable</dt>
       <dd class="data-list__value">
         <a href="{% url 'patients:my_dependents' %}">Mis pacientes a cargo</a> ·
-        <a href="{% url 'appointments:responsible_patients' %}">Agenda de mis pacientes</a>
+        <a href="{% url 'appointments:responsible_patients' %}">Agenda de mis pacientes</a> ·
+        <a href="{% url 'care_requests_ui:care_request_create' %}">Solicitar cita</a>
       </dd>
     </div>
     {% endif %}
@@ -51,6 +52,7 @@
       <dd class="data-list__value">
         <a href="{% url 'patients:my_profile' %}">Mi perfil</a> ·
         <a href="{% url 'appointments:booking' %}">Reservar cita</a> ·
+        <a href="{% url 'care_requests_ui:care_request_create' %}">Solicitar cita</a> ·
         <a href="{% url 'appointments:my_appointments' %}">Mis citas</a>
       </dd>
     </div>

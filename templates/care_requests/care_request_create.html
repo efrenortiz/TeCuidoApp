@@ -1,0 +1,101 @@
+{% extends "layouts/app_base.html" %}
+{% load static %}
+{% block title %}Solicitar cita — TeCuidoApp{% endblock %}
+{% block extra_head %}
+<script src="{% static 'js/care-request.js' %}" defer></script>
+{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Solicitar cita" description="Selecciona médico, fecha y horario. La cita se crea de inmediato si el horario sigue disponible." %}
+
+<div id="care-request-app">
+  {{ doctor_clinic_pairs|json_script:"doctor-clinic-data" }}
+  {{ care_request_config|json_script:"care-request-config" }}
+
+  <div id="care-request-error" class="card card--narrow" hidden></div>
+
+  <div class="card">
+    {% if patient_mode == "self" %}
+    <p class="field__help">Paciente: {{ fixed_patient.person }}</p>
+    {% elif patient_mode == "responsible" %}
+    <div class="field">
+      <label class="field__label" for="patient-select">Paciente</label>
+      <select id="patient-select" class="field-input">
+        {% for patient in responsible_patients %}
+        <option value="{{ patient.pk }}">{{ patient.person }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+  </div>
+
+  <div id="picker-panel" class="card">
+    <div class="booking-picker">
+      <div class="field">
+        <label class="field__label" for="doctor-select">Médico</label>
+        <select id="doctor-select" class="field-input"></select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="clinic-select">Consultorio</label>
+        <select id="clinic-select" class="field-input"></select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="date-input">Fecha</label>
+        <input type="date" id="date-input" class="field-input">
+      </div>
+      <button type="button" id="search-slots-btn" class="btn btn--secondary">Buscar horarios</button>
+    </div>
+
+    <p id="slot-grid-status" class="field__help" hidden></p>
+    <div id="slot-grid" class="slot-grid"></div>
+  </div>
+
+  <div id="details-panel" class="card" hidden>
+    <dl class="data-list" id="request-summary">
+      <div>
+        <dt class="data-list__label">Médico</dt>
+        <dd class="data-list__value" id="summary-doctor"></dd>
+      </div>
+      <div>
+        <dt class="data-list__label">Consultorio</dt>
+        <dd class="data-list__value" id="summary-clinic"></dd>
+      </div>
+      <div>
+        <dt class="data-list__label">Fecha</dt>
+        <dd class="data-list__value" id="summary-date"></dd>
+      </div>
+      <div>
+        <dt class="data-list__label">Horario</dt>
+        <dd class="data-list__value" id="summary-slot"></dd>
+      </div>
+    </dl>
+    <div class="field">
+      <label class="field__label" for="motivo-input">Motivo de la consulta <span class="field__required">*</span></label>
+      <textarea id="motivo-input" class="field-input" required></textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="padecimiento-input">Padecimiento (opcional)</label>
+      <textarea id="padecimiento-input" class="field-input"></textarea>
+    </div>
+    <div class="field">
+      <label class="field__label" for="descripcion-input">Descripción (opcional)</label>
+      <textarea id="descripcion-input" class="field-input"></textarea>
+    </div>
+    <div class="field" id="attachments-field">
+      <label class="field__label" for="attachments-input">Archivos adjuntos (opcional, máx. 5 — PDF/JPG/PNG)</label>
+      <input type="file" id="attachments-input" class="field-input" multiple accept=".pdf,.jpg,.jpeg,.png">
+      <p class="field__error" id="attachments-error" hidden></p>
+      <ul id="attachments-list"></ul>
+    </div>
+    <p id="submitting-status" class="field__help" hidden>Enviando solicitud…</p>
+    <div class="modal__actions">
+      <button type="button" id="cancel-details-btn" class="btn btn--secondary">Elegir otro horario</button>
+      <button type="button" id="confirm-btn" class="btn btn--primary">Confirmar solicitud</button>
+    </div>
+  </div>
+
+  <div id="success-panel" class="card card--narrow" hidden>
+    {% include "components/_alert.html" with type="success" text="Cita creada correctamente." %}
+    <p id="success-detail"></p>
+  </div>
+</div>
+{% endblock %}

@@ -376,12 +376,16 @@ La especificación establece explícitamente que `CareRequest` debe ser una Djan
 
 La app será responsable de:
 
-- creación;
-- estados;
-- archivos asociados;
+- creación — con médico, fecha y hora solicitados de forma explícita, no una solicitud abierta
+  (`requirements.md` §12, decisión de dominio 2026-09-14: sin aprobación ni revisión médica);
+- estados: `NUEVA → CONVERTIDA` (confirmado, `requirements.md` §12.1) — sin estados de
+  revisión/atención/cierre manual;
+- archivos asociados — reutilizan `ClinicalDocument`/almacenamiento privado de Fase 4, tipos y
+  límites confirmados en `requirements.md` §12.2;
 - actualización;
-- conversión a cita — un origen **alternativo y opcional** de `Appointment`, nunca un
-  requisito previo (`requirements.md` §12).
+- validación contra las reglas de Agenda de Fase 2 y creación **automática e inmediata** de la
+  `Appointment` correspondiente cuando esas reglas se cumplen — un origen **alternativo y
+  opcional** de `Appointment`, nunca un requisito previo (`requirements.md` §12).
 
 La creación de una cita no debe convertir `appointments` en propietario del modelo `CareRequest`.
 Tampoco a la inversa: `appointments` (Fase 2) queda completa y funcional sin que `care_requests`
@@ -1095,7 +1099,9 @@ pero mantendrá la responsabilidad de almacenar y proteger documentos.
 
 # 44. Preparación para Fase 5
 
-`care_requests` podrá convertirse en una cita mediante un caso de uso que coordine:
+`care_requests` invocará un caso de uso de `appointments` (nunca al revés) que valide la
+solicitud contra las reglas de Agenda de Fase 2 y cree la `Appointment` de forma automática e
+inmediata, sin aprobación ni revisión manual (`requirements.md` §12):
 
 ```text
 CareRequest
@@ -1103,7 +1109,17 @@ CareRequest
 Appointment
 ```
 
-La conversión no implica que los modelos deban vivir en la misma app.
+Que los modelos coordinen mediante un caso de uso no implica que deban vivir en la misma app.
+
+**Decisión de cierre técnico (2026-09-15) — opción B, con la FK invertida:** el "caso de uso"
+invocado es exactamente `appointments.services.appointment.create_appointment_from_hold(*,
+actor, hold, patient, doctor, clinic, idempotency_key="")` **sin modificar su firma** — no
+recibe un parámetro `care_request`, y `Appointment` no gana ningún campo. La relación es
+propiedad de `CareRequest`: `care_requests` asigna `CareRequest.appointment` (`OneToOneField`
+opcional hacia `Appointment`) después de recibir la `Appointment` ya creada, dentro de la misma
+transacción. `appointments` no queda enterado de `CareRequest` en ningún punto — ni en tiempo de
+ejecución ni a nivel de modelo. Detalle completo en `docs/design/care-request-service-contracts.md`
+§9.
 
 ---
 
