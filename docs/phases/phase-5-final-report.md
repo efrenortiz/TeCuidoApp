@@ -2459,3 +2459,10 @@ release fue regenerado desde ese `HEAD` y verificado, y no se encontraron secret
 se declara `PHASE 5 — CLOSED` en este prompt** (instrucción explícita) — el veredicto vigente
 sigue siendo `§41.K`, y su validación formal con la trazabilidad ahora corregida corresponde al
 `Prompt 03` de esta misma ronda.
+
+**Nota de auto-referencia (evita asumir un hash desactualizado, igual que 43.B advierte):** el
+contenido de §43 tal como existía hasta este punto se commiteó como
+`2e3769a3aa2861a3a5468c7d23e83f01bc4c96c7` — ese es, a su vez, el `HEAD` inmediatamente posterior
+a `a4debdf` citado arriba. `Prompt 03`, al ejecutar su propia auditoría, debe volver a correr
+`git rev-parse HEAD` en su propia sesión en vez de asumir que `2e3769a` sigue vigente — el mismo
+principio que este prompt aplicó sobre los hashes de la ronda anterior (43.A/43.B).
