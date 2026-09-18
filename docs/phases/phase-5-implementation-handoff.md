@@ -1,5 +1,11 @@
 # Fase 5 — Implementation Handoff
 
+**HISTORICAL (2026-09-18):** this handoff was written before implementation started. Fase 5 has
+since been implemented, audited, and formally closed — see
+`docs/phases/phase-5-final-report.md` §41.K (`PHASE 5 — CLOSED`). This document is kept as the
+record of the approved execution order actually followed; it does not describe the current
+state of the project.
+
 ## Purpose
 
 Provide the implementation team with the minimum execution order after Technical Design Freeze.

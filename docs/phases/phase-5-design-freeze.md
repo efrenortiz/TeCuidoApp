@@ -1,10 +1,15 @@
 # Fase 5 — CareRequest y operación: Design Freeze
 
 **Fecha:** 2026-09-14
-**Ámbito:** exclusivamente diseño y documentación — Fase 5 no tiene implementación de código
-todavía. Este documento certifica el cierre del diseño funcional/conceptual, no un cierre de
-fase (eso corresponde a un informe final posterior a la implementación, como
-`phase-4-final-report.md`).
+**Ámbito:** exclusivamente diseño y documentación — **en la fecha de este documento**, Fase 5 no
+tenía implementación de código todavía. Este documento certificó el cierre del diseño
+funcional/conceptual, no un cierre de fase (eso correspondía entonces a un informe final
+posterior a la implementación, como `phase-4-final-report.md`).
+
+**HISTORICAL (2026-09-18):** Fase 5 ya fue implementada, auditada y cerrada formalmente — ver
+`docs/phases/phase-5-final-report.md` §41.K (`PHASE 5 — CLOSED`). Este documento se conserva
+íntegro como registro del hito de Design Freeze (2026-09-14); no describe el estado actual del
+proyecto. Para el estado actual, consultar el reporte final, no este documento.
 
 ---
 

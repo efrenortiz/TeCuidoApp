@@ -1,5 +1,13 @@
 # Fase 5 — Documentation Index
 
+**Status (2026-09-18):** Fase 5 is implemented and formally closed — see
+`docs/phases/phase-5-final-report.md` §41.K (`PHASE 5 — CLOSED`). This index predates
+implementation and lists the pre-implementation design set only; it is kept for traceability of
+the design order actually followed, not as a claim that Fase 5 is still pending. The final
+report, the Definition of Done, the test matrix, and the implementation checklist/handoff
+documents (added or updated during and after implementation) are not listed in §2 below — they
+are the closure-time documents, read *after* this index's original set, not instead of it.
+
 ## 1. Purpose
 
 This index defines the authoritative documentation set for Fase 5 and the recommended reading order.

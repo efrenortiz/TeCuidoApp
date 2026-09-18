@@ -19,6 +19,12 @@
 > esos 3 defectos (§38, §39), sanear el repositorio y el paquete de entrega (§40), y volver a
 > ejecutar — no reutilizar — toda la evidencia de regresión, idempotencia y navegador real sobre
 > el commit final (`§41.B`-`§41.J`).
+>
+> **`§42` (2026-09-18, nueva ronda, Prompt 01):** corrección de consistencia documental
+> *externa* a este reporte — `README.md` y `docs/architecture.md` seguían describiendo Fase 5
+> como futura/siguiente pese a que este reporte ya la declaraba `CLOSED` en §41.K. §42 corrige
+> esa inconsistencia sin re-auditar código ni alterar ningún conteo de §41. No re-declara el
+> cierre — esa validación formal de esta nueva ronda corresponde a su Prompt 03.
 
 **Fecha:** 2026-09-16 (creación) — **última actualización: 2026-09-18** (§41, cierre formal)
 **Estado de diseño previo:** `✅ FASE 5 — TECHNICAL DESIGN FREEZE` (`docs/phases/phase-5-design-freeze.md`, 2026-09-15)
@@ -2237,3 +2243,86 @@ diseño de las 3 rondas de corrección) + `c4bf7f175d8af882125ac10802fdc509bdb91
 final y correcciones de trazabilidad documental, sin tocar código). La regresión de 41.C/41.D se
 ejecutó sobre el primero; el segundo no la invalida porque no modifica ningún archivo `.py`/
 migración/test — verificado (`git diff --stat` del segundo commit, arriba, no incluye ninguno).
+
+---
+
+# 42. Consistencia documental externa a este reporte — Prompt 01 de una nueva ronda (2026-09-18)
+
+**Origen:** auditoría de release engineering encontró que, aunque este reporte (§41.K) ya
+declaraba `PHASE 5 — CLOSED`, otros documentos que un lector externo consultaría primero
+(`README.md`, `docs/architecture.md`) seguían presentando Fase 5 como "siguiente / aún no
+iniciada" o "futura" — una inconsistencia real de "fuente oficial de verdad", no una duda sobre
+si Fase 5 está cerrada.
+
+**Alcance de esta sección: exclusivamente documental.** No se re-auditó código, no se re-corrieron
+tests, no se modificó ningún conteo de §41 (DoD, criterios de aceptación, resultados de
+regresión) — esos valores se conservan exactamente como en §41.
+
+## 42.A Búsqueda realizada
+
+```
+grep -n "Fase\|Phase" README.md
+grep -n "Fase 5\|Fase 6\|futura\|siguiente\|pendiente" docs/architecture.md
+grep -rniE "fase 5.{0,60}(futura|pendiente|siguiente|no iniciada|not started|todavía no|aún no)" \
+  docs/ README.md CLAUDE.md requirements.md
+```
+
+## 42.B Inconsistencias encontradas — estado actual vs. histórico
+
+| Documento | Afirmación encontrada | Clasificación | Corrección |
+|---|---|---|---|
+| `README.md` línea 15-16 | "Fase 5 — ⏭️ SIGUIENTE (aún no iniciada)"; "Fase 6 — Futura" | **Estado actual, desactualizado** (tabla fechada "2026-09-11", antes de que Fase 5 existiera) | Corregida a "✅ COMPLETADA (`phase-5-final-report.md` §41.K)"; Fase 6 pasa a "⏭️ SIGUIENTE"; fecha actualizada a 2026-09-18 |
+| `docs/architecture.md` línea 3-4 (banner superior) | "hasta Fase 4 — `PHASE 4 — CLOSED`" | **Estado actual, desactualizado** | Corregido a "hasta Fase 5 — `PHASE 5 — CLOSED`... Fase 6 es la fase siguiente" |
+| `docs/architecture.md` §44 "Resumen de fases" | "Fase 5 — CareRequest y operación — futura"; "Fase 6 — futura" | **Estado actual, desactualizado** | Fase 5 → "COMPLETADA (§41.K)"; Fase 6 → "siguiente" |
+| `docs/architecture.md` §44 "### Fases futuras" | Listaba Fase 5 como futura junto a Fase 6 | **Histórico** (era el estado real al cierre de Fase 4, cuando se escribió) | Marcado `[HISTORICAL]` en la propia lista, sin borrar la trazabilidad; encabezado aclara que ya no aplica a Fase 5 |
+| `docs/architecture.md` §7.7 "Responsabilidad futura (Fase 5)" | Encabezado en futuro sobre una responsabilidad ya implementada | **Estado actual mal etiquetado** (el contenido técnico era correcto y coincide con el código; solo el encabezado estaba mal) | Añadida nota "Estado: implementada y cerrada" antes del detalle; el detalle técnico se conserva sin reescribir porque sigue describiendo la arquitectura vigente con exactitud |
+| `docs/phases/phase-5-design-freeze.md` línea 3-6 | "Fase 5 no tiene implementación de código todavía" | **Histórico** (cierto en 2026-09-14, fecha del documento) | Marcado `HISTORICAL` explícito, con puntero a §41.K; contenido del hito conservado íntegro |
+| `docs/phases/phase-5-implementation-handoff.md` (todo el documento) | Handoff pre-implementación, sin ninguna nota de que la implementación ya ocurrió | **Histórico** | Añadida nota `HISTORICAL` al inicio, con puntero a §41.K; orden de ejecución conservado íntegro como registro |
+| `docs/phases/phase-5-documentation-index.md` | Índice que no menciona el reporte final ni el cierre, y no incluye los documentos añadidos durante/después de la implementación | **Índice desactualizado, no una afirmación de estado falsa per se** | Añadida nota de estado al inicio aclarando que el índice es pre-implementación y remitiendo a §41.K para el estado actual |
+
+**Documentos revisados sin cambios (no presentaban un estado antiguo como vigente):**
+- `docs/phases/phase-5-definition-of-done.md` — define criterios ("Fase 5 is complete when..."),
+  no afirma un estado actual; no requiere corrección.
+- `docs/adr/ADR-030-phase4-scope-boundary.md` — menciona "Fase 5... la relación arquitectónica
+  futura" en el contexto de una decisión de alcance de **Fase 4** fechada 2026-09-11 (antes de
+  que Fase 5 existiera); es correcto en su propio contexto histórico, no una afirmación sobre el
+  estado actual de Fase 5.
+- `CLAUDE.md`, `requirements.md` — listan el alcance de Fase 5 (qué incluye) como catálogo de
+  requisitos por fase, sin afirmar en ningún punto que Fase 5 esté pendiente o no implementada;
+  no son trackers de estado, no requieren corrección.
+
+## 42.C Archivos modificados
+
+```
+README.md
+docs/architecture.md
+docs/phases/phase-5-design-freeze.md
+docs/phases/phase-5-implementation-handoff.md
+docs/phases/phase-5-documentation-index.md
+docs/phases/phase-5-final-report.md   (esta sección)
+```
+
+Ningún archivo de `appointments/`, `clinical_documents/`, `patients/`, `medical_records/`, ni
+ningún test o código de producción fue modificado — instrucción explícita del prompt (§8), y
+verificado (`git status` sin cambios fuera de la lista anterior más `.claude/settings.local.json`,
+que permanece ajeno a Fase 5).
+
+## 42.D Verificaciones finales
+
+- `python manage.py check` → sin problemas (re-ejecutado tras estos cambios, que son solo `.md`).
+- Ningún conteo de tests, DoD o criterios de aceptación fue alterado — §41.C/§41.D/§41.H de este
+  reporte permanecen exactamente como estaban.
+- Búsqueda de cierre: `grep -rniE "fase 5.{0,60}(futura|pendiente|siguiente|no iniciada)"` sobre
+  `docs/`+`README.md`+`CLAUDE.md`+`requirements.md` tras las correcciones → los únicos resultados
+  restantes son las líneas de este propio §42 (que documentan la corrección) y la mención
+  correctamente histórica en `ADR-030-phase4-scope-boundary.md` (42.B) — ninguna afirmación de
+  estado actual desactualizada queda sin marcar.
+
+## 42.E Estado — no se declara cierre en este prompt
+
+Esta sección corrige exclusivamente la consistencia documental externa a este reporte. **No
+reabre, no re-audita y no vuelve a declarar el veredicto de `§41.K`** (`PHASE 5 — CLOSED`, ya
+emitido con evidencia completa en la ronda anterior) — esa declaración permanece como está,
+citada aquí solo como referencia. La instrucción explícita de este prompt es no declarar el
+cierre formal en este punto: esa validación final, incorporando ahora también la consistencia
+documental corregida en este §42, corresponde al Prompt 03 de esta misma ronda.

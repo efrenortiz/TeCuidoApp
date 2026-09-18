@@ -2,7 +2,8 @@
 
 **Estado:** Vigente — documento enmendado incrementalmente; redactado originalmente como
 "Propuesta inicial" durante Fase 1. Ver §44 "Estado actual" para el estado real y consolidado del
-proyecto por fase (hasta Fase 4 — `PHASE 4 — CLOSED`).  
+proyecto por fase (hasta Fase 5 — `PHASE 5 — CLOSED`, `docs/phases/phase-5-final-report.md`
+§41.K; Fase 6 es la fase siguiente).  
 **Versión:** 1.0 (sin nueva versión mayor; los cambios incrementales quedan documentados en §44 y
 en los ADR correspondientes)  
 **Fase de redacción original:** Fase 1 — Fundaciones  
@@ -447,7 +448,11 @@ la misma transacción. `Appointment` no gana ningún campo ni migración: `appoi
 completamente ajena a `care_requests`, ni siquiera a nivel de modelo. Ningún contrato ni código
 de `appointments`/`clinical_documents` se modifica para dar cabida a Fase 5.
 
-Responsabilidad futura (Fase 5):
+**Estado: implementada y cerrada (2026-09-18, `docs/phases/phase-5-final-report.md` §41.K —
+`PHASE 5 — CLOSED`).** El detalle que sigue describe el diseño aprobado que efectivamente se
+implementó — se conserva en tiempo presente/descriptivo tal como fue escrito durante el diseño,
+sin marcarlo `HISTORICAL`, porque sigue siendo una descripción exacta de la arquitectura vigente,
+no un estado superado:
 
 - solicitudes de atención: el paciente/responsable selecciona médico, fecha y hora concretos —
   no es una solicitud abierta ni queda pendiente de aprobación/revisión médica
@@ -1476,6 +1481,19 @@ exitosamente en el ambiente reconstruido, y quedó formalmente cerrada — ver
 abajo, que aún incluía a Fase 4, se corrige en el resumen siguiente; se conserva sin editar
 por lo demás como registro histórico de las fases que seguían pendientes al cierre de Fase 3.
 
+**Corrección de consistencia (cierre documental de Fase 5, 2026-09-18):** Fase 5 (`CareRequest`)
+fue implementada, auditada en 4 rondas de corrección (dominio/idempotencia, UI/browser, higiene
+de repositorio, consolidación final) y quedó formalmente cerrada — ver
+`docs/phases/phase-5-final-report.md` §41.K (`PHASE 5 — CLOSED`, commit
+`ff8abb8e1797dee728fe7c1d8d4052413b77d944` + consolidación documental `c4bf7f1`/`7ccfd7c`). Las
+decisiones arquitectónicas aprobadas para Fase 5 — dirección única `care_requests →
+appointments`, `AppointmentService` sin conocimiento de `CareRequest`, sin reverse accessor ORM
+(`related_name="+"`, §44 más abajo), `ClinicalDocument` asociado al resultado de `Appointment`
+sin nueva relación ni nuevo backend de almacenamiento — se mantienen sin cambio; este cierre es
+documental, no arquitectónico. La sección "Fase 5 — CareRequest" (§7.7 más abajo) y la lista
+"Fases futuras" más abajo, que aún describían Fase 5 como responsabilidad futura, se corrigen en
+el resumen siguiente y se marcan como histórico donde corresponde.
+
 ### Resumen de fases
 
 ```text
@@ -1483,8 +1501,8 @@ Fase 1 — Fundaciones                COMPLETADA (docs/phases/phase-1-foundation
 Fase 2 — Agenda                     COMPLETADA (docs/phases/phase-2-agenda-final-report.md)
 Fase 3 — Gestión clínica            COMPLETADA (docs/phases/phase-3-clinical-final-report.md — PHASE 3 — CLOSED)
 Fase 4 — Documentos                 COMPLETADA (docs/phases/phase-4-final-report.md — PHASE 4 — CLOSED)
-Fase 5 — CareRequest y operación    futura
-Fase 6 — Notificaciones y auditoría futura
+Fase 5 — CareRequest y operación    COMPLETADA (docs/phases/phase-5-final-report.md §41.K — PHASE 5 — CLOSED)
+Fase 6 — Notificaciones y auditoría siguiente
 ```
 
 ### Fase 1 — checklist original de construcción (histórico)
@@ -1517,11 +1535,11 @@ Fase 2 — Agenda (especificación funcional aprobada 2026-09-09, ver docs/phase
 Fase 3 — Gestión clínica (especificación funcional aprobada 2026-09-11, ver docs/phases/phase-3-clinical-encounter.md)
 ```
 
-### Fases futuras
+### Fases futuras (histórico, al cierre de Fase 4 — Fase 5 ya no es futura)
 
 ```text
-Fase 5 — CareRequest y operación
-Fase 6 — Notificaciones y auditoría
+Fase 5 — CareRequest y operación     [HISTORICAL — ver "Resumen de fases" arriba: COMPLETADA]
+Fase 6 — Notificaciones y auditoría  [vigente — es la fase siguiente]
 ```
 
 ---
