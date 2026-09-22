@@ -371,14 +371,37 @@ históricos) — detalle completo en `docs/phases/phase-6-implementation-summary
 - **Commit de cierre creado:** único archivo — `docs/phases/phase-6-implementation-summary.md`
   (todo el trabajo de esta etapa fue de validación y documentación, sin cambios de código).
 
-**FINAL AUDITED COMMIT:** `242c6ad784f4bacbca0ba26e305aa3810d3c21e4` (commit de cierre, §9 del
-prompt 2/3). Este mismo documento (`phase-6-final-report.md`) se actualiza para citar ese hash
-en un commit inmediatamente posterior — pequeño e indispensable únicamente por la auto-
-referencia (`final-report.md` no puede citar el hash de un commit que todavía no existe al
-momento de escribirse) — ese commit posterior es el que efectivamente deja el repositorio en el
-estado descrito por este documento; verificar con `git log -1` si se audita este archivo de
-forma aislada.
+**FINAL AUDITED COMMIT (prompt 2/3):** `242c6ad784f4bacbca0ba26e305aa3810d3c21e4`, corregido por
+auto-referencia a `b2f24f73b60a07ec086ddae6b663311a5539818f`. Ver §12 más abajo — ambos quedaron
+superados por un merge necesario antes de poder empujar al remoto.
 
 Todos los requisitos del prompt 2/3 se cumplieron. No se detectó ningún bloqueo.
 
-**Tag remoto:** todavía NO se crea — corresponde al prompt 3/3.
+## 12. Cierre formal — prompt 3/3: commit, tag, push y verificación (2026-09-22)
+
+Al iniciar la revisión previa de este prompt (`git fetch origin` + `git status`), se descubrió
+que `origin/main` había avanzado un commit (`1768ce1`) desde la última verificación: la rutina de
+auditoría en la nube programada en este mismo proyecto había corrido contra el `origin/main`
+vigente en ese momento (`cafa22b`) — anterior a cualquier trabajo de Fase 6, porque el
+propietario había decidido explícitamente no hacer `git push` todavía mientras la fase estaba en
+curso — y concluyó correctamente, dado lo que podía ver, `PHASE 6 NOT READY TO CLOSE (no
+iniciada)`, publicando su propio `docs/phases/phase-6-final-report.md` directamente en
+`origin/main`.
+
+Esto produjo una divergencia real (`origin/main` +1, local +24) con un conflicto
+agregar/agregar sobre este mismo archivo. Se consultó al propietario antes de continuar (no se
+resolvió el conflicto silenciosamente); su decisión explícita fue fusionar conservando
+íntegramente la versión local — el reporte real, construido sobre 24 commits de implementación,
+corrección y validación verificables, no el veredicto de una auditoría que nunca vio ese trabajo
+porque corrió contra un remoto que el propio propietario había mantenido deliberadamente
+desactualizado.
+
+**Commit funcional auditado (el merge que resuelve la divergencia):**
+`36fe37d4d4af9e4781e015ad054e22ad54637b92`
+
+**Commit final de cierre (esta actualización documental sobre el merge — auto-referencia, mismo
+patrón que todo este documento):** ver el commit inmediatamente posterior a esta sección.
+
+Son distintos únicamente por documentación: el commit funcional (`36fe37d`) ya contiene el
+contenido real y final de todos los documentos de Fase 6; el commit de cierre solo corrige las
+citas de hash que `36fe37d` no podía conocer de sí mismo en el momento de escribirse.

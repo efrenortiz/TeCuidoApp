@@ -1603,3 +1603,54 @@ Todos los requisitos del prompt 2/3 se cumplieron: tests verdes (847/847 + 4 sui
 evidencia browser válida y coherente con el código actual, PD-001..PD-008 consistentes,
 seguridad correcta, working tree limpio, release artifact limpio, commit de cierre creado. El
 tag remoto todavía **no** se crea — corresponde al prompt 3/3.
+
+---
+
+# Cierre formal — Prompt 3/3: commit, tag, push y verificación (2026-09-22)
+
+## Revisión previa (§1) — hallazgo antes de continuar
+
+`git fetch origin` (solo lectura) mostró que `origin/main` había avanzado de `cafa22b` a
+`1768ce1` desde la última verificación. Ese commit remoto era el resultado de la rutina de
+auditoría en la nube programada en este mismo proyecto, corriendo contra el `origin/main`
+vigente en ese momento — anterior a todo el trabajo de Fase 6, porque el propietario había
+decidido explícitamente no hacer `git push` mientras la fase estaba en curso. La auditoría
+concluyó, correctamente dado lo que podía ver, `PHASE 6 NOT READY TO CLOSE (no iniciada)`, y
+publicó su propio `docs/phases/phase-6-final-report.md` en `origin/main`.
+
+Esto es exactamente "cambios funcionales no previstos" en el sentido del §1 de este prompt — se
+detuvo el avance y se consultó al propietario antes de resolver nada (`AskUserQuestion`), en vez
+de fusionar/descartar silenciosamente. Decisión del propietario: fusionar, conservando
+íntegramente la versión local de `phase-6-final-report.md` (el reporte real, no el veredicto de
+una auditoría que nunca vio el trabajo real por estar corriendo contra un remoto deliberadamente
+desactualizado).
+
+## Merge (resuelve la divergencia)
+
+```text
+git merge origin/main --no-commit --no-ff
+  -> CONFLICTO (agregar/agregar): docs/phases/phase-6-final-report.md (único conflicto)
+git checkout --ours -- docs/phases/phase-6-final-report.md
+git add docs/phases/phase-6-final-report.md
+git commit
+```
+
+**Commit funcional auditado:** `36fe37d4d4af9e4781e015ad054e22ad54637b92` — contiene el
+contenido real y final de todos los documentos de Fase 6, incluida la resolución del conflicto.
+
+Verificación post-merge: `python manage.py check` → limpio; `makemigrations --check` → sin
+cambios. `git status --short --branch` → `## main...origin/main [adelante 25]` (divergencia
+resuelta, relación limpia de nuevo).
+
+## Commit de cierre (documental, corrige las citas de hash)
+
+`docs/phases/phase-6-final-report.md` y este documento no podían citar el hash de `36fe37d` en
+el momento de escribirse (no existía todavía) — mismo problema de auto-referencia resuelto en
+cada ronda anterior. Este párrafo se escribe y commitea en el commit inmediatamente posterior a
+`36fe37d`, que por tanto pasa a ser el **commit final de cierre** citado en la respuesta final de
+este prompt.
+
+Continúa en las siguientes secciones (§6-§11 del prompt: tag, push, verificación remota, release
+artifact, limpieza) — ver la respuesta final entregada al propietario para el resumen verificable
+completo (commit funcional, commit de cierre, tag, `origin/main`, tag remoto, tests, migrations,
+evidencia, release, SHA256, working tree).
