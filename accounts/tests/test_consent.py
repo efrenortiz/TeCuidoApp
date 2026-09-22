@@ -177,7 +177,12 @@ class ConsentDocumentReferenceTests(TestCase):
         url = consent_service.document_url(PolicyAcceptance.PolicyType.PRIVACY_NOTICE, "1.0")
         self.assertEqual(url, "https://example.com/aviso-de-privacidad")
 
+    @override_settings(LEGAL_DOCUMENT_URLS={})
     def test_document_url_is_empty_string_when_unconfigured(self):
+        # Prompt 3/4 (consolidación documental): el estado "no configurado" se fuerza
+        # explícitamente en vez de depender de que el entorno ambiente no tenga
+        # PRIVACY_NOTICE_URL/TERMS_AND_CONDITIONS_URL — un .env local con esas variables
+        # (p. ej. para validación en navegador, Prompt 2/4) no debe poder romper este test.
         url = consent_service.document_url(PolicyAcceptance.PolicyType.PRIVACY_NOTICE, "1.0")
         self.assertEqual(url, "")
 
