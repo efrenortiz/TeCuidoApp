@@ -1423,14 +1423,14 @@ que faltaba: el commit final auditado.
 ## Final audited commit
 
 ```text
-git rev-parse HEAD
+4f5e8c0ecb9a403fada16c8eded5d9bd56a1bed4
 ```
 
-Ver auto-referencia en el commit inmediatamente posterior a esta consolidación (mismo patrón ya
-usado en todo este documento — `79697e0`, `46a16af`, `a0793f0`, `899dcc4`, `5a903ba`/`d94a94b` —
-no confiar en un hash citado por adelantado). **Este no es el commit definitivo de cierre**: es
-el commit de la consolidación documental (prompt 1/3). El commit/tag de cierre definitivo se
-crea en el prompt 2/3, después de la revalidación completa.
+Auto-referencia trivial, mismo patrón ya usado en todo este documento — `79697e0`, `46a16af`,
+`a0793f0`, `899dcc4`, `5a903ba`/`d94a94b` — no confiar en este hash citado, volver a ejecutar
+`git rev-parse HEAD` en cualquier verificación posterior. **Este no es el commit definitivo de
+cierre**: es el commit de la consolidación documental (prompt 1/3). El commit/tag de cierre
+definitivo se crea en el prompt 2/3, después de la revalidación completa.
 
 ## Tag final
 
