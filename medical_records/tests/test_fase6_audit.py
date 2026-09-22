@@ -222,6 +222,23 @@ class AuditTrailAccessTests(TestCase):
         event_ids = [e.pk for e in response.context["page"].object_list]
         self.assertNotIn(old_event.pk, event_ids)
 
+    def test_ui_ignores_non_numeric_patient_id_instead_of_crashing(self):
+        """C-020 (prompt 2/4, validación browser/UI de Fase 6): un
+        `patient_id` no numérico en el filtro de la UI producía un
+        `ValueError` sin capturar (500), a diferencia del API
+        (`AuditEventListView._parse_int`, ya validaba con un 400
+        controlado). Mismo criterio permisivo que `date_from`/`date_to`: un
+        filtro de UI opcional con un valor inválido se ignora, no rompe la
+        pantalla."""
+        client = Client()
+        client.force_login(self.admin_user)
+        response = client.get("/clinica/auditoria/", {"patient_id": "abc"})
+        self.assertEqual(response.status_code, 200)
+        # El valor crudo se conserva en el formulario (mismo criterio que
+        # date_from/date_to con un valor no parseable), pero no se aplicó
+        # como filtro de paciente — la consulta no se rompió.
+        self.assertEqual(response.context["filters"]["patient_id"], "abc")
+
     def test_no_cache_headers_on_api(self):
         client = Client()
         client.force_login(self.admin_user)
