@@ -337,7 +337,20 @@ class AuditTrailView(ClinicalView):
 
         patient = None
         if patient_id:
-            patient = Patient.objects.filter(pk=patient_id).first()
+            # C-020 (prompt 2/4, validación browser/UI de Fase 6): un
+            # `patient_id` no numérico (p. ej. un typo) hacía que
+            # `Patient.objects.filter(pk=patient_id)` propagara un
+            # `ValueError` sin capturar — 500 no controlado en una pantalla
+            # de administrador. Mismo criterio permisivo ya usado por
+            # `_parse_ui_date` arriba: un filtro de UI opcional con un
+            # valor inválido se ignora, no rompe la pantalla. La API
+            # (`AuditEventListView._parse_int`) ya validaba esto con un 400
+            # controlado — esta corrección solo alinea la UI con ese mismo
+            # estándar, no introduce una regla nueva.
+            try:
+                patient = Patient.objects.filter(pk=int(patient_id)).first()
+            except (TypeError, ValueError):
+                patient = None
 
         date_from = _parse_ui_date(date_from_raw, end_of_day=False)
         date_to = _parse_ui_date(date_to_raw, end_of_day=True)
