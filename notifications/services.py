@@ -13,8 +13,11 @@ las relaciones de dominio existentes y gestiona el ciclo de vida de
 
 import datetime as dt
 import logging
+import smtplib
 
-from django.core.mail import send_mail
+from django.core.exceptions import ValidationError
+from django.core.mail import BadHeaderError, send_mail
+from django.core.validators import validate_email
 from django.db import IntegrityError, transaction
 from django.utils import timezone as dj_timezone
 
@@ -47,12 +50,21 @@ def _backoff_seconds(attempt_count):
 
 
 class TransportResult:
-    """Resultado de un intento de transporte (docs/design/phase-6-notification-service-contracts.md §8)."""
+    """Resultado de un intento de transporte (docs/design/phase-6-notification-service-contracts.md §8).
 
-    def __init__(self, *, ok, provider_reference="", reason_code=""):
+    Prompt 1 de la ronda de corrección post-implementación (§3, "diferenciar
+    fallos transitorios y permanentes"): `is_permanent` distingue, cuando es
+    técnicamente determinable, un fallo que ningún reintento puede resolver
+    (dirección con formato inválido, encabezado malformado, destinatario
+    rechazado por el servidor) de uno transitorio (timeout de red,
+    servidor no disponible) — sin inventar categorías de negocio nuevas, solo
+    a partir del tipo de excepción/validación técnica."""
+
+    def __init__(self, *, ok, provider_reference="", reason_code="", is_permanent=False):
         self.ok = ok
         self.provider_reference = provider_reference
         self.reason_code = reason_code
+        self.is_permanent = is_permanent
 
 
 class EmailTransport:
@@ -66,7 +78,21 @@ class EmailTransport:
         """Hallazgo 12.7 (docs/phases/phase-6-implementation-summary.md):
         no basta con "sin excepción" — `send_mail` devuelve el número de
         mensajes efectivamente entregados por el backend; un backend que
-        "no falla" pero reporta 0 entregas no debe marcarse `SENT`."""
+        "no falla" pero reporta 0 entregas no debe marcarse `SENT`.
+
+        Fallo permanente vs. transitorio (Prompt 1, §3): un formato de
+        dirección inválido se detecta *antes* de intentar el transporte —
+        ningún reintento lo arreglaría. `SMTPRecipientsRefused`/
+        `BadHeaderError` (el servidor rechazó explícitamente al
+        destinatario, o el encabezado es inválido) también son permanentes.
+        Cualquier otra excepción (timeout, conexión rechazada, servidor no
+        disponible) se trata como transitoria — sujeta a reintento."""
+        try:
+            validate_email(recipient_address)
+        except ValidationError:
+            logger.warning("Dirección de destino con formato inválido: %s", recipient_address)
+            return TransportResult(ok=False, reason_code="INVALID_RECIPIENT_FORMAT", is_permanent=True)
+
         try:
             delivered = send_mail(
                 subject=subject,
@@ -75,8 +101,11 @@ class EmailTransport:
                 recipient_list=[recipient_address],
                 fail_silently=False,
             )
+        except (smtplib.SMTPRecipientsRefused, BadHeaderError) as exc:
+            logger.warning("Fallo permanente de transporte hacia %s: %s", recipient_address, exc)
+            return TransportResult(ok=False, reason_code="RECIPIENT_REJECTED", is_permanent=True)
         except Exception as exc:  # noqa: BLE001 — un fallo de proveedor nunca debe propagarse
-            logger.warning("Fallo de transporte de Email hacia %s: %s", recipient_address, exc)
+            logger.warning("Fallo transitorio de transporte hacia %s: %s", recipient_address, exc)
             return TransportResult(ok=False, reason_code="TRANSPORT_ERROR")
         if not delivered:
             logger.warning("Transporte de Email hacia %s reportó 0 entregas.", recipient_address)
@@ -209,6 +238,13 @@ def _attempt_send(notification, *, message_override=None):
         notification.status = Notification.Status.SENT
         notification.sent_at = dj_timezone.now()
         notification.reason_code = ""
+    elif result.is_permanent:
+        # Fallo permanente (Prompt 1, §3): terminal de inmediato, sin
+        # esperar a agotar MAX_DELIVERY_ATTEMPTS — ningún reintento
+        # cambiaría un formato de dirección inválido o un rechazo
+        # explícito del servidor.
+        notification.status = Notification.Status.FAILED
+        notification.reason_code = f"PERMANENT:{result.reason_code}"
     elif notification.attempt_count >= MAX_DELIVERY_ATTEMPTS:
         notification.status = Notification.Status.FAILED
         notification.reason_code = f"MAX_ATTEMPTS_EXCEEDED:{result.reason_code}"
@@ -463,7 +499,18 @@ def reschedule_appointment_reminders(appointment):
     vez y todavía es elegible para reintento (`attempt_count <
     MAX_DELIVERY_ATTEMPTS`) sigue siendo una tarea futura pendiente de esta
     cita; dejarlo fuera de este recálculo habría permitido que se
-    reintentara más tarde con la fecha de la cita ya obsoleta."""
+    reintentara más tarde con la fecha de la cita ya obsoleta.
+
+    `SENDING` deliberadamente no se toca aquí (Prompt 1, corrección
+    post-implementación, §4): es un estado transitorio de milisegundos, y
+    `_render(...)` siempre relee la `Appointment` desde la base de datos en
+    el momento del envío — un recordatorio ya en `SENDING` durante una
+    reprogramación termina reflejando igualmente la fecha nueva, sin
+    necesidad de tocar su fila. Solo queda una ventana de carrera
+    extremadamente estrecha (milisegundos) entre la verificación de
+    elegibilidad de `process_due_notifications` y el envío real, aceptada
+    y documentada en vez de resuelta con locking adicional no justificado
+    por el volumen actual del proyecto."""
     affected = Notification.objects.filter(
         event_type=Notification.EventType.APPOINTMENT_REMINDER,
         resource_type=Notification.ResourceType.APPOINTMENT,
@@ -563,24 +610,48 @@ def process_due_notifications(now=None):
                 )
                 | Q(status=Notification.Status.SENDING, last_attempt_at__lte=stale_sending_cutoff)
             )
+            # Un fallo marcado PERMANENT (§3) es terminal de inmediato,
+            # incluso si attempt_count todavía no llega al máximo — nunca
+            # debe volver a reclamarse para un nuevo intento.
+            .exclude(reason_code__startswith="PERMANENT:")
         )
-        due_ids = list(claimable.filter(event_type__in=_RETRYABLE_EVENT_TYPES).values_list("pk", flat=True))
-        # Huérfanas no reintentables: se cierran, no se reenvían (ver
-        # docstring — su contenido de un solo uso ya no es reconstruible).
-        orphaned_non_retryable_ids = list(
-            claimable.filter(status=Notification.Status.SENDING)
-            .exclude(event_type__in=_RETRYABLE_EVENT_TYPES)
+        # Corrección (Prompt 1 de la ronda de corrección post-implementación,
+        # docs/phases/phase-6-implementation-summary.md): la rama SENDING de
+        # arriba, a diferencia de la de PENDING/FAILED, no filtraba por
+        # `attempt_count` — una fila huérfana que ya había alcanzado
+        # `MAX_DELIVERY_ATTEMPTS` en su último intento (proceso interrumpido
+        # justo después de incrementar `attempt_count` pero antes de
+        # persistir el resultado) podía reclamarse igual y recibir un sexto
+        # intento real de envío. `.exclude(...)` cierra ese hueco: una
+        # SENDING huérfana que ya agotó el máximo nunca entra a `due_ids`.
+        due_ids = list(
+            claimable.filter(event_type__in=_RETRYABLE_EVENT_TYPES)
+            .exclude(status=Notification.Status.SENDING, attempt_count__gte=MAX_DELIVERY_ATTEMPTS)
             .values_list("pk", flat=True)
         )
+        # Todo lo demás que sea SENDING huérfano (tipo no reintentable, o
+        # tipo reintentable que ya agotó el máximo de intentos) se cierra
+        # sin generar ningún intento adicional.
+        closed_without_resend = list(
+            claimable.filter(status=Notification.Status.SENDING)
+            .exclude(pk__in=due_ids)
+            .values_list("pk", "attempt_count")
+        )
+        closed_without_resend_ids = [pk for pk, _attempts in closed_without_resend]
+        exhausted_ids = [pk for pk, attempts in closed_without_resend if attempts >= MAX_DELIVERY_ATTEMPTS]
+        non_retryable_ids = [pk for pk in closed_without_resend_ids if pk not in exhausted_ids]
         # Reclamo inmediato: un worker concurrente que corra
         # `skip_locked=True` sobre las mismas filas ya no las verá
         # disponibles una vez que este bloque haga commit.
         Notification.objects.filter(pk__in=due_ids).update(status=Notification.Status.SENDING)
-        Notification.objects.filter(pk__in=orphaned_non_retryable_ids).update(
+        Notification.objects.filter(pk__in=exhausted_ids).update(
+            status=Notification.Status.FAILED, reason_code="MAX_ATTEMPTS_EXCEEDED:ORPHANED_SENDING",
+        )
+        Notification.objects.filter(pk__in=non_retryable_ids).update(
             status=Notification.Status.FAILED, reason_code="ORPHANED_NON_RETRYABLE_SENDING",
         )
 
-    sent, skipped = 0, len(orphaned_non_retryable_ids)
+    sent, skipped = 0, len(closed_without_resend_ids)
     for pk in due_ids:
         notification = Notification.objects.get(pk=pk)
         if notification.event_type == Notification.EventType.APPOINTMENT_REMINDER:
