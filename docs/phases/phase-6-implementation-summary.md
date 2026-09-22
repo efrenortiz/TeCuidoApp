@@ -822,6 +822,12 @@ Ningún archivo de Fases 1-5 fue tocado fuera de los puntos de enganche mínimos
 §4 y ampliados en esta ronda por C-001 (`medical_records/admin.py`) y C-006
 (`accounts/admin.py::PersonAdmin`).
 
+> Nota (2026-09-22): este §16 es el snapshot histórico de la ronda de corrección que cerró esta
+> sección. Una ronda posterior de 7 prompts secuenciales (ver "Ronda de refinamiento (Prompts 1-7
+> secuenciales)" más abajo) corrigió C-012/C-013 y actualizó el estado a `PHASE 6 — READY FOR
+> CLOSURE` (840/840 tests) — ese es el estado vigente, no el de este párrafo. Se conserva este
+> texto sin alterar por trazabilidad, no por vigencia.
+
 ## 17. Recomendaciones posteriores
 
 - Configurar `SITE_BASE_URL`, `PRIVACY_NOTICE_URL` y `TERMS_AND_CONDITIONS_URL` en el entorno de
@@ -860,3 +866,177 @@ segunda infraestructura de auditoría, segunda fuente de verdad para `Appointmen
 `notifications/`, `accounts/api.py`, `accounts/services/consent.py`, `medical_records/api.py` sin
 resultados relevantes — ver evidencia en la respuesta final). No se reabrió ninguna Fase 1-5 más
 allá de los puntos de enganche mínimos y ya documentados (§4, C-001, C-006).
+
+---
+
+# Ronda de refinamiento — 7 prompts secuenciales (2026-09-22)
+
+Segunda ronda de corrección post-implementación, ejecutada como secuencia de 7 prompts (retry/
+estados de notificaciones; auditoría y seguridad; consentimientos; emails; consolidación
+documental; validación en navegador; validación final). Antes de cada prompt se releyó el estado
+real del repositorio, `requirements.md`, `docs/architecture.md`,
+`docs/phases/phase-6-design-freeze.md` y este mismo documento, confirmando que cada corrección
+solicitada seguía siendo necesaria antes de tocar código.
+
+## Nuevas decisiones técnicas
+
+### ITD-015 — Clasificación de fallos permanentes vs. transitorios en el transporte
+
+- Problema: Prompt 1 pide "diferenciar fallos transitorios y permanentes cuando sea técnicamente
+  posible" sin inventar categorías de negocio nuevas.
+- Decisión: `EmailTransport.send` valida el formato de la dirección con
+  `django.core.validators.validate_email` **antes** de intentar el transporte (un formato
+  inválido nunca se arregla con un reintento); además clasifica `smtplib.SMTPRecipientsRefused`/
+  `django.core.mail.BadHeaderError` como permanentes (el servidor rechazó explícitamente al
+  destinatario, o el encabezado es inválido) y cualquier otra excepción como transitoria.
+  `TransportResult.is_permanent` propaga la clasificación; `_attempt_send` cierra un fallo
+  permanente como `FAILED` terminal de inmediato (`reason_code` prefijado `PERMANENT:`), sin
+  esperar a `MAX_DELIVERY_ATTEMPTS`.
+- Impacto: `process_due_notifications` excluye explícitamente
+  (`.exclude(reason_code__startswith="PERMANENT:")`) estas filas de cualquier reclamo futuro —
+  bug encontrado y corregido en el mismo pase (ver C-012).
+- Archivos: `notifications/services.py`.
+
+## Nuevas correcciones
+
+### C-012 — `SENDING` huérfana en `MAX_DELIVERY_ATTEMPTS` podía recibir un intento adicional (hallazgo explícito del Prompt 1, §1)
+
+- Problema: la rama de reclamo de filas `SENDING` huérfanas en `process_due_notifications`
+  filtraba por `last_attempt_at` vencido pero **no** por `attempt_count` — a diferencia de la
+  rama `PENDING`/`FAILED`, que sí lo hacía. Una fila `SENDING` interrumpida justo después de su
+  último intento permitido podía reclamarse y recibir un sexto envío real.
+- Causa: asimetría entre las dos ramas del filtro `Q(...)` original, introducida en la
+  implementación inicial de PD-007 (ronda anterior) y no cubierta por ningún test hasta este
+  prompt.
+- Solución: `due_ids` excluye explícitamente `SENDING` con `attempt_count >= MAX_DELIVERY_ATTEMPTS`;
+  esas filas (junto con las `SENDING` de tipo no reintentable) se cierran directamente como
+  `FAILED` con `reason_code=MAX_ATTEMPTS_EXCEEDED:ORPHANED_SENDING`, sin ningún intento de envío.
+- Archivos: `notifications/services.py::process_due_notifications`.
+- Tests: `test_orphaned_sending_at_max_attempts_is_not_reclaimed_for_another_attempt`.
+
+### C-013 — Fallo permanente podía seguir reclamándose antes de agotar `MAX_DELIVERY_ATTEMPTS`
+
+- Problema: al introducir ITD-015, un fallo marcado `PERMANENT:` con `attempt_count` todavía bajo
+  seguía cumpliendo el filtro original (`attempt_count < MAX_DELIVERY_ATTEMPTS`) y volvía a
+  reclamarse en la siguiente ejecución de `process_due_notifications` — contradiciendo la propia
+  intención de "permanente" (cerrar de inmediato, sin reintentos).
+- Causa: el filtro de reclamo no conocía la distinción permanente/transitorio recién introducida.
+- Solución: `.exclude(reason_code__startswith="PERMANENT:")` en la consulta de reclamo.
+- Archivos: `notifications/services.py::process_due_notifications`.
+- Tests: `test_permanently_failed_notification_is_never_reclaimed`,
+  `test_invalid_recipient_format_fails_permanently_without_waiting_for_max_attempts`.
+
+### C-014 — Rol explícito en la cobertura de acceso al audit trail (Prompt 2)
+
+- Problema: la cobertura previa de "no administrador denegado" solo probaba con un médico; el
+  Prompt 2 exige casos explícitos de paciente, responsable, médico e inactivo por separado.
+- Solución: tests nuevos por rol (paciente, responsable, usuario inactivo) contra API y UI.
+- Archivos: solo tests — ningún código de producción cambió (ya era correcto).
+- Tests: `medical_records/tests/test_fase6_audit.py::AuditTrailAccessTests::
+  test_patient_is_denied_audit_trail`, `::test_responsible_is_denied_audit_trail`,
+  `RejectionAuditCoverageTests::test_inactive_user_login_is_not_a_success_event`.
+
+### C-015 — Referencia canónica de documento no probada cuando está configurada (Prompt 3)
+
+- Problema: `document_url`/`acceptance_status` solo se habían probado con `LEGAL_DOCUMENT_URLS`
+  vacío (comportamiento por defecto); faltaba evidencia de que el mecanismo funciona cuando el
+  operador sí configura una URL real.
+- Solución: tests con `override_settings(LEGAL_DOCUMENT_URLS=...)`.
+- Archivos: solo tests.
+- Tests: `accounts/tests/test_consent.py::ConsentDocumentReferenceTests` (3 tests).
+
+### C-016 — Cobertura del evento "cita modificada" y del enlace del correo (Prompt 4)
+
+- Problema: `EmailContentTests` cubría creada/cancelada/recordatorio pero no modificada; tampoco
+  existía una verificación explícita de que el enlace del correo apunte a una vista realmente
+  protegida por autorización (no una ruta nueva sin protección propia).
+- Solución: tests nuevos.
+- Archivos: solo tests.
+- Tests: `notifications/tests/test_services.py::EmailContentTests::test_modified_email_content`,
+  `::test_link_points_to_authorization_protected_view_no_bypass`.
+
+### C-017 — Precisión de PD-002 en `phase-6-design-freeze.md` (Prompt 5)
+
+- Problema: §11/§12 del Design Freeze seguían afirmando, sin matiz, que "todo rechazo... debe
+  generar un `AuditEvent`" — una formulación más amplia que la excepción real ya implementada y
+  cerrada por PD-002 (boundary instrumentado + actor identificable). El Prompt 5 exige
+  explícitamente que "no debe existir una formulación normativa más amplia que contradiga la
+  implementación aprobada".
+- Causa: el Design Freeze nunca se actualizó cuando PD-002 se cerró en la ronda anterior — solo
+  se actualizaron los documentos derivados (`phase-6-audit-domain.md`).
+- Solución: nota de precisión añadida en ambas secciones, citando la excepción exacta y
+  remitiendo a `phase-6-audit-domain.md` §4 y a este documento. No se reabre ni se debilita la
+  regla general — se aclara su alcance ya cerrado.
+- Archivos: `docs/phases/phase-6-design-freeze.md` §11/§12.
+
+### C-018 — README.md y docs/architecture.md seguían diciendo "Fase 6 siguiente" (Prompt 5)
+
+- Problema: estos dos documentos —nunca tocados en la ronda de corrección anterior— seguían
+  describiendo Fase 6 como "⏭️ SIGUIENTE"/"la fase siguiente", contradiciendo el estado real
+  (implementada) ya reflejado en toda la documentación específica de Fase 6.
+- Solución: actualizados a "🔄 IMPLEMENTADA — pendiente de auditoría de cierre formal
+  independiente", con referencia a este documento y a `phase-6-final-report.md`. No se declara
+  `COMPLETADA`/`CLOSED` — esa declaración sigue reservada a la auditoría de cierre formal.
+- Archivos: `README.md`, `docs/architecture.md` (banner superior, "Resumen de fases", "Fases
+  futuras (histórico)").
+
+## Evidencia de navegador (Prompt 6)
+
+Ver `docs/phases/evidence/phase-6-browser-validation/README.md` — 8 capturas reales verificadas
+(no simuladas ni `django.test.Client`): consentimiento (pendiente → aceptado), acceso al audit
+trail por rol (paciente/médico/responsable denegados con 404 uniforme; administrador permitido
+con datos reales; anónimo redirigido a login), filtro de fecha funcionando en vivo, y contenido
+real de un correo "Cita reservada" impreso por el backend de consola. El documento de evidencia
+también reporta con transparencia un incidente de la propia secuencia de automatización (sesión
+no cerrada correctamente en dos intentos iniciales) y cómo se detectó y corrigió antes de aceptar
+cualquier captura como válida.
+
+## Regresión de esta ronda
+
+```text
+python manage.py check                                     -> System check identified no issues (0 silenced)
+python manage.py makemigrations --check --dry-run           -> No changes detected
+python manage.py test (suite completa del proyecto, -v 1)   -> Ran 840 tests in 563.110s — OK
+                                                                 (828 -> 840; +12 sobre la ronda
+                                                                 anterior: +6 notifications
+                                                                 [C-012/C-013/C-016 y refuerzos],
+                                                                 +3 medical_records [C-014],
+                                                                 +3 accounts [C-015])
+```
+
+Las trazas de excepción que imprime la corrida completa (`simulated outage`, `SMTP caído`,
+`Dirección de destino con formato inválido`, `reportó 0 entregas`) son de tests que simulan
+deliberadamente esos fallos (mocks con `side_effect`) para verificar degradación segura —
+`safe_record_event` y `EmailTransport`/`_attempt_send` las capturan y continúan; no son fallos
+reales de la corrida, que terminó `OK` con `exit code 0`. Cero regresiones detectadas en Fases
+1-5: la corrida ejecuta la suite completa del proyecto, no solo la de Fase 6.
+
+## Verificación final de las ocho decisiones (Prompt 7)
+
+| PD | Decisión | Código | Tests | Documentación | Estado |
+|---|---|---|---|---|---|
+| PD-001 | `ADMIN_SENSITIVE_ACCESS` sin uso | Sin cambios — sigue sin emisor, por diseño | N/A (ausencia verificada) | `phase-6-audit-domain.md` §3 | CONSISTENTE |
+| PD-002 | Excepción de rechazos previos al boundary | Sin cambios de código — ya correcto | `LoginAuditTests`, `RejectionAuditCoverageTests` | `phase-6-audit-domain.md` §4 + **`phase-6-design-freeze.md` §11/§12 (C-017, cierra la formulación más amplia)** | CONSISTENTE |
+| PD-003 | Password Recovery nativo | Sin cambios — `PasswordResetView` intacto | Regresión de `accounts` | `phase-6-notification-domain.md` §3 | CONSISTENTE |
+| PD-004 | Configuración hacia adelante | Sin cambios — ya era el comportamiento natural | `ReminderSchedulingTests` | `phase-6-notification-data-model.md` §2.2 | CONSISTENTE |
+| PD-005 | Email + enlace | Sin cambios de código — cobertura ampliada (C-016) | `EmailContentTests` (5 tests, los 4 eventos + no-bypass) | `phase-6-notification-security-and-privacy.md` §1 | CONSISTENTE |
+| PD-006 | Documentos externos versionados | Sin cambios de código — cobertura ampliada (C-015) | `ConsentDocumentReferenceTests` + evidencia de navegador | `phase-6-consent-domain.md` §1 | CONSISTENTE |
+| PD-007 | Retries limitados + backoff | **Corregido** (C-012/C-013, ITD-015) | `RetryBackoffTests` (11 tests) | `phase-6-notification-domain.md` §6, `phase-6-notification-service-contracts.md` §4 | CONSISTENTE |
+| PD-008 | Reutilización de `AuditEvent` | Sin cambios — sigue siendo la única fuente | Toda `test_fase6_audit.py` | `phase-6-audit-domain.md` §2 | CONSISTENTE |
+
+Ninguna PD quedó en `PENDIENTE`, `PARCIAL`, `CONTRADICTORIO` ni `AUSENTE`. No apareció ningún
+`PD-009` — todos los hallazgos de esta ronda fueron técnicos, resueltos sin tocar alcance,
+política ni ninguna de las ocho decisiones cerradas.
+
+## Estado recomendado tras esta ronda
+
+```text
+PHASE 6 — READY FOR CLOSURE
+```
+
+No es una autodeclaración de `PHASE 6 — CLOSED` — sigue reservada a una auditoría de cierre
+formal independiente (ver `docs/phases/phase-6-final-report.md`). Significa que, hasta donde esta
+implementación puede verificar por sí misma: las 7 decisiones F6-D01..F6-D07 y las 8 PD-001..
+PD-008 están implementadas, probadas y documentadas sin contradicciones; la regresión completa
+pasa; existe evidencia de navegador real; y no quedan hallazgos técnicos abiertos de los 7 prompts
+de esta ronda.

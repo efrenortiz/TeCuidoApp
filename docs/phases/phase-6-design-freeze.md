@@ -295,6 +295,16 @@ Los documentos derivados deberán convertir estos elementos en una taxonomía t�
 
 Además, **todo rechazo correspondiente a una operación incluida en el catálogo base debe generar un `AuditEvent`**. Esto permite registrar intentos no autorizados o rechazados además de las operaciones efectivamente realizadas.
 
+**Precisión PD-002 (decisión final del propietario, incorporada en la ronda de corrección
+post-implementación — no reabre esta regla, la precisa):** esta obligación aplica a los rechazos
+que alcanzan el boundary instrumentado de TeCuidoApp y para los que puede identificarse un actor
+real (`User`) al que atribuir el evento — `record_event`/`safe_record_event` exigen un actor real
+por invariante ya cerrada de Fase 3 (AH-086), y esta fase no la relaja. Quedan fuera, sin que ello
+incumpla esta regla: fallos previos al boundary de auditoría, rechazos del framework anteriores a
+la instrumentación propia de TeCuidoApp, y casos en los que no puede resolverse ningún actor (p.
+ej. un intento de login contra un correo que no existe en el sistema). Detalle completo y ejemplos
+en `docs/design/phase-6-audit-domain.md` §4 y `docs/phases/phase-6-implementation-summary.md`.
+
 ---
 
 ## 12. Principios de auditoría
@@ -320,7 +330,7 @@ Los eventos pueden distinguir:
 - error;
 - repetición/idempotencia cuando aplique.
 
-La auditoría de Fase 6 exige registrar los **rechazos de las operaciones comprendidas en el catálogo base**.
+La auditoría de Fase 6 exige registrar los **rechazos de las operaciones comprendidas en el catálogo base**, con la misma precisión PD-002 de §11: dentro del boundary instrumentado y con actor identificable.
 
 ---
 
