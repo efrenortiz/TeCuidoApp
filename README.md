@@ -13,7 +13,7 @@ Estado actual del proyecto (2026-09-22):
 | Fase 3 — Gestión clínica | ✅ COMPLETADA (`docs/phases/phase-3-clinical-final-report.md`) |
 | Fase 4 — Documentos | ✅ COMPLETADA (`docs/phases/phase-4-final-report.md`) |
 | Fase 5 — CareRequest y operación | ✅ COMPLETADA (`docs/phases/phase-5-final-report.md` §41.K — `PHASE 5 — CLOSED`) |
-| Fase 6 — Notificaciones y auditoría | 🔄 IMPLEMENTADA — pendiente de auditoría de cierre formal independiente (`docs/phases/phase-6-implementation-summary.md`, `docs/phases/phase-6-final-report.md`) |
+| Fase 6 — Notificaciones y auditoría | ✅ COMPLETADA (`docs/phases/phase-6-final-report.md` — `PHASE 6 — CLOSED`, tag `fase-6-closed`) |
 
 ## Stack
 

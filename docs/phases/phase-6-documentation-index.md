@@ -3,14 +3,12 @@
 **Estado:** DESIGN PACKAGE — derivado del Design Freeze v1.1
 **Fecha:** 2026-09-20
 
-> **Estado de implementación (2026-09-22):** el paquete descrito por este índice ya está
-> implementado, corregido y validado — `PHASE 6 — PREPARED FOR FINAL VALIDATION` (ver
-> `docs/phases/phase-6-implementation-summary.md` para el estado técnico completo y
-> `docs/phases/phase-6-final-report.md` para el reporte consolidado). Este documento aún **no**
-> declara `PHASE 6 — CLOSED` — esa declaración solo puede hacerse tras la revalidación completa y
-> el commit definitivo de cierre (segunda etapa de esta consolidación). Este índice conserva su
-> función original de navegación del paquete de diseño; no se reescribe como historial de
-> implementación.
+> **Estado de implementación (2026-09-22):** el paquete descrito por este índice está
+> implementado, corregido, validado y formalmente cerrado — `PHASE 6 — CLOSED` (tag
+> `fase-6-closed`; ver `docs/phases/phase-6-final-report.md` para el registro de cierre completo
+> y `docs/phases/phase-6-implementation-summary.md` para la bitácora técnica). Este índice
+> conserva su función original de navegación del paquete de diseño; no se reescribe como
+> historial de implementación.
 
 ## 1. Propósito
 
@@ -82,7 +80,5 @@ Implementation Handoff
 ## 5. Estado
 
 Este índice documenta el paquete de diseño. El estado real de implementación es
-`PHASE 6 — PREPARED FOR FINAL VALIDATION` (ver la nota al inicio de este documento y
-`docs/phases/phase-6-implementation-summary.md`) — no declara, ni antes ni ahora,
-`PHASE 6 — CLOSED`; esa declaración solo se hará una vez que la etapa de revalidación final
-(segunda etapa del cierre formal) confirme el commit definitivo y no queden hallazgos abiertos.
+`PHASE 6 — CLOSED` (tag `fase-6-closed`, ver la nota al inicio de este documento y
+`docs/phases/phase-6-final-report.md` para el registro de cierre completo).

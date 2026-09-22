@@ -1,21 +1,42 @@
 # TeCuidoApp — Fase 6 Final Report
 
-**Estado:** `PHASE 6 — READY TO TAG`. Todavía **no** es una autodeclaración de cierre —
-`PHASE 6 — CLOSED` y el tag remoto se declaran únicamente en la tercera etapa del cierre formal
-(prompt 3/3), después de confirmar este commit de cierre. Este documento registra la evidencia
-con la que esa etapa posterior, y cualquier auditoría independiente, puede verificar el estado,
-sin sustituirlas.
+**Estado:** `PHASE 6 — CLOSED`
+
 **Fecha del diseño:** 2026-09-20
-**Fecha de esta consolidación:** 2026-09-22 (cierre formal, prompt 2/3 — validación final y
-commit de cierre)
+**Fecha de cierre formal:** 2026-09-22 (prompt 3/3 — commit, tag, push y verificación)
 
 > Ver `docs/phases/phase-6-implementation-summary.md` para la bitácora técnica completa (ITD-001
 > a ITD-015, correcciones C-001 a C-020). Progresión del estado: `READY FOR CLOSURE` (ronda de 7
-> prompts) → `READY FOR FINAL AUDIT` (tras encontrar C-019/C-020 en la ronda de corrección
-> funcional de 4 prompts) → `PREPARED FOR FINAL VALIDATION` (prompt 1/3 del cierre formal) →
-> `READY TO TAG` (esta validación — prompt 2/3). Ningún hallazgo funcional nuevo desde la última
-> ronda; PD-001..PD-008 permanecen cerradas sin modificación. Commit de cierre:
-> `242c6ad784f4bacbca0ba26e305aa3810d3c21e4`.
+> prompts) → `READY FOR FINAL AUDIT` (ronda de corrección funcional, C-019/C-020) →
+> `PREPARED FOR FINAL VALIDATION` (prompt 1/3) → `READY TO TAG` (prompt 2/3) → **`CLOSED`**
+> (prompt 3/3, este documento). PD-001..PD-008 permanecen cerradas sin modificación en toda la
+> progresión.
+
+## Registro de cierre verificado
+
+| Campo | Valor |
+|---|---|
+| Commit funcional auditado | `36fe37d4d4af9e4781e015ad054e22ad54637b92` (merge que resuelve la divergencia con `origin/main`, contiene el contenido real y final) |
+| Commit final de cierre | `479dbb1ad5ed5b37d36a66f14d3d2923dc4e1ca2` (corrige las citas de hash sobre el merge — documental) |
+| Tag | `fase-6-closed` (objeto de tag anotado: `3f0e37e22eebe6e54f2fce92f3cd08741acf1d3d`, apunta a `479dbb1ad5ed5b37d36a66f14d3d2923dc4e1ca2`) |
+| `origin/main` | `479dbb1ad5ed5b37d36a66f14d3d2923dc4e1ca2` (idéntico al commit de cierre — verificado tras `git push`) |
+| Remote tag (dereferenciado) | `479dbb1ad5ed5b37d36a66f14d3d2923dc4e1ca2` (`git ls-remote --tags origin 'fase-6-closed^{}'`) |
+| Tests | 847/847, `OK` (suite completa) + 4 suites críticas (`notifications` 36/36, `accounts` 72/72, `appointments` 186/186, `medical_records` 217/217) |
+| Migrations | `makemigrations --check --dry-run` → "No changes detected" |
+| Browser evidence | `docs/phases/evidence/phase-6-browser-validation/README.md` — 15 capturas, dos rondas, coherente con el código de cierre (sin cambios UI-relevantes desde su captura) |
+| Release artifact | `TeCuidoApp-Fase6-closed.zip` (576 archivos, sin `.env`/`private_media/`/`__pycache__`/`*.pyc`) |
+| SHA256 | `d565e97341b37cd24616e3bca00b41375509582cd6145d8e67889fe7a893548a` |
+| Working tree | `CLEAN` (solo `.claude/settings.local.json` local, nunca commiteado) |
+
+**Nota de divergencia resuelta:** antes de este cierre, `origin/main` contenía un commit
+(`1768ce1`) de la rutina de auditoría en la nube programada, que había corrido contra un
+`origin/main` desactualizado (anterior a todo el trabajo de Fase 6) y concluido, correctamente
+dado lo que podía ver, `PHASE 6 NOT READY TO CLOSE (no iniciada)`. Esa divergencia se resolvió
+mediante un merge explícitamente autorizado por el propietario (no silenciosamente), conservando
+el reporte real — ver `docs/phases/phase-6-implementation-summary.md`, "Cierre formal — Prompt
+3/3" para el detalle completo.
+
+No se hace ningún commit después de esta actualización.
 
 ## 1. Identidad
 

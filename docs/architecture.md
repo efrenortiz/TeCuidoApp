@@ -3,8 +3,8 @@
 **Estado:** Vigente — documento enmendado incrementalmente; redactado originalmente como
 "Propuesta inicial" durante Fase 1. Ver §44 "Estado actual" para el estado real y consolidado del
 proyecto por fase (hasta Fase 5 — `PHASE 5 — CLOSED`, `docs/phases/phase-5-final-report.md`
-§41.K; Fase 6 — Notificaciones y auditoría está implementada, pendiente de auditoría de cierre
-formal independiente — `docs/phases/phase-6-implementation-summary.md`).  
+§41.K; Fase 6 — Notificaciones y auditoría — `PHASE 6 — CLOSED`,
+`docs/phases/phase-6-final-report.md`, tag `fase-6-closed`).  
 **Versión:** 1.0 (sin nueva versión mayor; los cambios incrementales quedan documentados en §44 y
 en los ADR correspondientes)  
 **Fase de redacción original:** Fase 1 — Fundaciones  
@@ -1503,9 +1503,8 @@ Fase 2 — Agenda                     COMPLETADA (docs/phases/phase-2-agenda-fin
 Fase 3 — Gestión clínica            COMPLETADA (docs/phases/phase-3-clinical-final-report.md — PHASE 3 — CLOSED)
 Fase 4 — Documentos                 COMPLETADA (docs/phases/phase-4-final-report.md — PHASE 4 — CLOSED)
 Fase 5 — CareRequest y operación    COMPLETADA (docs/phases/phase-5-final-report.md §41.K — PHASE 5 — CLOSED)
-Fase 6 — Notificaciones y auditoría IMPLEMENTADA (docs/phases/phase-6-implementation-summary.md
-                                     — pendiente de auditoría de cierre formal independiente,
-                                     no autodeclarada como CLOSED)
+Fase 6 — Notificaciones y auditoría COMPLETADA (docs/phases/phase-6-final-report.md —
+                                     PHASE 6 — CLOSED, tag fase-6-closed)
 ```
 
 ### Fase 1 — checklist original de construcción (histórico)
@@ -1542,8 +1541,8 @@ Fase 3 — Gestión clínica (especificación funcional aprobada 2026-09-11, ver
 
 ```text
 Fase 5 — CareRequest y operación     [HISTORICAL — ver "Resumen de fases" arriba: COMPLETADA]
-Fase 6 — Notificaciones y auditoría  [HISTORICAL — ver "Resumen de fases" arriba: IMPLEMENTADA,
-                                       pendiente de auditoría de cierre]
+Fase 6 — Notificaciones y auditoría  [HISTORICAL — ver "Resumen de fases" arriba: COMPLETADA,
+                                       PHASE 6 — CLOSED]
 ```
 
 ---

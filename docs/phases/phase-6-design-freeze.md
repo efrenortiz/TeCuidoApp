@@ -8,11 +8,13 @@
 **Versión:** 1.1  
 **Fecha:** 2026-09-20
 
-> **Estado de implementación (2026-09-21):** el paquete derivado de este Design Freeze está
-> implementado. `docs/phases/phase-6-implementation-summary.md` es la bitácora oficial de código,
-> tests, migraciones y las ocho decisiones finales del propietario (PD-001 a PD-008) que
-> incorporan/precisan lo congelado aquí sin contradecirlo. Este documento sigue siendo la
-> autoridad normativa de alcance — no se modifica su contenido más allá de esta nota.
+> **Estado de implementación (2026-09-22):** el paquete derivado de este Design Freeze está
+> implementado y formalmente cerrado — `PHASE 6 — CLOSED` (tag `fase-6-closed`,
+> `docs/phases/phase-6-final-report.md`). `docs/phases/phase-6-implementation-summary.md` es la
+> bitácora oficial de código, tests, migraciones y las ocho decisiones finales del propietario
+> (PD-001 a PD-008) que incorporan/precisan lo congelado aquí sin contradecirlo. Este documento
+> sigue siendo la autoridad normativa de alcance — no se modifica su contenido más allá de esta
+> nota.
 
 ---
 
