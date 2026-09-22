@@ -1113,3 +1113,75 @@ de regresión en el consumidor de estas señales.
 
 Corrección completa e implementada y probada. Pendientes los prompts 2/4, 3/4 y 4/4 de esta
 misma ronda (según se reciban) antes de volver a declarar un estado consolidado de Fase 6.
+
+---
+
+# Prompt 2/4 — evidencia browser/UI y consentimientos (2026-09-22)
+
+Objetivo: completar evidencia real de navegador que faltaba (estados UI del audit trail,
+consentimiento con documentos externos reales configurados, verificación adicional de enlaces de
+notificación). Detalle completo de escenarios y capturas en
+`docs/phases/evidence/phase-6-browser-validation/README.md` (sección "Ronda 2 — Prompt 2/4").
+
+## C-020 — `patient_id` no numérico causaba un 500 no controlado en `AuditTrailView` (UI)
+
+- **Problema:** al intentar generar la evidencia del estado "error de consulta" pedida por el
+  prompt, se encontró un fallo real (no fabricado): `AuditTrailView.get` pasaba `patient_id` sin
+  validar a `Patient.objects.filter(pk=patient_id)`. Un valor no numérico (`?patient_id=abc`)
+  produce un `ValueError` que Django no captura, resultando en un 500 con traceback completo
+  (entorno `DEBUG=True`) en una pantalla exclusiva de Administrador.
+- **Causa:** el filtro de `patient_id` nunca tuvo la misma validación defensiva que ya tenían sus
+  filtros hermanos en la misma vista (`_parse_ui_date` ignora silenciosamente una fecha
+  inválida) ni la que ya tenía el API equivalente (`AuditEventListView._parse_int`,
+  `medical_records/api.py`, responde con un `ApiError`/400 controlado). Inconsistencia entre UI y
+  API para el mismo filtro sobre el mismo recurso.
+- **Solución:** se envuelve `int(patient_id)` en `try/except (TypeError, ValueError)`, tratando
+  un valor inválido igual que un `date_from`/`date_to` inválido — se ignora (no se aplica el
+  filtro de paciente), el valor crudo se conserva en el formulario para que el usuario vea lo que
+  escribió. Sin introducir una respuesta HTTP nueva ni una regla de validación nueva — solo
+  alinea la UI con el criterio permisivo ya establecido en la misma vista.
+- **Restricciones respetadas:** no se modificó el API (ya era correcto); no se introdujo
+  funcionalidad nueva (§7 del prompt); PD-001..PD-008 sin cambios.
+- **Archivos:** `medical_records/views.py::AuditTrailView.get`.
+- **Tests:** `medical_records/tests/test_fase6_audit.py::AuditTrailAccessTests::
+  test_ui_ignores_non_numeric_patient_id_instead_of_crashing`.
+- **Evidencia browser:** captura del bug real (`09-audit-trail-error-patient-id-invalid-before-
+  fix.jpg`, generada revirtiendo temporalmente el fix con `git stash` — nunca hubo una versión
+  "rota a propósito" distinta del estado real pre-corrección) y de la corrección
+  (`10-audit-trail-patient-id-invalid-after-fix.jpg`).
+
+## Evidencia adicional generada (sin cambios de código)
+
+- **Estado "empty" del audit trail:** filtro válido sin resultados —
+  `11-audit-trail-empty.jpg`.
+- **Estado "loading":** no existe un estado de carga distinguible que capturar — el audit trail
+  es una vista Django server-rendered clásica sin capa JS/AJAX (documentado explícitamente en el
+  README de evidencia en vez de fabricar un spinner que la aplicación no tiene).
+- **Consentimiento con `LEGAL_DOCUMENT_URLS` real:** se configuraron
+  `PRIVACY_NOTICE_URL`/`TERMS_AND_CONDITIONS_URL` en `.env` local (nunca commiteado) con URLs de
+  prueba sobre `example.com` (dominio IANA reservado para documentación/pruebas), identificadas
+  inequívocamente como entorno de validación. Se verificó con `read_page` que el `href` de cada
+  enlace "Leer el documento" coincide exactamente con la URL configurada, y se completó el flujo
+  de aceptación de "Términos y condiciones" (el Aviso de privacidad ya estaba aceptado desde la
+  Ronda 1) — `12-consent-external-document-pending-terms.jpg`,
+  `13-consent-external-document-both-accepted.jpg`.
+- **Enlaces de notificación, verificación adicional en navegador real:** el enlace real de una
+  notificación (`http://localhost:8000/agenda/citas/6/`) lleva a la vista correcta y protegida de
+  Agenda para un usuario autorizado (200) y redirige a login sin filtrar datos para un anónimo
+  (302) — `14-notification-link-appointment-detail-authorized.jpg`,
+  `15-notification-link-anonymous-redirect-to-login.jpg`. Complementa (no reemplaza) la cobertura
+  ya existente por test (`test_link_points_to_authorization_protected_view_no_bypass`).
+
+## Regresión de este prompt
+
+```text
+python manage.py check                  -> System check identified no issues (0 silenced)
+python manage.py makemigrations --check -> No changes detected
+python manage.py test medical_records    -> 217/217 (216 -> 217; +1 de C-020)
+```
+
+## Estado tras este prompt
+
+Corrección completa e implementada y probada; evidencia browser completa guardada y trazable al
+commit de este prompt (ver `docs/phases/evidence/phase-6-browser-validation/README.md`,
+"Ronda 2 — Prompt 2/4"). Pendientes los prompts 3/4 y 4/4 de esta misma ronda.
