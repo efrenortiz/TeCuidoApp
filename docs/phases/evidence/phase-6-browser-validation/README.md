@@ -103,9 +103,11 @@ TeCuidoApp.
 **Herramienta:** Claude in Chrome (interacción real de navegador — no `django.test.Client`).
 **Servidor:** `python manage.py runserver` local, `EMAIL_BACKEND` de consola,
 `PRIVACY_NOTICE_URL`/`TERMS_AND_CONDITIONS_URL` configuradas en `.env` local (ver §3 abajo).
-**Commit exacto validado:** `<COMMIT_HASH>` (obtenido con `git rev-parse HEAD` **después** de
-confirmar esta ronda — ver el commit de auto-referencia que sigue al que introduce esta sección;
-no usar `79697e0` ni `38d22db`, ambos anteriores a las correcciones de esta ronda).
+**Commit exacto validado:** `592c356e07cf863d5983fa4a51d00990016d5afc` (auto-referencia trivial,
+mismo patrón ya usado en `79697e0`/`46a16af` — no confiar en este hash citado, volver a ejecutar
+`git rev-parse HEAD` en cualquier auditoría posterior; no usar `79697e0` ni `38d22db`, ambos
+anteriores a las correcciones de esta ronda: `38d22db` es el HEAD previo a C-020, el propio bug
+documentado arriba se reprodujo y corrigió DESPUÉS de ese commit).
 
 Esta ronda complementa, no repite, la evidencia de la Ronda 1 (arriba): estados UI pendientes
 (empty/error) de la pantalla de audit trail, consentimiento con URLs canónicas reales
