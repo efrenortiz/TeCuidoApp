@@ -270,6 +270,185 @@ class CancellationAndRescheduleTests(NotificationServiceTestCase):
         self.assertNotEqual(original_reminder.scheduled_for, original_scheduled_for)
 
 
+class ReminderWindowReconfigurationTests(NotificationServiceTestCase):
+    """PD-004 (prompt 1/4, corrección funcional post-implementación,
+    C-019): "nueva configuración de ReminderWindow aplica a nuevas citas y
+    a citas reprogramadas posteriormente" — sin reconciliación retroactiva
+    global de citas ya existentes que no se reprogramen."""
+
+    def _reconfigure(self, offsets):
+        ReminderWindow.objects.update(is_active=False)
+        for offset in offsets:
+            ReminderWindow.objects.update_or_create(
+                offset_days=offset, defaults={"is_active": True}
+            )
+
+    def _book_days_ahead(self, days_ahead):
+        day = (dj_timezone.now() + timedelta(days=days_ahead)).date()
+        availability_service.create_availability(
+            actor=self.doctor_user, doctor=self.doctor, clinic=self.clinic,
+            date=day, start_time=time(9, 0), end_time=time(13, 0),
+        )
+        start_at = availability_service.combine_local(day, time(9, 0), self.clinic)
+        end_at = start_at + timedelta(minutes=30)
+        hold = hold_service.create_hold(
+            actor=self.patient_user, doctor=self.doctor, clinic=self.clinic,
+            start_at=start_at, end_at=end_at,
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            appointment = appointment_service.create_appointment_from_hold(
+                actor=self.patient_user, hold=hold, patient=self.patient,
+                doctor=self.doctor, clinic=self.clinic,
+            )
+        return appointment
+
+    def _reschedule(self, appointment, days_ahead):
+        new_day = (dj_timezone.now() + timedelta(days=days_ahead)).date()
+        availability_service.create_availability(
+            actor=self.doctor_user, doctor=self.doctor, clinic=self.clinic,
+            date=new_day, start_time=time(9, 0), end_time=time(13, 0),
+        )
+        new_start_at = availability_service.combine_local(new_day, time(9, 0), self.clinic)
+        with self.captureOnCommitCallbacks(execute=True):
+            appointment_service.reschedule_appointment(
+                actor=self.patient_user, appointment=appointment, new_clinic=self.clinic,
+                new_start_at=new_start_at, reason=RequestReason.PATIENT_REQUEST,
+            )
+        appointment.refresh_from_db()
+        return appointment
+
+    def _reminder_offsets(self, appointment, user, statuses=None):
+        qs = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_REMINDER,
+            resource_id=appointment.pk, recipient_user=user,
+        )
+        if statuses is not None:
+            qs = qs.filter(status__in=statuses)
+        else:
+            qs = qs.exclude(status=Notification.Status.CANCELLED)
+        return {int(dk.rsplit(":", 1)[-1]) for dk in qs.values_list("dedupe_key", flat=True)}
+
+    def test_case1_default_config_creates_reminders_matching_active_offsets(self):
+        appointment = self._book_days_ahead(40)
+        self.assertEqual(self._reminder_offsets(appointment, self.patient_user), {15, 10, 5, 1})
+
+    def test_case2_new_appointment_uses_config_active_at_creation(self):
+        self._reconfigure([20, 10, 3, 1])
+        appointment = self._book_days_ahead(40)
+        self.assertEqual(self._reminder_offsets(appointment, self.patient_user), {20, 10, 3, 1})
+
+    def test_case3_reschedule_applies_config_changed_after_original_booking(self):
+        appointment = self._book_days_ahead(40)  # config vigente: 15/10/5/1
+        self.assertEqual(self._reminder_offsets(appointment, self.patient_user), {15, 10, 5, 1})
+
+        self._reconfigure([20, 10, 3, 1])
+        appointment = self._reschedule(appointment, days_ahead=45)
+
+        self.assertEqual(self._reminder_offsets(appointment, self.patient_user), {20, 10, 3, 1})
+        # Los offsets que dejaron de estar activos (15, 5) quedan
+        # cancelados explícitamente, no simplemente huérfanos.
+        cancelled = self._reminder_offsets(
+            appointment, self.patient_user, statuses=[Notification.Status.CANCELLED]
+        )
+        self.assertEqual(cancelled, {15, 5})
+        cancelled_rows = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_REMINDER,
+            resource_id=appointment.pk, recipient_user=self.patient_user,
+            status=Notification.Status.CANCELLED, dedupe_key__endswith=":15",
+        )
+        self.assertEqual(
+            cancelled_rows.first().reason_code, "REMINDER_WINDOW_NO_LONGER_ACTIVE"
+        )
+
+    def test_case4_repeated_reschedule_does_not_duplicate_notifications(self):
+        appointment = self._book_days_ahead(40)
+        self._reconfigure([20, 10, 3, 1])
+        appointment = self._reschedule(appointment, days_ahead=45)
+        count_after_first = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_REMINDER, resource_id=appointment.pk,
+        ).count()
+
+        appointment = self._reschedule(appointment, days_ahead=50)
+        count_after_second = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_REMINDER, resource_id=appointment.pk,
+        ).count()
+
+        self.assertEqual(count_after_first, count_after_second)
+        self.assertEqual(self._reminder_offsets(appointment, self.patient_user), {20, 10, 3, 1})
+
+    def test_case5_sent_and_sending_reminders_are_never_touched_failed_follows_active_config(self):
+        appointment = self._book_days_ahead(40)  # config vigente: 15/10/5/1
+
+        sent = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_REMINDER,
+            resource_id=appointment.pk, recipient_user=self.patient_user,
+            dedupe_key__endswith=":1",
+        ).first()
+        sent.status = Notification.Status.SENT
+        sent.sent_at = dj_timezone.now()
+        sent.save(update_fields=["status", "sent_at"])
+        sent_scheduled_before = sent.scheduled_for
+
+        sending = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_REMINDER,
+            resource_id=appointment.pk, recipient_user=self.patient_user,
+            dedupe_key__endswith=":5",
+        ).first()
+        sending.status = Notification.Status.SENDING
+        sending.save(update_fields=["status"])
+        sending_scheduled_before = sending.scheduled_for
+
+        failed = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_REMINDER,
+            resource_id=appointment.pk, recipient_user=self.patient_user,
+            dedupe_key__endswith=":10",
+        ).first()
+        failed.status = Notification.Status.FAILED
+        failed.attempt_count = 1
+        failed.save(update_fields=["status", "attempt_count"])
+        failed_scheduled_before = failed.scheduled_for
+
+        # Offset 5 (de la fila SENDING) deja de estar activo en la nueva
+        # configuración — si la reprogramación tocara SENDING, aquí se
+        # notaría.
+        self._reconfigure([20, 10, 3, 1])
+        appointment = self._reschedule(appointment, days_ahead=45)
+
+        sent.refresh_from_db()
+        self.assertEqual(sent.status, Notification.Status.SENT)
+        self.assertEqual(sent.scheduled_for, sent_scheduled_before)
+
+        sending.refresh_from_db()
+        self.assertEqual(sending.status, Notification.Status.SENDING)
+        self.assertEqual(sending.scheduled_for, sending_scheduled_before)
+        self.assertEqual(sending.reason_code, "")
+
+        failed.refresh_from_db()
+        self.assertEqual(failed.status, Notification.Status.FAILED)  # sigue elegible, no reenviado aquí
+        self.assertNotEqual(failed.scheduled_for, failed_scheduled_before)  # recalculado (offset 10 sigue activo)
+
+    def test_case6_exhausted_reminder_is_not_reactivated_by_reschedule(self):
+        appointment = self._book_days_ahead(40)  # config sin cambios: 15/10/5/1
+        exhausted = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_REMINDER,
+            resource_id=appointment.pk, recipient_user=self.patient_user,
+            dedupe_key__endswith=":10",
+        ).first()
+        exhausted.status = Notification.Status.FAILED
+        exhausted.attempt_count = notification_service.MAX_DELIVERY_ATTEMPTS
+        exhausted.reason_code = "MAX_ATTEMPTS_EXCEEDED:TRANSPORT_ERROR"
+        exhausted.save(update_fields=["status", "attempt_count", "reason_code"])
+        scheduled_before = exhausted.scheduled_for
+
+        self._reschedule(appointment, days_ahead=45)
+
+        exhausted.refresh_from_db()
+        self.assertEqual(exhausted.status, Notification.Status.FAILED)
+        self.assertEqual(exhausted.scheduled_for, scheduled_before)
+        self.assertEqual(exhausted.attempt_count, notification_service.MAX_DELIVERY_ATTEMPTS)
+        self.assertEqual(exhausted.reason_code, "MAX_ATTEMPTS_EXCEEDED:TRANSPORT_ERROR")
+
+
 class ProcessDueNotificationsTests(NotificationServiceTestCase):
     def test_reminder_skipped_when_appointment_no_longer_scheduled(self):
         appointment = self._book()
