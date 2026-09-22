@@ -3,6 +3,13 @@
 **Estado:** DESIGN PACKAGE — derivado del Design Freeze v1.1
 **Fecha:** 2026-09-20
 
+> **Estado de implementación (2026-09-22):** el paquete descrito por este índice ya está
+> implementado y corregido — `PHASE 6 — IMPLEMENTED / READY FOR FINAL AUDIT` (ver
+> `docs/phases/phase-6-implementation-summary.md` para el estado técnico completo y
+> `docs/phases/phase-6-final-report.md` para el reporte consolidado). Este índice conserva su
+> función original de navegación del paquete de diseño; no se reescribe como historial de
+> implementación.
+
 ## 1. Propósito
 
 Este índice define el conjunto de documentos derivados de Fase 6 — Notificaciones y auditoría, su ubicación recomendada en el repositorio y el orden de lectura para implementación.
@@ -72,4 +79,7 @@ Implementation Handoff
 
 ## 5. Estado
 
-Este índice documenta el paquete de diseño y no declara Fase 6 implementada ni cerrada.
+Este índice documenta el paquete de diseño. El estado real de implementación es
+`PHASE 6 — IMPLEMENTED / READY FOR FINAL AUDIT` (ver la nota al inicio de este documento y
+`docs/phases/phase-6-implementation-summary.md`) — no declara, ni antes ni ahora,
+`PHASE 6 — CLOSED`; esa declaración corresponde a la auditoría de cierre formal independiente.

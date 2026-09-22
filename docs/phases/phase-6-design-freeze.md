@@ -229,6 +229,18 @@ La consulta del audit trail queda restringida exclusivamente a **Administradores
 
 No es responsable de autorizar operaciones, modificar datos de dominio ni sustituir historia clínica.
 
+**Precisión PD-008 (decisión final del propietario, incorporada en la ronda de corrección
+funcional — no reabre esta separación de responsabilidades, precisa su forma física):** "`audit`"
+aquí es una **responsabilidad lógica transversal**, no necesariamente una app Django nueva y
+separada. La decisión final del propietario resolvió esta responsabilidad reutilizando
+`medical_records.AuditEvent` y `medical_records.services.audit` (ya existentes desde Fase 3, AH-
+156/AH-086), sin crear una tercera app transversal — el mismo criterio de "infraestructura mínima
+necesaria" que exige §28. Ningún principio de esta sección se relaja: registro de eventos,
+trazabilidad, consulta exclusiva de Administrador y no-autorización de operaciones se cumplen
+igual, solo que dentro de `medical_records` en vez de una app `audit` dedicada. Detalle completo
+en `docs/design/phase-6-audit-domain.md` §2 y `docs/phases/phase-6-implementation-summary.md`
+(PD-008).
+
 ---
 
 ## 9. Arquitectura de notificaciones

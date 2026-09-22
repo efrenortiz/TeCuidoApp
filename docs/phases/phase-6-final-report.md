@@ -1,15 +1,19 @@
 # TeCuidoApp — Fase 6 Final Report
 
-**Estado:** `PHASE 6 — READY FOR CLOSURE`. No es una autodeclaración de cierre — el cierre formal
-(`PHASE 6 — CLOSED`) sigue reservado a una auditoría independiente que no fue quien implementó el
-código. Este documento registra la evidencia con la que esa auditoría puede verificar el estado,
-sin sustituirla.
+**Estado:** `PHASE 6 — READY FOR FINAL AUDIT`. No es una autodeclaración de cierre — el cierre
+formal (`PHASE 6 — CLOSED`) sigue reservado a una auditoría independiente que no fue quien
+implementó el código. Este documento registra la evidencia con la que esa auditoría puede
+verificar el estado, sin sustituirla.
 **Fecha del diseño:** 2026-09-20
 **Fecha de esta consolidación:** 2026-09-22
 
 > Ver `docs/phases/phase-6-implementation-summary.md` para la bitácora técnica completa (ITD-001
-> a ITD-015, correcciones C-001 a C-018, y la ronda de corrección post-implementación de 7 prompts
-> secuenciales que llevó el estado de `IMPLEMENTED / READY FOR FINAL AUDIT` a `READY FOR CLOSURE`).
+> a ITD-015, correcciones C-001 a C-020). El estado pasó de `READY FOR CLOSURE` (ronda de 7
+> prompts) a `READY FOR FINAL AUDIT` en esta consolidación porque una ronda posterior de
+> corrección funcional encontró y corrigió dos hallazgos reales adicionales (C-019: PD-004 no se
+> reevaluaba al reprogramar recordatorios; C-020: un filtro de UI del audit trail rompía con
+> entrada inválida) — el estado se vuelve deliberadamente más conservador tras encontrar defectos
+> nuevos, en vez de mantener una declaración ya superada por los hechos.
 
 ## 1. Identidad
 
@@ -44,15 +48,37 @@ ronda en §11/§12)
 
 ## 3. Decisiones funcionales verificadas
 
-| Decisión | Verificación |
+Taxonomía F6-D01..F6-D07 (decisiones funcionales congeladas por el Design Freeze, §27 de
+`phase-6-design-freeze.md`) — **no se mezcla** con las decisiones del propietario PD-001..PD-008
+(sección independiente más abajo).
+
+| ID | Significado | Verificación |
+|---|---|---|
+| F6-D01 | Destinatarios de notificaciones de citas | Código: `notifications/services.py` (`notify_appointment_created/_modified/_cancelled`). Tests: `AppointmentCreatedNotificationTests`, `EmailContentTests`. Evidencia browser: `docs/phases/evidence/phase-6-browser-validation/README.md` §5. |
+| F6-D02 | Destinatarios de recordatorios | Código: `notifications/services.py::schedule_appointment_reminders` (Patient + Responsible, sin Doctor). Tests: `ReminderSchedulingTests::test_reminders_created_only_for_patient_and_responsible_not_doctor`. |
+| F6-D03 | Sin opt-out | Ausencia estructural verificada por `NoOptOutTests` + evidencia browser §4. |
+| F6-D04 | Aceptación de documentos de plataforma | Código: `accounts/services/consent.py`. Tests: `accounts/tests/test_consent.py` (18 tests, incl. `ConsentDocumentReferenceTests`). Evidencia browser §1, §7 (Prompt 2/4). |
+| F6-D05 | Solo Administrador consulta audit trail | Código: `medical_records/views.py::AuditTrailView`, `medical_records/admin.py` (restricción a `is_superuser`, no solo `is_staff`). Tests: `medical_records/tests/test_fase6_audit.py::AuditTrailAccessTests` (cobertura explícita por rol: paciente, médico, responsable, usuario inactivo, anónimo). Evidencia browser §2/§3. |
+| F6-D06 | Catálogo base + rechazos auditables dentro del boundary aprobado | Catálogo: `medical_records/models.py::AuditEvent.Action`. Rechazos: precisión PD-002 en Design Freeze §11/§12 (C-017) — solo dentro del boundary instrumentado y con actor identificable. Tests: `LoginAuditTests`, `RejectionAuditCoverageTests`. |
+| F6-D07 | Retención indefinida + depuración manual | Sin `DELETE`/purga automática en ningún flujo de `Notification` ni `AuditEvent`; confirmado por `grep` sin resultados de un mecanismo de purga automática. |
+
+## 3.1 Decisiones PD-001..PD-008 (propietario, posteriores al Design Freeze)
+
+Taxonomía independiente — resuelven hallazgos técnicos de la ronda de corrección post-
+implementación, no redefinen F6-D01..F6-D07. Detalle completo, código, tests y estado
+(`CONSISTENTE` las ocho) en `docs/phases/phase-6-implementation-summary.md`, secciones
+"Decisiones del propietario incorporadas" y "Verificación final de las ocho decisiones".
+
+| PD | Decisión |
 |---|---|
-| F6-D01 (Email + recordatorios) | Código: `notifications/services.py`. Tests: `notifications/tests/test_services.py`. Evidencia browser: `docs/phases/evidence/phase-6-browser-validation/README.md` §5. |
-| F6-D02 (Notificaciones de ciclo de vida de cita) | Código: `appointments/signals.py` + `notifications/receivers.py`. Tests: `EmailContentTests` (creada/modificada/cancelada). |
-| F6-D03 (Sin opt-out) | Ausencia estructural verificada por `NoOptOutTests` + evidencia browser §4. |
-| F6-D04 (Consentimiento) | Código: `accounts/services/consent.py`. Tests: `accounts/tests/test_consent.py` (18 tests, incl. `ConsentDocumentReferenceTests` de esta ronda). Evidencia browser §1. |
-| F6-D05 (Audit trail administrativo) | Código: `medical_records/views.py::AuditTrailView`, `medical_records/admin.py`. Tests: `medical_records/tests/test_fase6_audit.py` (20 tests, incl. cobertura explícita por rol de esta ronda). Evidencia browser §2/§3. |
-| F6-D06 (Auditoría de rechazos con actor real) | Precisión PD-002 en Design Freeze §11/§12 (C-017). Tests: `LoginAuditTests`, `RejectionAuditCoverageTests`. |
-| F6-D07 (Reutilización de `AuditEvent`, sin segunda infraestructura) | Confirmado por `grep` sin resultados de una segunda fuente de verdad (`notifications/`, `accounts/api.py`, `accounts/services/consent.py`, `medical_records/api.py`). |
+| PD-001 | `ADMIN_SENSITIVE_ACCESS` permanece sin operación emisora, por diseño |
+| PD-002 | Rechazos auditables solo dentro del boundary instrumentado y con actor identificable |
+| PD-003 | Recuperación de contraseña permanece en el flujo nativo de Django |
+| PD-004 | `ReminderWindow` configurable hacia adelante — nuevas citas + citas reprogramadas posteriormente; sin reconciliación retroactiva global |
+| PD-005 | Correos de cita: información esencial + enlace a TeCuidoApp, nunca contenido clínico |
+| PD-006 | Aviso de Privacidad y Términos como documentos externos versionados, con referencia canónica trazable |
+| PD-007 | Reintentos limitados (`MAX_DELIVERY_ATTEMPTS=5`) con backoff exponencial; sin estado nuevo |
+| PD-008 | `audit` como responsabilidad lógica transversal — `medical_records.AuditEvent`, sin app `audit` separada |
 
 ## 4. Implementación
 
@@ -91,12 +117,18 @@ ronda en §11/§12)
 ```text
 python manage.py check                                     -> System check identified no issues (0 silenced)
 python manage.py makemigrations --check --dry-run           -> No changes detected
-python manage.py test -v 1                                  -> Ran 840 tests in 563.110s — OK
+python manage.py test -v 1                                  -> Ran 847 tests in 569.631s — OK
 ```
 
-- 840/840 tests de la suite completa del proyecto (no solo Fase 6) — cero regresiones en
-  Fases 1-5. 828 → 840 en esta ronda (+12: +6 `notifications`, +3 `medical_records`,
-  +3 `accounts` — ver `phase-6-implementation-summary.md` para el detalle por corrección).
+- **847/847** tests de la suite completa del proyecto (no solo Fase 6) — cero regresiones en
+  Fases 1-5. Progresión real, no un número histórico reutilizado: 828 (cierre de la ronda de
+  7 prompts) → 840 (+12 de esa misma ronda) → **847** (+6 de C-019/`ReminderWindowReconfigurationTests`,
+  +1 de C-020). La primera corrida de esta consolidación reportó `847, FAILED (failures=1)` por un
+  test no hermético (`test_document_url_is_empty_string_when_unconfigured`, dependía de que el
+  entorno ambiente no tuviera `PRIVACY_NOTICE_URL`/`TERMS_AND_CONDITIONS_URL` configuradas —
+  ahora sí, por el `.env` local del Prompt 2/4); corregido con `override_settings` explícito (no
+  es una regresión de producción, ver `phase-6-implementation-summary.md`). Esta segunda corrida,
+  ya con esa corrección, es la que se reporta arriba.
 - Pruebas de seguridad: acceso al audit trail denegado explícitamente por rol (paciente,
   médico, responsable, usuario inactivo, anónimo) y por mecanismo (API + UI + Django Admin);
   distinción `is_staff` vs. `is_superuser`.
@@ -105,9 +137,14 @@ python manage.py test -v 1                                  -> Ran 840 tests in 
   recuperación de `SENDING` huérfanas sin duplicar filas (`test_retry_after_orphan_recovery_
   does_not_duplicate_notification_row`).
 - Pruebas de navegador (Claude in Chrome, interacción real — no `django.test.Client`):
-  `docs/phases/evidence/phase-6-browser-validation/README.md`, 8 capturas + contenido de correo
-  real por consola. Incluye la divulgación transparente de un incidente propio de la
-  automatización (sesión no cerrada correctamente en los primeros dos intentos) y su corrección.
+  `docs/phases/evidence/phase-6-browser-validation/README.md`, 15 capturas en dos rondas (Ronda
+  1: consentimiento, audit trail por rol, filtros, opt-out, redirección anónima; Ronda 2 — Prompt
+  2/4: estados empty/error del audit trail incluido el hallazgo real C-020 antes/después de
+  corregirlo, consentimiento con documentos externos reales configurados, verificación adicional
+  de enlaces de notificación) + contenido de correo real por consola. Incluye la divulgación
+  transparente de dos incidentes propios de la automatización (sesión no cerrada correctamente en
+  la Ronda 1) y su corrección — ningún hallazgo de producto se ocultó ni se atribuyó
+  incorrectamente a la automatización.
 
 ## 6. Auditoría final
 
@@ -150,17 +187,43 @@ python manage.py test -v 1                                  -> Ran 840 tests in 
   - No se registró ningún `PD-009` — todos los hallazgos de esta ronda fueron técnicos o
     documentales, resueltos sin tocar alcance, política ni ninguna de las ocho decisiones
     cerradas del propietario.
+- **Ronda de corrección funcional (4 prompts secuenciales, esta consolidación es el prompt 3/4):**
+  - Prompt 1/4 — **C-019**: `reschedule_appointment_reminders` releía el `offset_days` desde el
+    propio `dedupe_key` de cada notificación existente, en vez de volver a consultar
+    `ReminderWindow.objects.filter(is_active=True)` — un cambio de configuración nunca se
+    reflejaba en una cita reprogramada, violando PD-004. Corregido: offsets ya no activos se
+    cancelan explícitamente, offsets activos se recalculan, ventanas activas nuevas se
+    materializan reutilizando `schedule_appointment_reminders` (misma función de creación
+    original). 6 tests nuevos (`ReminderWindowReconfigurationTests`).
+  - Prompt 2/4 — **C-020**: `AuditTrailView.get` pasaba `patient_id` sin validar a
+    `Patient.objects.filter(pk=patient_id)` — un valor no numérico producía un `ValueError` sin
+    capturar (500) en una pantalla de Administrador; el API equivalente ya validaba esto con un
+    400 controlado. Corregido con el mismo criterio permisivo ya usado por `date_from`/`date_to`
+    en la misma vista. Evidencia browser real del bug (antes/después) en
+    `docs/phases/evidence/phase-6-browser-validation/README.md`, "Ronda 2 — Prompt 2/4".
+  - Ambos hallazgos fueron encontrados durante la propia validación/corrección (no reportados
+    externamente), corregidos en el mismo prompt que los encontró, con test de regresión y
+    documentación — consistente con el resto de esta bitácora.
+  - Ningún `PD-009` tampoco en esta ronda.
 
 ## 8. Estado de cierre
 
 ```text
-PHASE 6 — READY FOR CLOSURE
+PHASE 6 — READY FOR FINAL AUDIT
 ```
 
-Esto no es `PHASE 6 — CLOSED`. Significa que, hasta donde la implementación puede verificar por
-sí misma: las 7 decisiones F6-D01..F6-D07 y las 8 decisiones del propietario PD-001..PD-008 están
-implementadas, probadas (840/840) y documentadas sin contradicciones; existe evidencia de
-navegador real; y no quedan hallazgos técnicos abiertos de la ronda de corrección de 7 prompts.
+Esto no es `PHASE 6 — CLOSED`, ni tampoco `READY FOR CLOSURE` (la ronda de 7 prompts había
+llegado a esa conclusión; esta consolidación la revierte deliberadamente a un estado más
+conservador porque el prompt 1/4 y 2/4 de esta ronda encontraron y corrigieron dos hallazgos
+reales adicionales — C-019, C-020 — no cubiertos por la validación anterior). Significa que, hasta
+donde la implementación puede verificar por sí misma: las 7 decisiones F6-D01..F6-D07 y las 8
+decisiones del propietario PD-001..PD-008 están implementadas, probadas y documentadas sin
+contradicciones; existe evidencia de navegador real; y no quedan hallazgos técnicos abiertos de
+esta ronda — pero, precisamente porque esta ronda demostró que rondas previas "READY FOR CLOSURE"
+podían aun así tener defectos reales sin cubrir, el estado se mantiene en `READY FOR FINAL AUDIT`
+en vez de reclamar `READY FOR CLOSURE` de nuevo, a la espera del prompt 4/4 (validación final de
+esta misma ronda).
+
 El cierre formal (`PHASE 6 — CLOSED`) requiere una auditoría independiente de quien implementó
 el código — ver la nota de riesgo conocido sobre la rutina de auditoría en la nube programada
 contra `origin/main`, que a la fecha de esta consolidación no incluye estos commits (pendiente de
@@ -168,9 +231,9 @@ contra `origin/main`, que a la fecha de esta consolidación no incluye estos com
 
 Fecha de esta consolidación: 2026-09-22
 
-Commit de esta consolidación: `46a16af972a52676c4226a2870eea8b741472c4d` (auto-referencia trivial,
-mismo patrón ya usado en `79697e0` — no confiar en este hash citado, volver a ejecutar
-`git rev-parse HEAD` en cualquier auditoría posterior).
+Commit de esta consolidación: ver auto-referencia en el commit inmediatamente posterior a este
+documento (mismo patrón que `79697e0`/`46a16af`/`a0793f0` — no confiar en un hash citado por
+adelantado; volver a ejecutar `git rev-parse HEAD` en cualquier auditoría posterior).
 
 Evidencia principal: `docs/phases/phase-6-implementation-summary.md` (bitácora técnica completa),
 `docs/phases/evidence/phase-6-browser-validation/README.md` (evidencia de navegador).

@@ -44,8 +44,9 @@
 - Reintentos limitados con backoff exponencial, tope de intentos y recuperación de notificaciones
   huérfanas en `SENDING` (PD-007, corrección C-003/C-004, ITD-011/ITD-012).
 - Configuración de recordatorios con efecto hacia adelante únicamente, sin reconciliación
-  retroactiva (PD-004, ya el comportamiento natural de la implementación — documentado
-  explícitamente).
+  retroactiva (PD-004). *Corrección posterior:* la afirmación original de esta línea ("ya el
+  comportamiento natural de la implementación") resultó falsa — ver C-019 más abajo
+  ("Ronda de corrección funcional de recordatorios") para el hallazgo real y su corrección.
 - Arquitectura de auditoría confirmada como decisión final: `medical_records.AuditEvent` +
   `medical_records.services.audit`, sin app `audit` nueva (PD-008, ya implementado, ahora
   ratificado por el propietario).
@@ -421,6 +422,41 @@ reinterpretó ni se volvió a presentar como pendiente.
 
 Hallazgos técnicos 12.1 a 12.9 del prompt de corrección — ninguno requirió una nueva decisión de
 producto; todos se resolvieron técnicamente.
+
+### Índice de commits (prompt 3/4, consolidación documental)
+
+Ninguna corrección de esta lista queda pendiente — las 20 están implementadas, probadas y
+commiteadas. Detalle completo (problema/causa/solución/tests) en la entrada narrativa de cada
+`C-XXX` más abajo o en la sección de ronda correspondiente; esta tabla es solo el índice
+commit-por-corrección que exige la consolidación documental.
+
+| ID | Resumen | Commit(s) |
+|---|---|---|
+| C-001 | Django Admin del audit trail exigía `is_superuser`, no solo `is_staff` | `fd535e4` |
+| C-002 | Cobertura de tests de auditoría de rechazos (PD-002) | `fd535e4` |
+| C-003 | Recuperación de `SENDING` huérfano por lease timeout | `fd535e4` |
+| C-004 | Límite de reintentos + backoff (`MAX_DELIVERY_ATTEMPTS`) | `fd535e4` |
+| C-005 | Recordatorios `FAILED` incluidos en reprogramación/cancelación | `fd535e4` |
+| C-006 | Edición de `Person` de un paciente vía Admin ahora audita `MODIFY_PATIENT` | `fd535e4` |
+| C-007 | `send_mail` con 0 entregas ahora se trata como fallo | `fd535e4` |
+| C-008 | Filtros `date_from`/`date_to` agregados a la UI del audit trail | `fd535e4` |
+| C-009 | Pantalla de consentimiento con referencia canónica y fecha | `fd535e4` |
+| C-010 | Contenido real de los correos de cita + asunto corregido | `fd535e4` |
+| C-011 | Trazabilidad completa de consentimiento (`acceptance_trace`) | `fd535e4` |
+| C-012 | `SENDING` huérfana en el máximo de intentos no se reclama de nuevo | `628e247` |
+| C-013 | Fallo permanente no se vuelve a reclamar antes de agotar intentos | `628e247` |
+| C-014 | Cobertura explícita por rol del acceso denegado al audit trail | `cb7d099` |
+| C-015 | Tests de referencia de documento con `LEGAL_DOCUMENT_URLS` configurado | `cb7d099` |
+| C-016 | Cobertura del email de cita modificada + no-bypass del enlace | `cb7d099` |
+| C-017 | Precisión de PD-002 incorporada al Design Freeze §11/§12 | `46a16af` |
+| C-018 | README.md/architecture.md corregidos ("implementada", no "siguiente") | `46a16af` |
+| C-019 | Reprogramación de recordatorios ahora relee `ReminderWindow` vigente (PD-004) | código `cb8fe85`, tests `02e2738`, docs `38d22db` |
+| C-020 | `patient_id` no numérico ya no rompe la UI del audit trail | código `aeb9403`, tests `daae3f9`, docs `592c356` |
+
+**Commit final auditado de esta consolidación (prompt 3/4):** ver auto-referencia en
+`docs/phases/phase-6-final-report.md` §5 (mismo patrón de auto-referencia trivial ya usado en
+`79697e0`/`46a16af`/`a0793f0` — no confiar en un hash citado por adelantado; volver a ejecutar
+`git rev-parse HEAD` en cualquier auditoría posterior).
 
 ### C-001 — Acceso inconsistente al audit trail vía Django Admin (hallazgo 12.1)
 
@@ -851,7 +887,7 @@ Ningún archivo de Fases 1-5 fue tocado fuera de los puntos de enganche mínimos
 | PD-001 | `ADMIN_SENSITIVE_ACCESS` sin uso | `AuditEvent.Action.ADMIN_SENSITIVE_ACCESS` definida, sin emisor | N/A (nada que probar — ausencia verificada por `grep`) | `phase-6-audit-domain.md` §3, este documento §6 | CONSISTENTE |
 | PD-002 | Excepción de rechazos previos al boundary | Sin cambio de código — comportamiento ya correcto | `RejectionAuditCoverageTests`, `LoginAuditTests` | `phase-6-audit-domain.md` §4 | CONSISTENTE |
 | PD-003 | Password Recovery nativo | `PasswordResetView`/`PasswordResetForm` sin modificar; `create_password_recovery_notification` sin invocar | Regresión de `accounts` (333/333 en ronda inicial, sin cambios en esta ronda) | `phase-6-notification-domain.md` §3 | CONSISTENTE |
-| PD-004 | Configuración hacia adelante | Comportamiento ya natural de `schedule_appointment_reminders`/`reschedule_appointment_reminders` (nunca releen `ReminderWindow` tras crear la cita) | Cubierto indirectamente por `ReminderSchedulingTests`/`CancellationAndRescheduleTests` | `phase-6-notification-data-model.md` §2.2 | CONSISTENTE |
+| PD-004 | Configuración hacia adelante | **Corrección posterior (C-019):** esta fila afirmaba "comportamiento ya natural" — resultó falso; `reschedule_appointment_reminders` releía el offset desde el propio `dedupe_key` en vez de `ReminderWindow` vigente. Corregido, ver "Ronda de corrección funcional de recordatorios" más abajo | `ReminderWindowReconfigurationTests` (6 tests) | `phase-6-notification-data-model.md` §2.2 | CONSISTENTE |
 | PD-005 | Email + enlace | `notifications/services.py::_render`/`_appointment_essentials`/`_appointment_url` | `EmailContentTests` (3 tests) | `phase-6-notification-security-and-privacy.md` §1 | CONSISTENTE |
 | PD-006 | Documentos externos versionados | `accounts/services/consent.py::document_url`/`acceptance_trace`; `settings.LEGAL_DOCUMENT_URLS` | `test_acceptance_trace_answers_the_five_pd006_questions`, `test_acceptance_trace_none_when_never_accepted`, `test_status_endpoint_reflects_pending_and_accepted` | `phase-6-consent-domain.md` §1 | CONSISTENTE |
 | PD-007 | Retries limitados + backoff | `MAX_DELIVERY_ATTEMPTS`, `_backoff_seconds`, `SENDING_LEASE_TIMEOUT`, `process_due_notifications` | `RetryBackoffTests` (7 tests) | `phase-6-notification-domain.md` §6, `phase-6-notification-service-contracts.md` §4 | CONSISTENTE |
@@ -1041,6 +1077,12 @@ PD-008 están implementadas, probadas y documentadas sin contradicciones; la reg
 pasa; existe evidencia de navegador real; y no quedan hallazgos técnicos abiertos de los 7 prompts
 de esta ronda.
 
+> Nota (2026-09-22): esta conclusión resultó incompleta — la ronda de corrección funcional
+> siguiente (prompts 1/4 y 2/4, más abajo) encontró dos hallazgos reales adicionales (C-019,
+> C-020) que esta ronda no cubrió. El estado vigente es `PHASE 6 — READY FOR FINAL AUDIT` (más
+> conservador, no `READY FOR CLOSURE`), ver `docs/phases/phase-6-final-report.md` §8. Se conserva
+> este texto sin alterar por trazabilidad, no por vigencia.
+
 ---
 
 # Ronda de corrección funcional de recordatorios (prompt 1/4, 2026-09-22)
@@ -1185,3 +1227,75 @@ python manage.py test medical_records    -> 217/217 (216 -> 217; +1 de C-020)
 Corrección completa e implementada y probada; evidencia browser completa guardada y trazable al
 commit de este prompt (ver `docs/phases/evidence/phase-6-browser-validation/README.md`,
 "Ronda 2 — Prompt 2/4"). Pendientes los prompts 3/4 y 4/4 de esta misma ronda.
+
+---
+
+# Prompt 3/4 — consolidación documental y reporte final (2026-09-22)
+
+Objetivo: alinear toda la documentación de Fase 6 con el estado real de código/tests, sin
+declarar `PHASE 6 — CLOSED`. Cambios por documento:
+
+- **`phase-6-design-freeze.md`:** se verificaron PD-002/PD-004/PD-005/PD-008 contra el contenido
+  existente. PD-002 ya tenía su precisión (C-017, ronda anterior). PD-004/PD-005 no tenían
+  ninguna afirmación que los contradijera (son decisiones técnicas correctamente delegadas a
+  documentos derivados por el propio §28 del Design Freeze). Se encontró y corrigió una brecha
+  real en PD-008: §8/§8.2 describían `notifications` y `audit` como dos apps Django separadas,
+  sin ninguna precisión que explicara que la decisión final reutilizó `medical_records` — se
+  agregó una nota de precisión en §8.2, mismo patrón que C-017.
+- **`phase-6-documentation-index.md`:** nunca se había actualizado desde su redacción original
+  como `DESIGN PACKAGE`. Se agregó una nota de estado de implementación (banner + §5) apuntando a
+  `PHASE 6 — IMPLEMENTED / READY FOR FINAL AUDIT`, sin reescribir su función de navegación
+  original.
+- **`phase-6-implementation-summary.md` (este documento):** se agregó un índice consolidado de
+  commits para las 20 correcciones (`C-001` a `C-020`, tabla al inicio de "Correcciones
+  post-implementación") y se corrigieron dos afirmaciones que habían quedado desactualizadas y
+  ahora eran falsas (la fila de PD-004 en la primera tabla de verificación, y el párrafo de §2
+  que decía que el comportamiento de PD-004 "ya era natural" — ambas se referían al mismo hallazgo
+  que C-019 demostró falso). Se agregó también una nota de vigencia sobre "Estado recomendado tras
+  esta ronda" (7 prompts) para que no se confunda con el estado actual.
+- **`phase-6-final-report.md`:** matriz F6-D01..F6-D07 corregida a la taxonomía exacta pedida
+  (antes mezclaba lenguaje de PD-002/PD-006 en las descripciones); se agregó una sección
+  independiente §3.1 con las ocho PD, sin mezclar ambas taxonomías; estado corregido de
+  `READY FOR CLOSURE` a `PHASE 6 — READY FOR FINAL AUDIT` (más conservador, por los hallazgos de
+  los prompts 1/4 y 2/4 de esta misma ronda); commit final vía auto-referencia (ver más abajo).
+
+## Hallazgo de higiene de tests (no es una corrección de producción)
+
+Al volver a ejecutar la suite completa (exigido por §7 del prompt — no confiar en el número
+`840` histórico), la primera corrida reportó `847 tests, FAILED (failures=1)`:
+`test_document_url_is_empty_string_when_unconfigured` fallaba porque el `.env` local configurado
+en el Prompt 2/4 (`PRIVACY_NOTICE_URL`/`TERMS_AND_CONDITIONS_URL`, para la evidencia de
+navegador) hace que `settings.LEGAL_DOCUMENT_URLS` ya no esté vacío en este entorno — el test
+asumía implícitamente un entorno sin esas variables, en vez de forzar el estado "no configurado"
+explícitamente. No es una regresión de código de producción: es un test no hermético que dependía
+del entorno ambiente. Corregido agregando `@override_settings(LEGAL_DOCUMENT_URLS={})` — mismo
+patrón ya usado por los tests hermanos de la misma clase.
+
+- Archivos: `accounts/tests/test_consent.py` (solo tests).
+- Sin corrección de producción — no se le asigna un ID `C-XXX` (no hubo problema en el código de
+  la aplicación).
+
+## Regresión final de este prompt
+
+```text
+python manage.py check                  -> System check identified no issues (0 silenced)
+python manage.py makemigrations --check -> No changes detected
+python manage.py test (suite completa)  -> Ran 847 tests in 569.631s — OK
+                                            (840 -> 847; +6 C-019, +1 C-020; sin regresión)
+```
+
+Primera corrida: `847, FAILED (failures=1)` — `test_document_url_is_empty_string_when_
+unconfigured` no era hermético (dependía de que el entorno no tuviera
+`PRIVACY_NOTICE_URL`/`TERMS_AND_CONDITIONS_URL`, ahora configuradas en `.env` local por el
+Prompt 2/4). Corregido con `@override_settings(LEGAL_DOCUMENT_URLS={})` explícito — sin
+corrección de producción, ver sección anterior. Segunda corrida (arriba): limpia.
+
+## Estado tras este prompt
+
+```text
+PHASE 6 — READY FOR FINAL AUDIT
+```
+
+Documentación consolidada, sin contradicciones conocidas entre `design-freeze`,
+`documentation-index`, este documento y `final-report.md`. No se declara `PHASE 6 — CLOSED`.
+Pendiente el prompt 4/4 (validación final) de esta misma ronda.
