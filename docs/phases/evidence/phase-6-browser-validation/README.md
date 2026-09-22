@@ -1,5 +1,13 @@
 # Fase 6 — Evidencia de validación en navegador (Prompt 6 de la corrección post-implementación)
 
+> **Cierre formal — prompt 1/3 (2026-09-22):** este documento reúne evidencia de dos rondas
+> distintas, cada una con su propio commit de referencia real en el momento en que se capturó
+> (Ronda 1: `79697e0`; Ronda 2 — Prompt 2/4: `592c356` — ver cada sección). Ningún hash aquí es
+> reutilizado ni desactualizado respecto al momento de su propia captura. El commit vigente de
+> esta consolidación documental (no de nueva evidencia — no se capturó nada nuevo en este
+> prompt) se registra en `docs/phases/phase-6-final-report.md` §10 y
+> `docs/phases/phase-6-implementation-summary.md` ("Final audited commit").
+
 **Fecha:** 2026-09-22
 **Herramienta:** Claude in Chrome (interacción real de navegador — no `django.test.Client`).
 **Servidor:** `python manage.py runserver` local, `EMAIL_BACKEND` de consola.

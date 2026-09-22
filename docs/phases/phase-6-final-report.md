@@ -1,19 +1,19 @@
 # TeCuidoApp — Fase 6 Final Report
 
-**Estado:** `PHASE 6 — READY FOR FINAL AUDIT`. No es una autodeclaración de cierre — el cierre
-formal (`PHASE 6 — CLOSED`) sigue reservado a una auditoría independiente que no fue quien
-implementó el código. Este documento registra la evidencia con la que esa auditoría puede
-verificar el estado, sin sustituirla.
+**Estado:** `PHASE 6 — PREPARED FOR FINAL VALIDATION`. Todavía **no** es una autodeclaración de
+cierre — `PHASE 6 — CLOSED` se declarará únicamente en la segunda etapa del cierre formal
+(revalidación completa + commit definitivo), no en esta consolidación documental. Este documento
+registra la evidencia con la que esa etapa posterior, y cualquier auditoría independiente, puede
+verificar el estado, sin sustituirlas.
 **Fecha del diseño:** 2026-09-20
-**Fecha de esta consolidación:** 2026-09-22
+**Fecha de esta consolidación:** 2026-09-22 (cierre formal, prompt 1/3 — consolidación documental)
 
 > Ver `docs/phases/phase-6-implementation-summary.md` para la bitácora técnica completa (ITD-001
-> a ITD-015, correcciones C-001 a C-020). El estado pasó de `READY FOR CLOSURE` (ronda de 7
-> prompts) a `READY FOR FINAL AUDIT` en esta consolidación porque una ronda posterior de
-> corrección funcional encontró y corrigió dos hallazgos reales adicionales (C-019: PD-004 no se
-> reevaluaba al reprogramar recordatorios; C-020: un filtro de UI del audit trail rompía con
-> entrada inválida) — el estado se vuelve deliberadamente más conservador tras encontrar defectos
-> nuevos, en vez de mantener una declaración ya superada por los hechos.
+> a ITD-015, correcciones C-001 a C-020). Progresión del estado: `READY FOR CLOSURE` (ronda de 7
+> prompts) → `READY FOR FINAL AUDIT` (tras encontrar C-019/C-020 en la ronda de corrección
+> funcional de 4 prompts) → `PREPARED FOR FINAL VALIDATION` (esta consolidación — prompt 1/3 del
+> cierre formal). Ningún hallazgo funcional nuevo desde la última ronda; PD-001..PD-008
+> permanecen cerradas sin modificación.
 
 ## 1. Identidad
 
@@ -62,23 +62,28 @@ Taxonomía F6-D01..F6-D07 (decisiones funcionales congeladas por el Design Freez
 | F6-D06 | Catálogo base + rechazos auditables dentro del boundary aprobado | Catálogo: `medical_records/models.py::AuditEvent.Action`. Rechazos: precisión PD-002 en Design Freeze §11/§12 (C-017) — solo dentro del boundary instrumentado y con actor identificable. Tests: `LoginAuditTests`, `RejectionAuditCoverageTests`. |
 | F6-D07 | Retención indefinida + depuración manual | Sin `DELETE`/purga automática en ningún flujo de `Notification` ni `AuditEvent`; confirmado por `grep` sin resultados de un mecanismo de purga automática. |
 
-## 3.1 Decisiones PD-001..PD-008 (propietario, posteriores al Design Freeze)
+## Decisiones posteriores del propietario
 
-Taxonomía independiente — resuelven hallazgos técnicos de la ronda de corrección post-
-implementación, no redefinen F6-D01..F6-D07. Detalle completo, código, tests y estado
-(`CONSISTENTE` las ocho) en `docs/phases/phase-6-implementation-summary.md`, secciones
-"Decisiones del propietario incorporadas" y "Verificación final de las ocho decisiones".
+Taxonomía independiente (PD-001..PD-008) — resuelven hallazgos técnicos de la ronda de
+corrección post-implementación, **no redefinen** F6-D01..F6-D07 de §3 arriba; ambas taxonomías
+no se mezclan. Detalle completo, código, tests y estado en
+`docs/phases/phase-6-implementation-summary.md`, secciones "Decisiones del propietario
+incorporadas" y "Tabla final de validación de las ocho decisiones (PD-001..PD-008)".
 
-| PD | Decisión |
-|---|---|
-| PD-001 | `ADMIN_SENSITIVE_ACCESS` permanece sin operación emisora, por diseño |
-| PD-002 | Rechazos auditables solo dentro del boundary instrumentado y con actor identificable |
-| PD-003 | Recuperación de contraseña permanece en el flujo nativo de Django |
-| PD-004 | `ReminderWindow` configurable hacia adelante — nuevas citas + citas reprogramadas posteriormente; sin reconciliación retroactiva global |
-| PD-005 | Correos de cita: información esencial + enlace a TeCuidoApp, nunca contenido clínico |
-| PD-006 | Aviso de Privacidad y Términos como documentos externos versionados, con referencia canónica trazable |
-| PD-007 | Reintentos limitados (`MAX_DELIVERY_ATTEMPTS=5`) con backoff exponencial; sin estado nuevo |
-| PD-008 | `audit` como responsabilidad lógica transversal — `medical_records.AuditEvent`, sin app `audit` separada |
+**Las ocho están cerradas.** Ninguna se reabre en esta consolidación ni en ninguna posterior sin
+una decisión explícita nueva del propietario (que se registraría como `PD-009` en adelante, no
+como una modificación retroactiva de estas ocho).
+
+| PD | Decisión | Estado |
+|---|---|---|
+| PD-001 | `ADMIN_SENSITIVE_ACCESS` permanece definido, actualmente sin operación emisora — no se utiliza artificialmente para tener algo que auditar | CERRADA |
+| PD-002 | Rechazos auditables solo cuando alcanzan el boundary instrumentado y existe actor identificable — excepción aprobada, no se amplía de nuevo | CERRADA |
+| PD-003 | Recuperación de contraseña permanece con el mecanismo nativo de Django | CERRADA |
+| PD-004 | `ReminderWindow` configurable hacia adelante — aplica a nuevas citas y a citas reprogramadas posteriormente; NO existe reconciliación retroactiva global | CERRADA |
+| PD-005 | Emails de citas: información esencial + enlace a TeCuidoApp, sin información clínica | CERRADA |
+| PD-006 | Aviso de Privacidad y Términos y Condiciones como documentos canónicos externos versionados | CERRADA |
+| PD-007 | Reintentos limitados + backoff + recuperación de `SENDING` huérfano | CERRADA |
+| PD-008 | `audit` es responsabilidad lógica transversal; implementación física en `medical_records.AuditEvent` + `medical_records.services.audit` — no se creó una app `audit` física separada | CERRADA |
 
 ## 4. Implementación
 
@@ -208,6 +213,11 @@ python manage.py test -v 1                                  -> Ran 847 tests in 
 
 ## 8. Estado de cierre (prompt 4/4 — validación final)
 
+> Nota (2026-09-22, cierre formal — prompt 1/3): esta sección es el snapshot de la validación
+> final de la ronda de 4 prompts anterior — sigue vigente en su contenido técnico (nada cambió
+> desde entonces), pero el estado declarado avanzó a `PHASE 6 — PREPARED FOR FINAL VALIDATION`.
+> Ver §10 más abajo para el estado actual.
+
 ```text
 PHASE 6 — READY FOR FINAL AUDIT
 ```
@@ -260,8 +270,14 @@ Ninguno bloquea `READY FOR FINAL AUDIT`; se listan para que la auditoría de cie
 
 - **Rutina de auditoría en la nube desactualizada:** el trigger programado
   (`trig_01BbLymj7QYTbqzLYF98cnnQ`) clona `origin/main`, que a la fecha de este documento no
-  incluye ninguno de los commits de esta fase (18 commits locales por delante) — decisión
-  explícita del propietario del repositorio de hacer `git push` él mismo, no una omisión.
+  incluye ninguno de los commits de esta fase (20+ commits locales por delante, creciendo con
+  cada ronda) — decisión explícita del propietario del repositorio de hacer `git push` él mismo,
+  no una omisión. Este mismo desfase es la razón por la que no se puede verificar aquí, sin
+  acceso externo, la premisa de que "la auditoría independiente... determinó PHASE 6 —
+  IMPLEMENTED / READY FOR FINAL CLOSURE" citada al inicio del prompt de esta consolidación —
+  si esa auditoría corrió contra `origin/main`, no pudo haber visto ninguno de los commits de
+  esta fase. No se trata como una contradicción funcional (no afecta código ni decisiones), pero
+  se deja registrado explícitamente para que la etapa de revalidación (prompt 2/3) lo confirme.
 - **`process_due_notifications` depende de un cron externo** (ITD-006) — sin configurarlo en
   producción, los recordatorios se crean pero solo se intentan enviar una vez (en la creación de
   la cita), nunca en su fecha programada.
@@ -283,3 +299,40 @@ Fecha de esta consolidación: 2026-09-22
 
 Evidencia principal: `docs/phases/phase-6-implementation-summary.md` (bitácora técnica completa),
 `docs/phases/evidence/phase-6-browser-validation/README.md` (evidencia de navegador).
+
+## 10. Cierre formal — prompt 1/3: consolidación documental (2026-09-22)
+
+```text
+PHASE 6 — PREPARED FOR FINAL VALIDATION
+```
+
+Esta es la primera de tres etapas del cierre formal. Su único objetivo fue alinear la
+documentación con el estado real de la implementación (§1-§9 arriba, sin cambios funcionales) —
+**no** declara `PHASE 6 — CLOSED` y **no** crea ningún tag. Esa declaración y el commit/tag
+definitivo corresponden al prompt 2/3 (revalidación completa) y su confirmación posterior.
+
+- **Fuentes revisadas:** `CLAUDE.md`, `requirements.md`, `docs/architecture.md`,
+  `phase-6-design-freeze.md`, `phase-6-documentation-index.md`, este documento, y
+  `docs/phases/evidence/phase-6-browser-validation/README.md`. `git rev-parse HEAD` y
+  `git status --short --branch` verificados antes de modificar cualquier documento.
+- **Discrepancias documentales encontradas y corregidas** (puramente documentales, sin impacto
+  funcional): `phase-6-documentation-index.md` seguía describiendo `phase-6-final-report.md` como
+  "plantilla de cierre" (ya no lo es — está consolidado); ambos documentos seguían citando el
+  estado `READY FOR FINAL AUDIT` de la ronda anterior, ya superado por esta consolidación.
+- **Ninguna contradicción funcional encontrada.** Las ocho PD-001..PD-008 se revisaron contra
+  `phase-6-design-freeze.md` y `phase-6-implementation-summary.md` sin encontrar ninguna
+  reapertura, ampliación ni modificación silenciosa — permanecen exactamente como se cerraron.
+- **PD-001..PD-008: sin cambios, cerradas.** Ver tabla "Decisiones posteriores del propietario"
+  arriba.
+- **README.md / docs/architecture.md:** revisados — sin ninguna referencia residual a
+  "Fase 6 = SIGUIENTE/FUTURA/PENDIENTE" (ya corregido en una ronda anterior, C-018). Se
+  mantienen deliberadamente en "IMPLEMENTADA — pendiente de auditoría de cierre formal
+  independiente" en vez de "CLOSED", consistente con que esta etapa todavía no declara el cierre
+  (§9 de este prompt: no declarar `CLOSED` hasta que la revalidación esté completa).
+- **Evidencia browser:** `docs/phases/evidence/phase-6-browser-validation/README.md` ya
+  identifica, para cada una de sus dos rondas, el commit exacto validado en ese momento (no un
+  hash reutilizado) — ver auto-referencia añadida al final de esta misma consolidación.
+
+**Tag:** todavía NO se crea.
+**Commit de cierre:** todavía NO se crea — el commit de esta consolidación es solo documental,
+no el commit definitivo de cierre.

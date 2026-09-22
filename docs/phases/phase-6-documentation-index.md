@@ -4,9 +4,11 @@
 **Fecha:** 2026-09-20
 
 > **Estado de implementación (2026-09-22):** el paquete descrito por este índice ya está
-> implementado y corregido — `PHASE 6 — IMPLEMENTED / READY FOR FINAL AUDIT` (ver
+> implementado, corregido y validado — `PHASE 6 — PREPARED FOR FINAL VALIDATION` (ver
 > `docs/phases/phase-6-implementation-summary.md` para el estado técnico completo y
-> `docs/phases/phase-6-final-report.md` para el reporte consolidado). Este índice conserva su
+> `docs/phases/phase-6-final-report.md` para el reporte consolidado). Este documento aún **no**
+> declara `PHASE 6 — CLOSED` — esa declaración solo puede hacerse tras la revalidación completa y
+> el commit definitivo de cierre (segunda etapa de esta consolidación). Este índice conserva su
 > función original de navegación del paquete de diseño; no se reescribe como historial de
 > implementación.
 
@@ -38,7 +40,7 @@ El contrato normativo es `docs/phases/phase-6-design-freeze.md`. Ningún documen
 | 16 | `phase-6-screens.md` | `docs/design/` | Estados concretos de pantallas |
 | 17 | `phase-6-testing-strategy.md` | `docs/phases/` | Estrategia y matriz de pruebas |
 | 18 | `phase-6-implementation-handoff.md` | `docs/phases/` | Orden de implementación y handoff |
-| 19 | `phase-6-final-report.md` | `docs/phases/` | Plantilla de cierre posterior a implementación |
+| 19 | `phase-6-final-report.md` | `docs/phases/` | Reporte de cierre — consolidado, no ya una plantilla (ver estado en la nota al inicio de este documento) |
 
 ## 3. Orden de lectura
 
@@ -80,6 +82,7 @@ Implementation Handoff
 ## 5. Estado
 
 Este índice documenta el paquete de diseño. El estado real de implementación es
-`PHASE 6 — IMPLEMENTED / READY FOR FINAL AUDIT` (ver la nota al inicio de este documento y
+`PHASE 6 — PREPARED FOR FINAL VALIDATION` (ver la nota al inicio de este documento y
 `docs/phases/phase-6-implementation-summary.md`) — no declara, ni antes ni ahora,
-`PHASE 6 — CLOSED`; esa declaración corresponde a la auditoría de cierre formal independiente.
+`PHASE 6 — CLOSED`; esa declaración solo se hará una vez que la etapa de revalidación final
+(segunda etapa del cierre formal) confirme el commit definitivo y no queden hallazgos abiertos.

@@ -1393,3 +1393,75 @@ funcional de recordatorios (1/4, C-019), evidencia browser/UI complementaria (2/
 consolidación documental (3/4), y esta validación final (4/4). Riesgos restantes documentados en
 `docs/phases/phase-6-final-report.md` §9 — ninguno bloquea este estado. No se registró ningún
 `PD-009` en toda la ronda.
+
+---
+
+# Cierre formal — Prompt 1/3: consolidación documental (2026-09-22)
+
+Primera de tres etapas del cierre formal (ver `docs/phases/phase-6-final-report.md` §10 para el
+resumen completo). Objetivo: alinear toda la documentación con el estado real, sin cambios
+funcionales, sin declarar `PHASE 6 — CLOSED` todavía.
+
+## Verificación de PD-001..PD-008 contra el Design Freeze
+
+Se releyó `docs/phases/phase-6-design-freeze.md` completo contra la redacción exacta exigida por
+este prompt para cada PD. Resultado: PD-002 (§11/§12, precisión C-017) y PD-008 (§8.2, precisión
+de la ronda de corrección funcional) ya tenían su precisión formal incorporada. PD-001, PD-003,
+PD-004, PD-005, PD-006, PD-007 no tienen ninguna afirmación en el Design Freeze que los
+contradiga — son decisiones correctamente delegadas a documentos derivados por el propio §28
+("Decisiones técnicas pendientes de los documentos derivados"). **Ninguna de las ocho se
+reabrió, amplió ni modificó** — se conservan exactamente como fueron cerradas.
+
+## Alcance implementado, ITD, correcciones, pruebas, regresión, evidencia, migraciones y
+## seguridad — referencia
+
+Todo este contenido ya existe en las secciones correspondientes de este mismo documento (§2-§17,
+"Ronda de refinamiento", "Ronda de corrección funcional de recordatorios", "Prompt 2/4", "Prompt
+3/4", "Prompt 4/4" más arriba) — no se duplica aquí. Este prompt solo agrega el dato inequívoco
+que faltaba: el commit final auditado.
+
+## Final audited commit
+
+```text
+git rev-parse HEAD
+```
+
+Ver auto-referencia en el commit inmediatamente posterior a esta consolidación (mismo patrón ya
+usado en todo este documento — `79697e0`, `46a16af`, `a0793f0`, `899dcc4`, `5a903ba`/`d94a94b` —
+no confiar en un hash citado por adelantado). **Este no es el commit definitivo de cierre**: es
+el commit de la consolidación documental (prompt 1/3). El commit/tag de cierre definitivo se
+crea en el prompt 2/3, después de la revalidación completa.
+
+## Tag final
+
+Todavía **no** se crea — pendiente del prompt 2/3, después de que la revalidación completa
+confirme que no quedan hallazgos abiertos.
+
+## Contradicciones encontradas
+
+Ninguna contradicción **funcional**. Se registra, sin bloquear esta consolidación (no es una
+contradicción funcional, es una cuestión de trazabilidad externa que no puedo verificar desde
+este repositorio): la premisa de este prompt afirma que "la auditoría independiente... determinó
+`PHASE 6 — IMPLEMENTED / READY FOR FINAL CLOSURE`", pero `git status --short --branch` muestra
+`origin/main` 20+ commits detrás de `HEAD` — si esa auditoría corrió contra `origin/main` (el
+único lugar accesible externamente, dado que el propietario aún no ha hecho `git push`), no pudo
+haber evaluado ninguno de los commits de Fase 6. No es una discrepancia de código ni de
+decisiones — se deja registrada para que el prompt 2/3 (revalidación) la confirme o la aclare.
+
+## Discrepancias puramente documentales corregidas
+
+- `phase-6-documentation-index.md`: describía `phase-6-final-report.md` como "plantilla de
+  cierre" — ya no lo es, está consolidado. Corregido.
+- `phase-6-documentation-index.md` y `phase-6-final-report.md`: ambos citaban el estado
+  `READY FOR FINAL AUDIT` de la ronda anterior — actualizado a `PREPARED FOR FINAL VALIDATION`
+  en ambos, consistente con que esta etapa todavía no declara `CLOSED`.
+
+## Estado tras este prompt
+
+```text
+PHASE 6 — PREPARED FOR FINAL VALIDATION
+```
+
+Documentación consolidada. Tag: no creado. Commit de cierre definitivo: no creado. Pendiente el
+prompt 2/3 (revalidación completa) y su confirmación posterior antes de declarar
+`PHASE 6 — CLOSED`.
