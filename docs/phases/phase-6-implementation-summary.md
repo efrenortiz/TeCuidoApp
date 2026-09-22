@@ -1018,7 +1018,7 @@ reales de la corrida, que terminó `OK` con `exit code 0`. Cero regresiones dete
 | PD-001 | `ADMIN_SENSITIVE_ACCESS` sin uso | Sin cambios — sigue sin emisor, por diseño | N/A (ausencia verificada) | `phase-6-audit-domain.md` §3 | CONSISTENTE |
 | PD-002 | Excepción de rechazos previos al boundary | Sin cambios de código — ya correcto | `LoginAuditTests`, `RejectionAuditCoverageTests` | `phase-6-audit-domain.md` §4 + **`phase-6-design-freeze.md` §11/§12 (C-017, cierra la formulación más amplia)** | CONSISTENTE |
 | PD-003 | Password Recovery nativo | Sin cambios — `PasswordResetView` intacto | Regresión de `accounts` | `phase-6-notification-domain.md` §3 | CONSISTENTE |
-| PD-004 | Configuración hacia adelante | Sin cambios — ya era el comportamiento natural | `ReminderSchedulingTests` | `phase-6-notification-data-model.md` §2.2 | CONSISTENTE |
+| PD-004 | Configuración hacia adelante | **Corregido** (C-019 — ver "Ronda de corrección funcional de recordatorios" más abajo; la reprogramación no releía `ReminderWindow` vigente) | `ReminderSchedulingTests` + `ReminderWindowReconfigurationTests` (6 tests) | `phase-6-notification-data-model.md` §2.2 | CONSISTENTE |
 | PD-005 | Email + enlace | Sin cambios de código — cobertura ampliada (C-016) | `EmailContentTests` (5 tests, los 4 eventos + no-bypass) | `phase-6-notification-security-and-privacy.md` §1 | CONSISTENTE |
 | PD-006 | Documentos externos versionados | Sin cambios de código — cobertura ampliada (C-015) | `ConsentDocumentReferenceTests` + evidencia de navegador | `phase-6-consent-domain.md` §1 | CONSISTENTE |
 | PD-007 | Retries limitados + backoff | **Corregido** (C-012/C-013, ITD-015) | `RetryBackoffTests` (11 tests) | `phase-6-notification-domain.md` §6, `phase-6-notification-service-contracts.md` §4 | CONSISTENTE |
@@ -1040,3 +1040,76 @@ implementación puede verificar por sí misma: las 7 decisiones F6-D01..F6-D07 y
 PD-008 están implementadas, probadas y documentadas sin contradicciones; la regresión completa
 pasa; existe evidencia de navegador real; y no quedan hallazgos técnicos abiertos de los 7 prompts
 de esta ronda.
+
+---
+
+# Ronda de corrección funcional de recordatorios (prompt 1/4, 2026-09-22)
+
+Una auditoría funcional posterior identificó una discrepancia real entre **PD-004** y la
+implementación de `reschedule_appointment_reminders()`, no cubierta por la ronda de 7 prompts
+anterior (esa ronda tocó `process_due_notifications` y el transporte, no la reconfiguración de
+`ReminderWindow`).
+
+## C-019 — `reschedule_appointment_reminders` no releía la configuración vigente de `ReminderWindow`
+
+- **Problema:** al reprogramar una cita, la función recalculaba `scheduled_for` de cada
+  recordatorio ya existente usando el `offset_days` incrustado en su propio `dedupe_key`
+  (`APPOINTMENT_REMINDER:{appointment_id}:{user_id}:{offset_days}`), en vez de volver a
+  consultar `ReminderWindow.objects.filter(is_active=True)`. Si la configuración de ventanas
+  cambiaba entre la creación original de la cita y su reprogramación, la cita reprogramada
+  conservaba offsets obsoletos en vez de adoptar la configuración vigente.
+- **Causa:** el `dedupe_key` es (correctamente) estable para no duplicar filas — pero se estaba
+  usando también como fuente de la configuración, cuando debía usarse solo como identidad de la
+  fila. Eran dos responsabilidades distintas mezcladas en el mismo dato.
+- **Solución:**
+  1. Se calcula `active_offsets` desde `ReminderWindow.objects.filter(is_active=True)` al inicio
+     de la función (la misma fuente de verdad que usa la creación original,
+     `schedule_appointment_reminders`).
+  2. Todo recordatorio `PENDING`/`FAILED` (con `attempt_count < MAX_DELIVERY_ATTEMPTS`) cuyo
+     offset ya no está en `active_offsets` se cancela explícitamente
+     (`reason_code="REMINDER_WINDOW_NO_LONGER_ACTIVE"`) en vez de recalcularse con una ventana
+     obsoleta.
+  3. Todo recordatorio cuyo offset sigue activo se recalcula contra la fecha vigente de la cita
+     — comportamiento ya existente, sin cambios.
+  4. Al final, se reutiliza `schedule_appointment_reminders(appointment)` (la misma función de
+     creación original, no una segunda fuente de verdad) para materializar cualquier ventana
+     activa nueva que la cita todavía no tuviera — respeta elegibilidad (offsets ya vencidos no
+     se crean) e idempotencia (`dedupe_key` evita duplicar lo que el paso 2/3 ya dejó en su
+     lugar).
+  5. `SENT` y `SENDING` siguen completamente fuera del alcance de esta función — decisión ya
+     cerrada en la ronda anterior (Prompt 1 de la corrección de 7 prompts), sin cambios: un
+     recordatorio ya enviado nunca se reenvía, y `SENDING` es una ventana de milisegundos que se
+     autocorrige en el propio envío.
+  6. Una fila agotada (`attempt_count >= MAX_DELIVERY_ATTEMPTS`) sigue completamente fuera del
+     alcance de la función (queda excluida del `queryset` de recorridos) — nunca se reactiva por
+     un cambio de configuración ni por una reprogramación.
+- **Restricciones respetadas:** no se creó reconciliación retroactiva global (solo se recalculan
+  las filas de la cita efectivamente reprogramada, nunca todas las citas ya existentes); no se
+  creó un nuevo scheduler ni una segunda fuente de verdad (se reutiliza `ReminderWindow` y
+  `schedule_appointment_reminders`, ya existentes); PD-004 y PD-007 no se modificaron, solo se
+  corrigió una implementación que no los cumplía correctamente.
+- **Archivos:** `notifications/services.py` (`reschedule_appointment_reminders`,
+  docstring de `schedule_appointment_reminders`).
+- **Tests:** `notifications/tests/test_services.py::ReminderWindowReconfigurationTests` (6 tests,
+  casos 1-6 del prompt de corrección — configuración por defecto, nueva cita con configuración
+  cambiada, reprogramación que adopta la configuración cambiada, reprogramación repetida sin
+  duplicar filas, interacción con `SENT`/`SENDING`/`FAILED`, y no reactivación de una fila
+  agotada).
+
+## Regresión de esta ronda
+
+```text
+python manage.py check                       -> System check identified no issues (0 silenced)
+python manage.py makemigrations --check       -> No changes detected
+python manage.py test notifications           -> 36/36 (30 -> 36; +6 de ReminderWindowReconfigurationTests)
+python manage.py test appointments             -> 186/186 (sin regresión en Agenda)
+```
+
+No se tocó ningún archivo de `appointments/` — la corrección es exclusiva de
+`notifications/services.py`; la suite de `appointments` se ejecutó solo para confirmar ausencia
+de regresión en el consumidor de estas señales.
+
+## Estado tras este prompt
+
+Corrección completa e implementada y probada. Pendientes los prompts 2/4, 3/4 y 4/4 de esta
+misma ronda (según se reciban) antes de volver a declarar un estado consolidado de Fase 6.
