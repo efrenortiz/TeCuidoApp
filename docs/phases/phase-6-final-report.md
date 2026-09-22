@@ -206,34 +206,80 @@ python manage.py test -v 1                                  -> Ran 847 tests in 
     documentación — consistente con el resto de esta bitácora.
   - Ningún `PD-009` tampoco en esta ronda.
 
-## 8. Estado de cierre
+## 8. Estado de cierre (prompt 4/4 — validación final)
 
 ```text
 PHASE 6 — READY FOR FINAL AUDIT
 ```
 
 Esto no es `PHASE 6 — CLOSED`, ni tampoco `READY FOR CLOSURE` (la ronda de 7 prompts había
-llegado a esa conclusión; esta consolidación la revierte deliberadamente a un estado más
-conservador porque el prompt 1/4 y 2/4 de esta ronda encontraron y corrigieron dos hallazgos
-reales adicionales — C-019, C-020 — no cubiertos por la validación anterior). Significa que, hasta
-donde la implementación puede verificar por sí misma: las 7 decisiones F6-D01..F6-D07 y las 8
-decisiones del propietario PD-001..PD-008 están implementadas, probadas y documentadas sin
-contradicciones; existe evidencia de navegador real; y no quedan hallazgos técnicos abiertos de
-esta ronda — pero, precisamente porque esta ronda demostró que rondas previas "READY FOR CLOSURE"
-podían aun así tener defectos reales sin cubrir, el estado se mantiene en `READY FOR FINAL AUDIT`
-en vez de reclamar `READY FOR CLOSURE` de nuevo, a la espera del prompt 4/4 (validación final de
-esta misma ronda).
+llegado a esa conclusión; el prompt 3/4 de esta ronda la revirtió deliberadamente a un estado más
+conservador porque los prompts 1/4 y 2/4 encontraron y corrigieron dos hallazgos reales
+adicionales — C-019, C-020 — no cubiertos por la validación anterior). El cierre formal
+(`PHASE 6 — CLOSED`) requiere una auditoría independiente de quien implementó el código.
 
-El cierre formal (`PHASE 6 — CLOSED`) requiere una auditoría independiente de quien implementó
-el código — ver la nota de riesgo conocido sobre la rutina de auditoría en la nube programada
-contra `origin/main`, que a la fecha de esta consolidación no incluye estos commits (pendiente de
-`git push` por decisión explícita del propietario del repositorio).
+**HEAD auditado:** ver auto-referencia en el commit inmediatamente posterior a este documento
+(mismo patrón que `79697e0`/`46a16af`/`a0793f0`/el commit de consolidación del prompt 3/4 — no
+confiar en un hash citado por adelantado; volver a ejecutar `git rev-parse HEAD`).
+
+**Número final de tests:** 847/847, `OK` (suite completa del proyecto). Suites críticas
+ejecutadas explícitamente por separado: `notifications` 36/36, `medical_records` (audit) 217/217,
+`accounts` (incl. consent) 72/72, `appointments` (agenda) — ver resultado en la respuesta de este
+prompt. Cero fallos, cero regresiones detectadas en Fases 1-5 (la suite completa las ejecuta
+todas, no solo Fase 6).
+
+**Estado de migraciones:** `makemigrations --check --dry-run` → "No changes detected". Todas las
+migraciones de Fase 6 (`notifications` 0001/0002, `accounts` 0004, `medical_records` 0005-0007)
+aplicadas y sin drift respecto al estado de los modelos.
+
+**Estado de seguridad:** sin secretos/credenciales/tokens en el repositorio (`.env` gitignored y
+nunca tracked, confirmado por `git ls-files`); `git archive --format=zip HEAD` verificado sin
+`.env`, `__pycache__/`, `*.pyc` ni `private_media/` (solo `.env.example`, el template esperado);
+acceso al audit trail restringido a `is_superuser` en API/UI/Django Admin por igual; `.claude/
+settings.local.json` permanece fuera de todo commit funcional de Fase 6 (confirmado por `git
+status`/`git diff` — solo config local de la sesión, sin datos sensibles).
+
+**Estado de evidencia browser:** `docs/phases/evidence/phase-6-browser-validation/README.md`
+completo — 15 capturas en dos rondas, cada una con su commit de referencia verificado (`79697e0`
+Ronda 1, `592c356` Ronda 2), escenarios de consentimiento, audit trail por rol, estados UI
+(empty/error, con divulgación transparente de que "loading" no aplica a esta vista
+server-rendered), y enlaces de notificación sin bypass.
+
+**Decisiones PD-001..PD-008:** las ocho `CONSISTENTE` — tabla completa en
+`docs/phases/phase-6-implementation-summary.md`, sección "Tabla final de validación de las ocho
+decisiones (PD-001..PD-008)" (prompt 4/4).
+
+**Hallazgos corregidos:** ver §7 arriba — C-001 a C-020, todos cerrados con código (cuando
+aplicó), tests y commit. Índice completo de commits en
+`docs/phases/phase-6-implementation-summary.md`, sección "Índice de commits" dentro de
+"Correcciones post-implementación".
+
+## 9. Riesgos restantes
+
+Ninguno bloquea `READY FOR FINAL AUDIT`; se listan para que la auditoría de cierre los considere:
+
+- **Rutina de auditoría en la nube desactualizada:** el trigger programado
+  (`trig_01BbLymj7QYTbqzLYF98cnnQ`) clona `origin/main`, que a la fecha de este documento no
+  incluye ninguno de los commits de esta fase (18 commits locales por delante) — decisión
+  explícita del propietario del repositorio de hacer `git push` él mismo, no una omisión.
+- **`process_due_notifications` depende de un cron externo** (ITD-006) — sin configurarlo en
+  producción, los recordatorios se crean pero solo se intentan enviar una vez (en la creación de
+  la cita), nunca en su fecha programada.
+- **`SITE_BASE_URL`/`LEGAL_DOCUMENT_URLS` deben configurarse con valores reales en producción** —
+  sin configurar, los enlaces de correo apuntarían a `localhost:8000` y el enlace "Leer el
+  documento" no aparecería (degradación segura, no una falla).
+- **`MAX_DELIVERY_ATTEMPTS`/backoff/`SENDING_LEASE_TIMEOUT`** son una primera elección razonable,
+  no medida contra tráfico real de producción — candidatos a ajustar con datos de operación.
+- **Recuperación de contraseña (PD-003)** queda fuera del transporte de `notifications` — un
+  fallo de ese flujo específico no genera una fila `Notification` (sí queda en los logs nativos
+  de Django) — decisión final del propietario, no un defecto.
+
+Ninguno de estos riesgos es nuevo de esta ronda ni requiere una decisión adicional del
+propietario — todos ya estaban aceptados como conocidos desde rondas anteriores
+(`docs/phases/phase-6-implementation-summary.md` §15), salvo el primero, que es consecuencia
+directa y ya documentada de la decisión explícita de no hacer `git push` todavía.
 
 Fecha de esta consolidación: 2026-09-22
-
-Commit de esta consolidación: `0b4478ff773a523b8eca0e64f591fc3523b89161` (auto-referencia
-trivial, mismo patrón ya usado en `79697e0`/`46a16af`/`a0793f0` — no confiar en este hash citado,
-volver a ejecutar `git rev-parse HEAD` en cualquier auditoría posterior).
 
 Evidencia principal: `docs/phases/phase-6-implementation-summary.md` (bitácora técnica completa),
 `docs/phases/evidence/phase-6-browser-validation/README.md` (evidencia de navegador).

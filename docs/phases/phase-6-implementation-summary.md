@@ -1299,3 +1299,97 @@ PHASE 6 — READY FOR FINAL AUDIT
 Documentación consolidada, sin contradicciones conocidas entre `design-freeze`,
 `documentation-index`, este documento y `final-report.md`. No se declara `PHASE 6 — CLOSED`.
 Pendiente el prompt 4/4 (validación final) de esta misma ronda.
+
+---
+
+# Prompt 4/4 — validación final, git y release readiness (2026-09-22)
+
+## Tabla final de validación de las ocho decisiones (PD-001..PD-008)
+
+| ID | Decisión | Código | Tests | Evidencia | Documentación | Estado |
+|---|---|---|---|---|---|---|
+| PD-001 | `ADMIN_SENSITIVE_ACCESS` sin operación emisora, por diseño | `medical_records/models.py::AuditEvent.Action.ADMIN_SENSITIVE_ACCESS` (definida, sin emisor) | N/A — ausencia verificada por `grep` sin resultados de ningún emisor | — (ausencia estructural, no aplica evidencia browser) | `phase-6-audit-domain.md` §3 | CONSISTENTE |
+| PD-002 | Rechazos auditables solo dentro del boundary instrumentado y con actor identificable | Sin cambio de código — `record_event`/`safe_record_event` ya exigían actor real (AH-086, Fase 3) | `LoginAuditTests`, `RejectionAuditCoverageTests` | — (mecanismo de servidor, no visible en captura de UI) | `phase-6-audit-domain.md` §4; precisión formal en `phase-6-design-freeze.md` §11/§12 (C-017) | CONSISTENTE |
+| PD-003 | Recuperación de contraseña permanece en el flujo nativo de Django | Sin cambios — `PasswordResetView`/`PasswordResetForm` intactos; `create_password_recovery_notification` sin invocar | Regresión completa de `accounts` | — (fuera del alcance de la evidencia browser de Fase 6) | `phase-6-notification-domain.md` §3 | CONSISTENTE |
+| PD-004 | `ReminderWindow` configurable hacia adelante; sin reconciliación retroactiva global | `notifications/services.py::reschedule_appointment_reminders` (**corregido**, C-019 — releía offset del `dedupe_key`, ahora consulta `ReminderWindow` vigente) | `ReminderWindowReconfigurationTests` (6 tests, casos 1-6 del prompt de corrección) | — (mecanismo temporal, no capturable en una sola captura de UI) | `phase-6-notification-data-model.md` §2.2; C-019 en este documento | CONSISTENTE |
+| PD-005 | Correos de cita: información esencial + enlace, nunca contenido clínico | `notifications/services.py::_render`/`_appointment_essentials`/`_appointment_url` | `EmailContentTests` (5 tests: creada/modificada/cancelada/recordatorio + no-bypass del enlace) | `docs/phases/evidence/phase-6-browser-validation/README.md` Ronda 1 §5 (correo real por consola), Ronda 2 §8 (enlace verificado en navegador, capturas 14-15) | `phase-6-notification-security-and-privacy.md` §1 | CONSISTENTE |
+| PD-006 | Aviso de Privacidad/Términos como documentos externos versionados, con referencia canónica trazable | `accounts/services/consent.py::document_url`/`acceptance_trace`; `settings.LEGAL_DOCUMENT_URLS` | `ConsentDocumentReferenceTests`, `test_acceptance_trace_answers_the_five_pd006_questions`, `test_acceptance_trace_none_when_never_accepted` | `docs/phases/evidence/phase-6-browser-validation/README.md` Ronda 1 §1 (capturas 01-02), Ronda 2 §7 (capturas 12-13, con `LEGAL_DOCUMENT_URLS` real configurado y `href` verificado) | `phase-6-consent-domain.md` §1 | CONSISTENTE |
+| PD-007 | Reintentos limitados (`MAX_DELIVERY_ATTEMPTS=5`) con backoff exponencial; sin estado nuevo | `notifications/services.py` (`_attempt_send`, `process_due_notifications`, **corregido** C-012/C-013 — `SENDING` huérfana agotada y fallo permanente ya no se reclaman de nuevo) | `RetryBackoffTests` (15 tests) | — (mecanismo de fondo, no visible en UI) | `phase-6-notification-domain.md` §6, `phase-6-notification-service-contracts.md` §4 | CONSISTENTE |
+| PD-008 | `audit` como responsabilidad lógica transversal — `medical_records.AuditEvent`, sin app `audit` separada | Sin app nueva; `medical_records.AuditEvent`/`medical_records.services.audit` únicos | Toda la suite `medical_records.tests.test_fase6_audit` (28 tests) | `docs/phases/evidence/phase-6-browser-validation/README.md` Ronda 1 §2/§3 (capturas 03-08), Ronda 2 §6 (capturas 09-11) | `phase-6-audit-domain.md` §2; precisión formal en `phase-6-design-freeze.md` §8.2 (esta ronda) | CONSISTENTE |
+
+Las ocho terminan `CONSISTENTE`. Ninguna quedó `PENDIENTE`, `PARCIAL` ni `CONTRADICTORIA`. No se
+registró ningún `PD-009` en esta ronda de 4 prompts — los dos hallazgos reales que surgieron
+(C-019, C-020) fueron puramente técnicos y se resolvieron sin tocar ninguna de las ocho
+decisiones ni el alcance de la fase.
+
+## Suite completa y suites críticas (§1 del prompt 4/4)
+
+```text
+python manage.py check                  -> System check identified no issues (0 silenced)
+python manage.py makemigrations --check -> No changes detected
+python manage.py test (suite completa)  -> Ran 847 tests in 576.008s — OK
+python manage.py test notifications     -> Ran 36 tests — OK
+python manage.py test medical_records   -> Ran 217 tests — OK   (audit)
+python manage.py test accounts          -> Ran 72 tests — OK    (incluye consent)
+python manage.py test appointments      -> Ran 186 tests — OK   (agenda)
+```
+
+Ningún fallo. Las cuatro suites críticas suman 511 tests, todos incluidos también en los 847 de
+la suite completa (no son una muestra aparte — se ejecutaron por separado únicamente para dar
+visibilidad explícita por dominio, como pide el prompt).
+
+## Regresión por fase (§2 del prompt 4/4)
+
+| Fase | App(s) principal(es) | Resultado |
+|---|---|---|
+| Fase 1 — Fundaciones | `accounts`, `doctors`, `clinics`, `patients` | Incluidas en la suite completa (847/847) y en `accounts` (72/72) — sin fallos |
+| Fase 2 — Agenda | `appointments` | 186/186 — sin fallos |
+| Fase 3 — Gestión clínica | `medical_records` (encuentros clínicos) | Incluida en `medical_records` (217/217) — sin fallos |
+| Fase 4 — Documentos | `clinical_documents`, `prescriptions`, `study_orders` | Incluidas en la suite completa — sin fallos |
+| Fase 5 — CareRequest y operación | `care_requests` | Incluida en la suite completa — sin fallos |
+
+No se encontró ningún fallo preexistente que documentar o clasificar — la suite completa
+terminó `OK` sin excepciones no manejadas ajenas a los tres tracebacks esperados (tests que
+simulan fallos deliberadamente: outage de base de datos, SMTP caído, formato de destinatario
+inválido — ver detalle en §13 más abajo en este documento).
+
+## Git, secretos y release artifact (§4/§5/§6 del prompt 4/4)
+
+```text
+git status --short --branch  -> ## main...origin/main [adelante 18]; solo .claude/settings.local.json modificado
+git diff --cached            -> (vacío, nada staged sin commitear)
+git rev-parse HEAD           -> ver auto-referencia del commit de este prompt
+```
+
+- `.claude/settings.local.json`: modificado localmente (config de plugins/permisos de la sesión,
+  sin datos sensibles) pero **nunca commiteado** en ningún commit de Fase 6 de esta ni de
+  ninguna ronda anterior — confirmado por `git diff --cached` vacío.
+- Sin cambios de modo de archivo inesperados: `git diff --summary` de todos los commits de esta
+  sesión muestra únicamente `create mode 100644` para archivos nuevos, ningún cambio de
+  permisos sobre archivos existentes.
+- `.env` nunca tracked (`git ls-files` sin resultados) y gitignorado (`.gitignore:19`); sin
+  `__pycache__/`, `*.pyc` ni `private_media/` tracked.
+- `git archive --format=zip HEAD` verificado (576 archivos): sin `.env`, `__pycache__/`, `*.pyc`
+  ni `private_media/` — único archivo con nombre similar es `.env.example` (el template
+  esperado, con placeholders/URLs de ejemplo, no secretos reales).
+
+## Evidencia de navegador (§7 del prompt 4/4)
+
+Verificado: `docs/phases/evidence/phase-6-browser-validation/README.md` está completo y
+actualizado (15 capturas, dos rondas, cada una con su propio commit de referencia real —
+`79697e0` Ronda 1, `592c356` Ronda 2, ninguno reutilizando un hash desactualizado). Cubre
+consentimiento (con y sin `LEGAL_DOCUMENT_URLS` configurado), audit trail por rol y por estado UI
+(éxito/denegado/empty/error), filtros, ausencia de opt-out, y enlaces de notificación sin bypass
+de autorización — ver detalle completo en `docs/phases/phase-6-final-report.md` §5/§8.
+
+## Estado final de esta ronda de 4 prompts
+
+```text
+PHASE 6 — READY FOR FINAL AUDIT
+```
+
+No se declara `PHASE 6 — CLOSED`. Los cuatro prompts de esta ronda están completos: corrección
+funcional de recordatorios (1/4, C-019), evidencia browser/UI complementaria (2/4, C-020),
+consolidación documental (3/4), y esta validación final (4/4). Riesgos restantes documentados en
+`docs/phases/phase-6-final-report.md` §9 — ninguno bloquea este estado. No se registró ningún
+`PD-009` en toda la ronda.
