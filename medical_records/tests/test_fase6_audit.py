@@ -9,7 +9,7 @@ from django.test import Client, TestCase
 
 from accounts.models import Person, User
 from medical_records.models import AuditEvent
-from patients.models import Patient
+from patients.models import Patient, Responsible
 
 
 def _make_person(email, first_name="Test"):
@@ -227,6 +227,34 @@ class AuditTrailAccessTests(TestCase):
         client.force_login(self.admin_user)
         response = client.get("/api/v1/clinical/audit/events/")
         self.assertEqual(response["Cache-Control"], "no-store")
+
+    def test_patient_is_denied_audit_trail(self):
+        """Prompt 2 de la corrección post-implementación: cobertura
+        explícita por rol, no solo genérica con un médico."""
+        patient_person = _make_person("patient-trail@example.com", "Pat")
+        patient = Patient.objects.create(
+            person=patient_person, sex=Patient.Sex.FEMALE, regime=Patient.Regime.ADULT,
+        )
+        client = Client()
+        client.force_login(patient.person.user)
+        self.assertEqual(client.get("/api/v1/clinical/audit/events/").status_code, 403)
+        self.assertEqual(client.get("/clinica/auditoria/").status_code, 404)
+
+    def test_responsible_is_denied_audit_trail(self):
+        responsible_person = _make_person("responsible-trail@example.com", "Resp")
+        responsible = Responsible.objects.create(person=responsible_person)
+        client = Client()
+        client.force_login(responsible.person.user)
+        self.assertEqual(client.get("/api/v1/clinical/audit/events/").status_code, 403)
+        self.assertEqual(client.get("/clinica/auditoria/").status_code, 404)
+
+    def test_inactive_user_is_denied_audit_trail(self):
+        self.doctor_person.user.is_active = False
+        self.doctor_person.user.save(update_fields=["is_active"])
+        client = Client()
+        logged_in = client.login(username=self.doctor_person.user.email, password="s3cure-pass!")
+        self.assertFalse(logged_in)  # ModelBackend ya rechaza usuarios inactivos al autenticar
+        self.assertEqual(client.get("/api/v1/clinical/audit/events/").status_code, 401)
 
     def test_django_admin_staff_without_superuser_cannot_see_audit_trail(self):
         """Hallazgo 12.1: `is_staff=True` (acceso genérico a `/admin/`) no

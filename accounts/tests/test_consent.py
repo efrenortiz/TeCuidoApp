@@ -1,6 +1,6 @@
 from datetime import date
 
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 
 from accounts.models import PolicyAcceptance, User
 from accounts.services import consent as consent_service
@@ -159,3 +159,36 @@ class ConsentApiTests(TestCase):
     def test_no_cache_headers(self):
         response = self.client.get("/api/v1/consent/status/")
         self.assertEqual(response["Cache-Control"], "no-store")
+
+
+class ConsentDocumentReferenceTests(TestCase):
+    """Prompt 3 de la corrección post-implementación (PD-006): "acceso a
+    documento" — el mecanismo de referencia canónica funciona cuando está
+    configurado, no solo cuando está vacío por defecto."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email="doc-ref@example.com", password="s3cure-pass!")
+
+    @override_settings(LEGAL_DOCUMENT_URLS={
+        "PRIVACY_NOTICE": {"1.0": "https://example.com/aviso-de-privacidad"},
+        "TERMS_AND_CONDITIONS": {"1.0": ""},
+    })
+    def test_document_url_resolves_configured_reference(self):
+        url = consent_service.document_url(PolicyAcceptance.PolicyType.PRIVACY_NOTICE, "1.0")
+        self.assertEqual(url, "https://example.com/aviso-de-privacidad")
+
+    def test_document_url_is_empty_string_when_unconfigured(self):
+        url = consent_service.document_url(PolicyAcceptance.PolicyType.PRIVACY_NOTICE, "1.0")
+        self.assertEqual(url, "")
+
+    @override_settings(LEGAL_DOCUMENT_URLS={
+        "PRIVACY_NOTICE": {"1.0": "https://example.com/aviso-de-privacidad"},
+    })
+    def test_status_endpoint_surfaces_configured_document_url(self):
+        client = Client()
+        client.force_login(self.user)
+        response = client.get("/api/v1/consent/status/")
+        self.assertEqual(
+            response.json()["PRIVACY_NOTICE"]["document_url"],
+            "https://example.com/aviso-de-privacidad",
+        )

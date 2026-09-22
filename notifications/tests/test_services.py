@@ -387,6 +387,51 @@ class EmailContentTests(NotificationServiceTestCase):
         self.assertIn(str(self.doctor), message)
         self.assertIn(notification_service._appointment_url(appointment), message)
 
+    def test_modified_email_content(self):
+        """Prompt 4 de la corrección post-implementación: cobertura
+        explícita del cuarto tipo de evento (creada/cancelada/recordatorio
+        ya estaban cubiertos; modificada no lo estaba)."""
+        appointment = self._book()
+        new_day = (dj_timezone.now() + timedelta(days=25)).date()
+        availability_service.create_availability(
+            actor=self.doctor_user, doctor=self.doctor, clinic=self.clinic,
+            date=new_day, start_time=time(9, 0), end_time=time(13, 0),
+        )
+        new_start_at = availability_service.combine_local(new_day, time(9, 0), self.clinic)
+        with self.captureOnCommitCallbacks(execute=True):
+            appointment_service.reschedule_appointment(
+                actor=self.patient_user, appointment=appointment, new_clinic=self.clinic,
+                new_start_at=new_start_at, reason=RequestReason.PATIENT_REQUEST,
+            )
+        notification = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_MODIFIED,
+            resource_id=appointment.pk, recipient_user=self.patient_user,
+        ).first()
+        subject, message = notification_service._render(notification)
+        self.assertIn("modificada", subject.lower())
+        self.assertIn(str(self.doctor), message)
+        self.assertIn(self.clinic.name, message)
+        self.assertIn(notification_service._appointment_url(appointment), message)
+        for term in self._CLINICAL_TERMS:
+            self.assertNotIn(term, message.lower())
+
+    def test_link_points_to_authorization_protected_view_no_bypass(self):
+        """Prompt 4, "no bypass de autorización": el enlace del correo
+        apunta a la misma vista ya protegida de Agenda (LoginRequiredMixin
+        + autorización por objeto) — no crea una ruta nueva sin
+        autorización propia."""
+        from django.urls import reverse
+
+        appointment = self._book()
+        url = notification_service._appointment_url(appointment)
+        self.assertIn(reverse("appointments:appointment_detail", args=[appointment.pk]), url)
+
+        anonymous_client = self.client_class()
+        response = anonymous_client.get(
+            reverse("appointments:appointment_detail", args=[appointment.pk])
+        )
+        self.assertEqual(response.status_code, 302)  # LoginRequiredMixin redirige a login
+
 
 class RetryBackoffTests(NotificationServiceTestCase):
     """PD-007 — reintentos limitados + backoff; hallazgos 12.3/12.4/12.5/12.7."""
@@ -472,6 +517,93 @@ class RetryBackoffTests(NotificationServiceTestCase):
         notification.refresh_from_db()
         self.assertEqual(notification.status, Notification.Status.FAILED)
         self.assertEqual(notification.reason_code, "ORPHANED_NON_RETRYABLE_SENDING")
+
+    def test_orphaned_sending_at_max_attempts_is_not_reclaimed_for_another_attempt(self):
+        """Regresión (Prompt 1, corrección post-implementación): una fila
+        SENDING huérfana que ya alcanzó MAX_DELIVERY_ATTEMPTS en su último
+        intento (proceso interrumpido justo tras incrementar attempt_count)
+        nunca debe recibir un intento adicional."""
+        appointment = self._book()
+        notification = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_CREATED,
+            resource_id=appointment.pk, recipient_user=self.patient_user,
+        ).first()
+        notification.status = Notification.Status.SENDING
+        notification.attempt_count = notification_service.MAX_DELIVERY_ATTEMPTS
+        notification.last_attempt_at = (
+            dj_timezone.now() - notification_service.SENDING_LEASE_TIMEOUT - timedelta(minutes=1)
+        )
+        notification.save(update_fields=["status", "attempt_count", "last_attempt_at"])
+
+        with mock.patch.object(notification_service._TRANSPORT, "send") as mocked_send:
+            result = notification_service.process_due_notifications()
+            mocked_send.assert_not_called()
+
+        notification.refresh_from_db()
+        self.assertEqual(notification.status, Notification.Status.FAILED)
+        self.assertIn("MAX_ATTEMPTS_EXCEEDED", notification.reason_code)
+        self.assertEqual(notification.attempt_count, notification_service.MAX_DELIVERY_ATTEMPTS)
+        self.assertEqual(result["skipped"], 1)
+
+    def test_invalid_recipient_format_fails_permanently_without_waiting_for_max_attempts(self):
+        appointment = self._book()
+        notification = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_CREATED,
+            resource_id=appointment.pk, recipient_user=self.patient_user,
+        ).first()
+        notification.status = Notification.Status.PENDING
+        notification.attempt_count = 0
+        notification.recipient_address = "not-an-email"
+        notification.save(update_fields=["status", "attempt_count", "recipient_address"])
+
+        notification_service._attempt_send(notification)
+
+        self.assertEqual(notification.status, Notification.Status.FAILED)
+        self.assertTrue(notification.reason_code.startswith("PERMANENT:"))
+        self.assertEqual(notification.attempt_count, 1)
+
+    def test_permanently_failed_notification_is_never_reclaimed(self):
+        appointment = self._book()
+        notification = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_CREATED,
+            resource_id=appointment.pk, recipient_user=self.patient_user,
+        ).first()
+        notification.status = Notification.Status.FAILED
+        notification.attempt_count = 1
+        notification.reason_code = "PERMANENT:INVALID_RECIPIENT_FORMAT"
+        notification.scheduled_for = dj_timezone.now() - timedelta(minutes=1)
+        notification.save()
+
+        with mock.patch.object(notification_service._TRANSPORT, "send") as mocked_send:
+            notification_service.process_due_notifications()
+            mocked_send.assert_not_called()
+
+        notification.refresh_from_db()
+        self.assertEqual(notification.status, Notification.Status.FAILED)
+        self.assertEqual(notification.attempt_count, 1)
+
+    def test_retry_after_orphan_recovery_does_not_duplicate_notification_row(self):
+        """Idempotencia (Prompt 1, §5): recuperar una SENDING huérfana y
+        reenviarla con éxito no debe crear una segunda fila de Notification
+        ni un segundo intento de correo además del que efectivamente ocurre."""
+        appointment = self._book()
+        notification = Notification.objects.filter(
+            event_type=Notification.EventType.APPOINTMENT_CREATED,
+            resource_id=appointment.pk, recipient_user=self.patient_user,
+        ).first()
+        dedupe_key = notification.dedupe_key
+        notification.status = Notification.Status.SENDING
+        notification.last_attempt_at = (
+            dj_timezone.now() - notification_service.SENDING_LEASE_TIMEOUT - timedelta(minutes=1)
+        )
+        notification.save(update_fields=["status", "last_attempt_at"])
+
+        notification_service.process_due_notifications()
+
+        self.assertEqual(Notification.objects.filter(dedupe_key=dedupe_key).count(), 1)
+        notification.refresh_from_db()
+        self.assertEqual(notification.status, Notification.Status.SENT)
+        self.assertEqual(notification.attempt_count, 2)
 
     def test_reschedule_recomputes_failed_reminder_with_attempts_remaining(self):
         appointment = self._book()
