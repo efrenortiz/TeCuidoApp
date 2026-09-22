@@ -1,19 +1,21 @@
 # TeCuidoApp — Fase 6 Final Report
 
-**Estado:** `PHASE 6 — PREPARED FOR FINAL VALIDATION`. Todavía **no** es una autodeclaración de
-cierre — `PHASE 6 — CLOSED` se declarará únicamente en la segunda etapa del cierre formal
-(revalidación completa + commit definitivo), no en esta consolidación documental. Este documento
-registra la evidencia con la que esa etapa posterior, y cualquier auditoría independiente, puede
-verificar el estado, sin sustituirlas.
+**Estado:** `PHASE 6 — READY TO TAG`. Todavía **no** es una autodeclaración de cierre —
+`PHASE 6 — CLOSED` y el tag remoto se declaran únicamente en la tercera etapa del cierre formal
+(prompt 3/3), después de confirmar este commit de cierre. Este documento registra la evidencia
+con la que esa etapa posterior, y cualquier auditoría independiente, puede verificar el estado,
+sin sustituirlas.
 **Fecha del diseño:** 2026-09-20
-**Fecha de esta consolidación:** 2026-09-22 (cierre formal, prompt 1/3 — consolidación documental)
+**Fecha de esta consolidación:** 2026-09-22 (cierre formal, prompt 2/3 — validación final y
+commit de cierre)
 
 > Ver `docs/phases/phase-6-implementation-summary.md` para la bitácora técnica completa (ITD-001
 > a ITD-015, correcciones C-001 a C-020). Progresión del estado: `READY FOR CLOSURE` (ronda de 7
 > prompts) → `READY FOR FINAL AUDIT` (tras encontrar C-019/C-020 en la ronda de corrección
-> funcional de 4 prompts) → `PREPARED FOR FINAL VALIDATION` (esta consolidación — prompt 1/3 del
-> cierre formal). Ningún hallazgo funcional nuevo desde la última ronda; PD-001..PD-008
-> permanecen cerradas sin modificación.
+> funcional de 4 prompts) → `PREPARED FOR FINAL VALIDATION` (prompt 1/3 del cierre formal) →
+> `READY TO TAG` (esta validación — prompt 2/3). Ningún hallazgo funcional nuevo desde la última
+> ronda; PD-001..PD-008 permanecen cerradas sin modificación. Commit de cierre:
+> `242c6ad784f4bacbca0ba26e305aa3810d3c21e4`.
 
 ## 1. Identidad
 
@@ -336,3 +338,47 @@ definitivo corresponden al prompt 2/3 (revalidación completa) y su confirmació
 **Tag:** todavía NO se crea.
 **Commit de cierre:** todavía NO se crea — el commit de esta consolidación es solo documental,
 no el commit definitivo de cierre.
+
+## 11. Cierre formal — prompt 2/3: validación final y commit de cierre (2026-09-22)
+
+```text
+PHASE 6 — READY TO TAG
+```
+
+Segunda etapa del cierre formal. Validación completa con evidencia fresca (no valores
+históricos) — detalle completo en `docs/phases/phase-6-implementation-summary.md`, sección
+"Cierre formal — Prompt 2/3".
+
+- **Tests:** 847 totales, 847 ejecutados, 0 fallidos (suite completa, re-ejecutada en este
+  prompt, no reutilizada de la ronda anterior). Suites críticas confirmadas por separado:
+  `notifications` 36/36, `accounts` 72/72, `appointments` 186/186, `medical_records` 217/217.
+- **`check`:** "System check identified no issues (0 silenced)". **Migraciones:** "No changes
+  detected".
+- **Regresión:** sin fallos en Fases 1-5 (ver tabla por fase en `implementation-summary.md`).
+  Ningún fallo introducido por Fase 6.
+- **PD-001..PD-008:** las ocho `CONSISTENTE` en la matriz final (Decisión/Código/Test/
+  Documentación/Estado) — ninguna reabierta.
+- **Evidencia browser:** verificada coherente con el código actual — ningún archivo
+  UI-relevante (`templates/`, vistas, servicios) cambió desde el commit de su propia captura
+  (`592c356`); no fue necesario repetir ninguna prueba.
+- **Seguridad:** `.env` no tracked y gitignorado; sin secretos/tokens hardcodeados; audit trail
+  restringido a `is_superuser` en API/UI/Django Admin por igual (`is_staff` solo no es
+  suficiente en ninguno de los tres).
+- **Git:** working tree limpio salvo `.claude/settings.local.json` (nunca commiteado); nada
+  ajeno a Fase 6.
+- **Release artifact:** `git archive --format=zip HEAD` — 576 archivos, sin `.env`,
+  `__pycache__/`, `*.pyc` ni `private_media/`.
+- **Commit de cierre creado:** único archivo — `docs/phases/phase-6-implementation-summary.md`
+  (todo el trabajo de esta etapa fue de validación y documentación, sin cambios de código).
+
+**FINAL AUDITED COMMIT:** `242c6ad784f4bacbca0ba26e305aa3810d3c21e4` (commit de cierre, §9 del
+prompt 2/3). Este mismo documento (`phase-6-final-report.md`) se actualiza para citar ese hash
+en un commit inmediatamente posterior — pequeño e indispensable únicamente por la auto-
+referencia (`final-report.md` no puede citar el hash de un commit que todavía no existe al
+momento de escribirse) — ese commit posterior es el que efectivamente deja el repositorio en el
+estado descrito por este documento; verificar con `git log -1` si se audita este archivo de
+forma aislada.
+
+Todos los requisitos del prompt 2/3 se cumplieron. No se detectó ningún bloqueo.
+
+**Tag remoto:** todavía NO se crea — corresponde al prompt 3/3.

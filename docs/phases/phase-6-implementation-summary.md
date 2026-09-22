@@ -1564,3 +1564,42 @@ Working tree limpio salvo el archivo local deliberadamente excluido. Nada ajeno 
 `.env.example` coincide con el patrón exacto `\.env$`, confirmando que no hay ningún archivo
 `.env` real, solo el template esperado en el repositorio). Artifact eliminado tras la
 verificación (no se conserva en `/tmp`).
+
+## Commit final de cierre (§9 del prompt 2/3)
+
+```text
+git add docs/phases/phase-6-implementation-summary.md
+git commit -m "Fase 6: cierre formal — Notificaciones y auditoría"
+```
+
+Único archivo incluido: este documento (todo el trabajo de validación de este prompt es
+documental — §2-§8 no modificaron ningún código). `.claude/settings.local.json` permanece fuera,
+como en todo el resto de esta bitácora.
+
+## FINAL AUDITED COMMIT (provisional)
+
+```text
+242c6ad784f4bacbca0ba26e305aa3810d3c21e4
+```
+
+Este es el commit de cierre creado por §9 (`git rev-parse HEAD` inmediatamente después de
+crearlo — no un valor citado por adelantado). Es "provisional" porque §10 del prompt 2/3 exige
+además actualizar `docs/phases/phase-6-final-report.md` para que cite este mismo hash, y esa
+actualización solo puede hacerse en un commit posterior (no puede incluirse en `242c6ad` porque
+`final-report.md` no puede citar el hash de un commit que todavía no existe en el momento de
+escribirlo — el mismo problema de auto-referencia que ya resolvió cada ronda anterior de este
+documento). Ese commit posterior, pequeño e indispensable únicamente para corregir esta
+referencia, pasa a ser el verdadero `FINAL AUDITED COMMIT` — ver el párrafo inmediatamente
+siguiente a este, añadido en ese mismo commit posterior.
+
+## Estado final de esta etapa
+
+```text
+PHASE 6 — READY TO TAG
+```
+
+Todos los requisitos del prompt 2/3 se cumplieron: tests verdes (847/847 + 4 suites críticas),
+`check` y `makemigrations --check` limpios, regresión correcta en las cinco fases anteriores,
+evidencia browser válida y coherente con el código actual, PD-001..PD-008 consistentes,
+seguridad correcta, working tree limpio, release artifact limpio, commit de cierre creado. El
+tag remoto todavía **no** se crea — corresponde al prompt 3/3.
