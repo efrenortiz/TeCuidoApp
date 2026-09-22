@@ -218,9 +218,9 @@ conservador porque los prompts 1/4 y 2/4 encontraron y corrigieron dos hallazgos
 adicionales — C-019, C-020 — no cubiertos por la validación anterior). El cierre formal
 (`PHASE 6 — CLOSED`) requiere una auditoría independiente de quien implementó el código.
 
-**HEAD auditado:** ver auto-referencia en el commit inmediatamente posterior a este documento
-(mismo patrón que `79697e0`/`46a16af`/`a0793f0`/el commit de consolidación del prompt 3/4 — no
-confiar en un hash citado por adelantado; volver a ejecutar `git rev-parse HEAD`).
+**HEAD auditado:** `5a903bae2b33872274472dd3334be5edf00ddc5f` (auto-referencia trivial, mismo
+patrón ya usado en `79697e0`/`46a16af`/`a0793f0`/`899dcc4` — no confiar en este hash citado,
+volver a ejecutar `git rev-parse HEAD` en cualquier auditoría posterior).
 
 **Número final de tests:** 847/847, `OK` (suite completa del proyecto). Suites críticas
 ejecutadas explícitamente por separado: `notifications` 36/36, `medical_records` (audit) 217/217,
