@@ -465,7 +465,12 @@ def schedule_appointment_reminders(appointment):
     """Materializa una fila PENDING por (ventana activa x destinatario
     elegible) — ITD-007: se calculan en el momento de creación de la cita,
     no bajo demanda, para mantener la deduplicación trivial por
-    `dedupe_key` estable."""
+    `dedupe_key` estable.
+
+    También la reutiliza `reschedule_appointment_reminders` (C-019) para
+    materializar ventanas activas nuevas tras un cambio de configuración
+    de `ReminderWindow` — es la misma función, no una segunda fuente de
+    verdad; `dedupe_key` evita duplicar lo que ya exista."""
     windows = ReminderWindow.objects.filter(is_active=True)
     for window in windows:
         scheduled_for = appointment.start_at - dt.timedelta(days=window.offset_days)
@@ -510,7 +515,29 @@ def reschedule_appointment_reminders(appointment):
     extremadamente estrecha (milisegundos) entre la verificación de
     elegibilidad de `process_due_notifications` y el envío real, aceptada
     y documentada en vez de resuelta con locking adicional no justificado
-    por el volumen actual del proyecto."""
+    por el volumen actual del proyecto.
+
+    C-019 (PD-004, corrección post-implementación — prompt 1/4 de la ronda
+    de correcciones funcionales): la configuración vigente al momento de
+    la reprogramación es la que manda — "nueva configuración de
+    ReminderWindow aplica a nuevas citas y a citas reprogramadas
+    posteriormente", nunca la configuración congelada que tenía la fila ya
+    existente. Antes, esta función releía el `offset_days` desde el propio
+    `dedupe_key` de cada notificación existente en vez de volver a
+    consultar `ReminderWindow.objects.filter(is_active=True)` — así que un
+    cambio de configuración nunca se reflejaba en una cita reprogramada.
+    Ahora: (1) todo offset que ya no esté activo se cancela explícitamente
+    (no se recalcula con una ventana obsoleta); (2) todo offset que sigue
+    activo se recalcula contra la fecha vigente, igual que antes; (3) se
+    reutiliza `schedule_appointment_reminders` (misma función que la
+    creación original, no una segunda fuente de verdad) para materializar
+    cualquier ventana activa nueva que la cita todavía no tenga — respeta
+    elegibilidad (no crea para offsets ya vencidos) e idempotencia
+    (`dedupe_key` evita duplicar lo que ya existe)."""
+    now = dj_timezone.now()
+    active_offsets = set(
+        ReminderWindow.objects.filter(is_active=True).values_list("offset_days", flat=True)
+    )
     affected = Notification.objects.filter(
         event_type=Notification.EventType.APPOINTMENT_REMINDER,
         resource_type=Notification.ResourceType.APPOINTMENT,
@@ -518,9 +545,16 @@ def reschedule_appointment_reminders(appointment):
         status__in=[Notification.Status.PENDING, Notification.Status.FAILED],
         attempt_count__lt=MAX_DELIVERY_ATTEMPTS,
     )
-    now = dj_timezone.now()
     for notification in affected:
         offset_days = int(notification.dedupe_key.rsplit(":", 1)[-1])
+        if offset_days not in active_offsets:
+            # La ventana que originó esta fila ya no forma parte de la
+            # configuración vigente (PD-004) — se cancela en vez de
+            # recalcularse con un offset obsoleto.
+            notification.status = Notification.Status.CANCELLED
+            notification.reason_code = "REMINDER_WINDOW_NO_LONGER_ACTIVE"
+            notification.save(update_fields=["status", "reason_code", "updated_at"])
+            continue
         new_scheduled_for = appointment.start_at - dt.timedelta(days=offset_days)
         if new_scheduled_for <= now:
             notification.status = Notification.Status.CANCELLED
@@ -529,6 +563,11 @@ def reschedule_appointment_reminders(appointment):
         else:
             notification.scheduled_for = new_scheduled_for
             notification.save(update_fields=["scheduled_for", "updated_at"])
+    # Ventanas activas que esta cita todavía no tiene materializadas (p.
+    # ej. la configuración creció, o cambió a offsets que esta cita nunca
+    # tuvo) — se crean ahora con la misma función de creación original;
+    # `dedupe_key` evita duplicar lo que el bucle de arriba ya recalculó.
+    schedule_appointment_reminders(appointment)
     # Recordatorios para un destinatario que apareció después de la
     # reprogramación (p. ej. una relación de responsable activada
     # mientras tanto) no se retro-generan automáticamente: la próxima
