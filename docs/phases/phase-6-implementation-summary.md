@@ -9,7 +9,10 @@
 - Fecha de corrección post-implementación: 2026-09-21
 - Rama: main
 - Commit inicial: `cafa22b7a77fd5a1e5fc4de9979ecbe70abc2f49`
-- Commit final: pendiente de registrar (se completará en el commit de cierre)
+- Commit final: `14d3318e5c4f3e8b3a73eb14f5e042e429e6136b` (documentación; el trabajo de
+  código/tests de esta fase está en `fd535e4`/`03c929c`, inmediatamente anteriores). Como en
+  rondas anteriores de este proyecto, no asumir que este hash sigue siendo el HEAD real — volver
+  a ejecutar `git rev-parse HEAD` en cualquier auditoría posterior.
 
 > Este documento cubre dos rondas: la implementación inicial (§§1-17, texto original conservado
 > salvo actualizaciones de estado) y la corrección post-implementación que incorpora las
