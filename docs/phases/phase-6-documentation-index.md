@@ -1,0 +1,75 @@
+# TeCuidoApp — Fase 6 — Documentation Index
+
+**Estado:** DESIGN PACKAGE — derivado del Design Freeze v1.1
+**Fecha:** 2026-09-20
+
+## 1. Propósito
+
+Este índice define el conjunto de documentos derivados de Fase 6 — Notificaciones y auditoría, su ubicación recomendada en el repositorio y el orden de lectura para implementación.
+
+El contrato normativo es `docs/phases/phase-6-design-freeze.md`. Ningún documento de este paquete puede contradecirlo, `requirements.md`, `docs/architecture.md` ni los ADR vigentes.
+
+## 2. Estructura y ubicación
+
+| Orden | Documento | Folder | Propósito |
+|---:|---|---|---|
+| 1 | `phase-6-design-freeze.md` | `docs/phases/` | Contrato normativo de la fase |
+| 2 | `phase-6-documentation-index.md` | `docs/phases/` | Navegación y trazabilidad documental |
+| 3 | `phase-6-notification-domain.md` | `docs/design/` | Dominio y reglas de notificaciones |
+| 4 | `phase-6-notification-data-model.md` | `docs/design/` | Modelo lógico/físico de persistencia |
+| 5 | `phase-6-notification-service-contracts.md` | `docs/design/` | Contratos internos de servicios |
+| 6 | `phase-6-notification-api-contracts.md` | `docs/design/` | Contrato HTTP/API |
+| 7 | `phase-6-notification-security-and-privacy.md` | `docs/design/` | Seguridad, privacidad y contenido mínimo |
+| 8 | `phase-6-audit-domain.md` | `docs/design/` | Dominio y taxonomía de auditoría |
+| 9 | `phase-6-audit-data-model.md` | `docs/design/` | Persistencia y reutilización de `AuditEvent` |
+| 10 | `phase-6-audit-service-contracts.md` | `docs/design/` | Emisión y consulta de auditoría |
+| 11 | `phase-6-audit-api-contracts.md` | `docs/design/` | Consulta administrativa del audit trail |
+| 12 | `phase-6-audit-and-history.md` | `docs/design/` | Reglas de historial, append-only y retención |
+| 13 | `phase-6-consent-domain.md` | `docs/design/` | Aceptación de documentos de plataforma |
+| 14 | `phase-6-consent-service-contracts.md` | `docs/design/` | Servicios de aceptación |
+| 15 | `phase-6-ux.md` | `docs/design/` | Comportamiento UX transversal |
+| 16 | `phase-6-screens.md` | `docs/design/` | Estados concretos de pantallas |
+| 17 | `phase-6-testing-strategy.md` | `docs/phases/` | Estrategia y matriz de pruebas |
+| 18 | `phase-6-implementation-handoff.md` | `docs/phases/` | Orden de implementación y handoff |
+| 19 | `phase-6-final-report.md` | `docs/phases/` | Plantilla de cierre posterior a implementación |
+
+## 3. Orden de lectura
+
+```text
+requirements.md
+    ↓
+ADRs aplicables
+    ↓
+docs/architecture.md
+    ↓
+phase-6-design-freeze.md
+    ↓
+phase-6-documentation-index.md
+    ↓
+Notificaciones
+    ↓
+Auditoría
+    ↓
+Consentimientos
+    ↓
+UX / Screens
+    ↓
+Testing
+    ↓
+Implementation Handoff
+```
+
+## 4. Reglas de coherencia
+
+- Todos los archivos nuevos de Fase 6 usan el prefijo `phase-6-`.
+- `notifications` no se convierte en dueño de reglas de Agenda.
+- `audit` no autoriza operaciones ni se convierte en un repositorio clínico paralelo.
+- El `AuditEvent` existente es la fuente de verdad de auditoría; no se crea una segunda tabla de auditoría.
+- La consulta del audit trail es exclusiva de Administradores autorizados.
+- No existe opt-out de las notificaciones operativas o recordatorios congelados.
+- Los recordatorios periódicos no se envían al Doctor asignado.
+- La retención de auditoría es indefinida; no hay depuración automática.
+
+## 5. Estado
+
+Este índice documenta el paquete de diseño y no declara Fase 6 implementada ni cerrada.
