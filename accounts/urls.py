@@ -9,7 +9,7 @@ app_name = "accounts"
 urlpatterns = [
     path(
         "login/",
-        auth_views.LoginView.as_view(
+        views.AuditedLoginView.as_view(
             template_name="registration/login.html",
             authentication_form=EmailVerifiedAuthenticationForm,
         ),
@@ -71,4 +71,5 @@ urlpatterns = [
         views.InvitationAcceptView.as_view(),
         name="invitation_accept",
     ),
+    path("consentimiento/", views.ConsentView.as_view(), name="consent"),
 ]

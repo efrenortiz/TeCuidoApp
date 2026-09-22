@@ -1,0 +1,31 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Aviso de privacidad y términos — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Aviso de privacidad y términos" description="Documentos de la plataforma (F6-D04)." %}
+
+<div class="card card--narrow">
+  <dl class="data-list">
+    {% for doc in documents %}
+    <div>
+      <dt class="data-list__label">{{ doc.label }} (v{{ doc.version }})</dt>
+      <dd class="data-list__value">
+        {% if doc.document_url %}
+        <a href="{{ doc.document_url }}" target="_blank" rel="noopener">Leer el documento</a><br>
+        {% endif %}
+        {% if doc.accepted %}
+        {% include "components/_badge.html" with text="Aceptado" variant="success" %}
+        <span>el {{ doc.accepted_at|date:"d/m/Y H:i" }}</span>
+        {% else %}
+        {% include "components/_badge.html" with text="Pendiente de aceptación" variant="warning" %}
+        <form method="post" style="display:inline">
+          {% csrf_token %}
+          <input type="hidden" name="policy_type" value="{{ doc.policy_type }}">
+          <button type="submit" class="btn btn--primary">Aceptar versión {{ doc.version }}</button>
+        </form>
+        {% endif %}
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+</div>
+{% endblock %}

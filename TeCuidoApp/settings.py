@@ -81,6 +81,7 @@ INSTALLED_APPS = [
     'study_orders',
     'clinical_documents',
     'care_requests',
+    'notifications',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -189,6 +190,29 @@ EMAIL_BACKEND = os.environ.get(
     "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
 )
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@tecuido.local")
+
+# Fase 6 (PD-005/PD-006) — base absoluta para enlaces incluidos en
+# notificaciones por Email, generadas fuera de un request (señales de
+# `appointments`, docs/phases/phase-6-implementation-summary.md ITD-013).
+# Sin barra final.
+SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "http://localhost:8000").rstrip("/")
+
+# Fase 6 — PD-006 (docs/phases/phase-6-implementation-summary.md): referencia
+# canónica externa de cada versión publicada del Aviso de Privacidad y los
+# Términos y Condiciones. TeCuidoApp no gestiona el contenido/versionado
+# jurídico (consent-domain.md §5) — solo conserva de dónde puede consultarse
+# cada versión aceptada, incluidas versiones ya superadas por una posterior,
+# para que una aceptación histórica siga siendo trazable a su publicación
+# original. Agregar una versión nueva es una decisión de producto/legal
+# (ITD-009), no técnica.
+LEGAL_DOCUMENT_URLS = {
+    "PRIVACY_NOTICE": {
+        "1.0": os.environ.get("PRIVACY_NOTICE_URL", ""),
+    },
+    "TERMS_AND_CONDITIONS": {
+        "1.0": os.environ.get("TERMS_AND_CONDITIONS_URL", ""),
+    },
+}
 
 
 # Authentication

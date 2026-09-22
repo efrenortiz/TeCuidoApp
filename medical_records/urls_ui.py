@@ -23,4 +23,6 @@ urlpatterns = [
         views.PatientEncounterHistoryView.as_view(),
         name="encounter_history",
     ),
+    # Fase 6 — F6-D05
+    path("auditoria/", views.AuditTrailView.as_view(), name="audit_trail"),
 ]

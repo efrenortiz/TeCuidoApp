@@ -46,6 +46,7 @@ from appointments.services.permissions import (
     patient_profile,
     responsible_profile,
 )
+from appointments.signals import appointment_cancelled, appointment_created, appointment_modified
 from clinics.models import DoctorClinic
 from patients.models import ResponsiblePatientRelationship
 
@@ -154,6 +155,13 @@ def create_appointment_from_hold(*, actor, hold, patient, doctor, clinic, idempo
         raise AppointmentConflict() from exc
 
     mark_consumed(locked_hold, now=now)
+    # Fase 6 (docs/design/phase-6-notification-service-contracts.md
+    # `notify_appointment_created`, cierra M-03 de la auditoría documental):
+    # despachado tras `commit` para que un fallo al crear la intención de
+    # notificación nunca revierta la reserva ya confirmada, y para cubrir
+    # por igual una reserva directa y una originada por CareRequest — ambas
+    # pasan por esta misma función.
+    transaction.on_commit(lambda: appointment_created.send(sender=Appointment, appointment=appointment))
     return appointment
 
 
@@ -186,6 +194,11 @@ def cancel_appointment(*, actor, appointment, reason):
     locked.cancelled_by = actor
     locked.cancellation_reason = reason
     locked.save()
+    transaction.on_commit(
+        lambda: appointment_cancelled.send(
+            sender=Appointment, appointment=locked, event_context={"reason": reason}
+        )
+    )
     return locked
 
 
@@ -317,6 +330,17 @@ def reschedule_appointment(*, actor, appointment, new_clinic, new_start_at, reas
                 return locked
         raise IdempotencyKeyConflict() from exc
 
+    transaction.on_commit(
+        lambda: appointment_modified.send(
+            sender=Appointment,
+            appointment=locked,
+            event_context={
+                "reason": reason,
+                "old_start_at": old_start_at,
+                "new_start_at": new_start_at,
+            },
+        )
+    )
     return locked
 
 

@@ -253,6 +253,15 @@ class AuditEvent(models.Model):
         DOWNLOAD_CLINICAL_DOCUMENT = "DOWNLOAD_CLINICAL_DOCUMENT", "Descarga de documento clínico"
         CREATE_DOCUMENT_VERSION = "CREATE_DOCUMENT_VERSION", "Nueva versión de documento clínico"
         VOID_CLINICAL_DOCUMENT = "VOID_CLINICAL_DOCUMENT", "Anulación de documento clínico"
+        # Fase 6 (docs/design/phase-6-audit-domain.md §3) — catálogo
+        # transversal, no clínico. M-02 de la auditoría documental ya
+        # decidió reutilizar este mismo `AuditEvent`/`Action` en vez de una
+        # segunda tabla; ver docs/phases/phase-6-implementation-summary.md.
+        LOGIN = "LOGIN", "Inicio de sesión"
+        MODIFY_PATIENT = "MODIFY_PATIENT", "Modificación de paciente"
+        CHANGE_PERMISSIONS = "CHANGE_PERMISSIONS", "Cambio de permisos"
+        DISABLE_USER = "DISABLE_USER", "Desactivación de usuario"
+        ADMIN_SENSITIVE_ACCESS = "ADMIN_SENSITIVE_ACCESS", "Acceso administrativo a información sensible"
 
     class Result(models.TextChoices):
         SUCCESS = "SUCCESS", "Éxito"
@@ -268,6 +277,12 @@ class AuditEvent(models.Model):
         PRESCRIPTION = "Prescription", "Receta"
         STUDY_ORDER = "StudyOrder", "Solicitud de estudio"
         CLINICAL_DOCUMENT = "ClinicalDocument", "Documento clínico"
+        # Fase 6 — recurso genérico para acciones no clínicas del catálogo
+        # transversal (LOGIN/CHANGE_PERMISSIONS/DISABLE_USER). Reutiliza
+        # `resource_id` ya existente; no se agrega una FK dedicada (no
+        # justificada por docs/design/phase-6-audit-data-model.md §3).
+        USER = "User", "Usuario"
+        PATIENT = "Patient", "Paciente"
 
     # AH-084/175 — asignado por el servidor, nunca por el cliente.
     occurred_at = models.DateTimeField(auto_now_add=True)

@@ -189,3 +189,42 @@ class Invitation(models.Model):
 
     def __str__(self):
         return f"Invitation({self.email}, {self.status})"
+
+
+class PolicyAcceptance(models.Model):
+    """Fase 6 — F6-D04 (docs/design/phase-6-consent-domain.md §8).
+
+    ITD-001 (docs/phases/phase-6-implementation-summary.md): vive en
+    `accounts` (dueña de `User`) en vez de una app `consent` separada —
+    `phase-6-design-freeze.md` §8 solo anticipa dos apps transversales
+    nuevas (`notifications`, `audit`); un modelo tan pequeño no justifica
+    una tercera."""
+
+    class PolicyType(models.TextChoices):
+        PRIVACY_NOTICE = "PRIVACY_NOTICE", "Aviso de privacidad"
+        TERMS_AND_CONDITIONS = "TERMS_AND_CONDITIONS", "Términos y condiciones"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="policy_acceptances"
+    )
+    policy_type = models.CharField(max_length=25, choices=PolicyType.choices)
+    policy_version = models.CharField(max_length=20)
+    # Asignado por el servidor (nunca por el cliente) —
+    # docs/design/phase-6-consent-service-contracts.md §1.
+    accepted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "aceptación de documento de plataforma"
+        verbose_name_plural = "aceptaciones de documentos de plataforma"
+        constraints = [
+            # Cierra la condicional de consent-service-contracts.md §4:
+            # repetir la misma combinación es idempotente, no un error.
+            models.UniqueConstraint(
+                fields=["user", "policy_type", "policy_version"],
+                name="policyacceptance_user_type_version_unique",
+            ),
+        ]
+        indexes = [models.Index(fields=["user", "policy_type"])]
+
+    def __str__(self):
+        return f"{self.user} · {self.policy_type} v{self.policy_version}"

@@ -22,19 +22,22 @@ on `can_edit` — they are the same resource in different states/reader
 contexts, not different screens.
 """
 
+import datetime as dt
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone as dj_timezone
+from django.utils.dateparse import parse_date
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.cache import never_cache
 
 from appointments.models import Appointment
 from appointments.services.permissions import is_assigned_doctor
-from medical_records.models import ClinicalEncounter
+from medical_records.models import AuditEvent, ClinicalEncounter
 from medical_records.services import encounter as encounter_service
 from medical_records.services import record as record_service
 from medical_records.services.exceptions import (
@@ -48,6 +51,7 @@ from medical_records.services.exceptions import (
     IncompleteClinicalContent,
     InvalidClinicalData,
 )
+from medical_records.services import audit as audit_service
 from medical_records.services.permissions import can_edit_patient_record
 from patients.models import Patient
 
@@ -290,4 +294,75 @@ class PatientEncounterHistoryView(ClinicalView):
             request,
             "medical_records/encounter_history.html",
             {"patient": patient, "page": page},
+        )
+
+
+# --- Audit trail administrativo (Fase 6, S6-AUDIT / F6-D05) -----------------
+
+
+def _parse_ui_date(raw, *, end_of_day):
+    """Convierte un `YYYY-MM-DD` de un `<input type="date">` a un datetime
+    aware — inicio o fin de ese día en la zona horaria activa. `None`/valor
+    inválido se ignora silenciosamente (mismo criterio permisivo que un
+    filtro de UI opcional, no un endpoint que deba validar estrictamente)."""
+    if not raw:
+        return None
+    parsed_date = parse_date(raw)
+    if parsed_date is None:
+        return None
+    time_part = dt.time.max if end_of_day else dt.time.min
+    return dj_timezone.make_aware(dt.datetime.combine(parsed_date, time_part))
+
+
+class AuditTrailView(ClinicalView):
+    """docs/design/phase-6-screens.md §2 — exclusiva de Administrador
+    autorizado (F6-D05). `list_audit_events` ya aplica `can_view_audit_log`;
+    un actor no autorizado recibe 404 uniforme (IDOR — mismo patrón ya
+    usado en `_get_encounter_or_404`), nunca un 403 que confirme que la
+    pantalla existe para roles no autorizados."""
+
+    _PAGE_SIZE = 25
+
+    def get(self, request):
+        """Hallazgo 12.8 (docs/phases/phase-6-implementation-summary.md):
+        la UI debe ofrecer los mismos filtros que el contrato compromete —
+        `phase-6-audit-api-contracts.md` §3 incluye `date_from`/`date_to`,
+        que antes de esta corrección solo existían en `AuditEventListView`
+        (API), no aquí."""
+        action = request.GET.get("action") or None
+        result = request.GET.get("result") or None
+        patient_id = request.GET.get("patient_id") or None
+        date_from_raw = request.GET.get("date_from") or None
+        date_to_raw = request.GET.get("date_to") or None
+
+        patient = None
+        if patient_id:
+            patient = Patient.objects.filter(pk=patient_id).first()
+
+        date_from = _parse_ui_date(date_from_raw, end_of_day=False)
+        date_to = _parse_ui_date(date_to_raw, end_of_day=True)
+
+        try:
+            queryset = audit_service.list_audit_events(
+                actor=request.user, patient=patient, action=action, result=result,
+                date_from=date_from, date_to=date_to,
+            )
+        except ClinicalNotAuthorized:
+            raise Http404
+
+        page_number = request.GET.get("page") or 1
+        paginator = Paginator(queryset, self._PAGE_SIZE)
+        page = paginator.get_page(page_number)
+        return render(
+            request,
+            "medical_records/audit_trail.html",
+            {
+                "page": page,
+                "action_choices": AuditEvent.Action.choices,
+                "result_choices": AuditEvent.Result.choices,
+                "filters": {
+                    "action": action, "result": result, "patient_id": patient_id,
+                    "date_from": date_from_raw, "date_to": date_to_raw,
+                },
+            },
         )

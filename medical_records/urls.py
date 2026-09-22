@@ -22,4 +22,6 @@ urlpatterns = [
         api.PatientEncounterHistoryView.as_view(),
         name="patient_encounter_history",
     ),
+    # Fase 6 — F6-D05 (docs/design/phase-6-audit-api-contracts.md)
+    path("audit/events/", api.AuditEventListView.as_view(), name="audit_event_list"),
 ]

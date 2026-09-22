@@ -21,12 +21,15 @@ import json
 
 from django.core.paginator import Paginator
 from django.http import JsonResponse
+from django.utils.dateparse import parse_datetime
 from django.views import View
 
 from appointments.models import Appointment
-from medical_records.models import ClinicalEncounter
+from medical_records.models import AuditEvent, ClinicalEncounter
+from medical_records.services import audit as audit_service
 from medical_records.services import encounter as encounter_service
 from medical_records.services import record as record_service
+from medical_records.services.permissions import can_view_audit_log
 from medical_records.services.exceptions import (
     ClinicalAuditError,
     ClinicalConcurrencyError,
@@ -145,6 +148,15 @@ def _parse_int(value, field):
         return int(value)
     except (TypeError, ValueError) as exc:
         raise ApiError(f"El parámetro '{field}' debe ser un entero.") from exc
+
+
+def _parse_optional_datetime(value, field):
+    if not value:
+        return None
+    parsed = parse_datetime(value)
+    if parsed is None:
+        raise ApiError(f"El parámetro '{field}' debe ser una fecha/hora ISO-8601 válida.")
+    return parsed
 
 
 # --- Field mapping (clinical-api-contracts.md §25, D-002) --------------------
@@ -330,6 +342,84 @@ class PatientEncounterHistoryView(JsonApiView):
                 "next": page.next_page_number() if page.has_next() else None,
                 "previous": page.previous_page_number() if page.has_previous() else None,
                 "results": [_serialize_encounter_summary(e) for e in page.object_list],
+            },
+            status=200,
+        )
+
+
+def _serialize_audit_event(event):
+    """docs/design/phase-6-audit-api-contracts.md §4 — nunca el contenido
+    clínico ni secretos; solo metadatos de trazabilidad."""
+    return {
+        "id": event.pk,
+        "occurred_at": event.occurred_at.isoformat(),
+        "actor_id": event.actor_id,
+        "actor_role": event.actor_role,
+        "action": event.action,
+        "result": event.result,
+        "reason_code": event.reason_code,
+        "resource_type": event.resource_type,
+        "resource_id": event.resource_id,
+        "patient_id": event.patient_id,
+    }
+
+
+class AuditEventListView(JsonApiView):
+    """F6-D05 (docs/design/phase-6-audit-api-contracts.md) — consulta
+    administrativa del audit trail. `list_audit_events` ya aplica
+    `can_view_audit_log` (solo `is_superuser`); un actor no autorizado
+    recibe el mismo 403 uniforme que el resto de la API clínica, sin
+    revelar si el audit trail existiría para él."""
+
+    _PAGE_SIZE_DEFAULT = 20
+    _PAGE_SIZE_MAX = 100
+
+    def get(self, request):
+        # La autorización debe evaluarse antes de cualquier respuesta
+        # temprana — un `patient_id` inexistente no puede convertirse en un
+        # atajo que devuelva 200 a un actor no autorizado sin pasar por
+        # `can_view_audit_log` (bug encontrado en revisión de seguridad,
+        # docs/phases/phase-6-implementation-summary.md §9).
+        if not can_view_audit_log(request.user):
+            raise ClinicalNotAuthorized()
+
+        patient = None
+        if request.GET.get("patient_id"):
+            patient_id = _parse_int(request.GET["patient_id"], "patient_id")
+            patient = Patient.objects.filter(pk=patient_id).first()
+            if patient is None:
+                return JsonResponse({"count": 0, "next": None, "previous": None, "results": []}, status=200)
+
+        action = request.GET.get("action") or None
+        if action is not None and action not in AuditEvent.Action.values:
+            raise ApiError(f"'action' debe ser uno de {AuditEvent.Action.values!r}.")
+
+        result = request.GET.get("result") or None
+        if result is not None and result not in AuditEvent.Result.values:
+            raise ApiError(f"'result' debe ser uno de {AuditEvent.Result.values!r}.")
+
+        date_from = _parse_optional_datetime(request.GET.get("date_from"), "date_from")
+        date_to = _parse_optional_datetime(request.GET.get("date_to"), "date_to")
+
+        queryset = audit_service.list_audit_events(
+            actor=request.user, patient=patient, action=action, result=result,
+            date_from=date_from, date_to=date_to,
+        )
+
+        page_size = (
+            min(_parse_int(request.GET["page_size"], "page_size"), self._PAGE_SIZE_MAX)
+            if request.GET.get("page_size") else self._PAGE_SIZE_DEFAULT
+        )
+        page_number = _parse_int(request.GET["page"], "page") if request.GET.get("page") else 1
+
+        paginator = Paginator(queryset, page_size)
+        page = paginator.get_page(page_number)
+        return JsonResponse(
+            {
+                "count": paginator.count,
+                "next": page.next_page_number() if page.has_next() else None,
+                "previous": page.previous_page_number() if page.has_previous() else None,
+                "results": [_serialize_audit_event(e) for e in page.object_list],
             },
             status=200,
         )

@@ -63,11 +63,22 @@
       <dd class="data-list__value">
         <a href="{% url 'appointments:admin_doctor_picker' %}">Agenda por médico</a> ·
         <a href="{% url 'appointments:booking' %}">Reservar cita</a> ·
-        <a href="{% url 'appointments:my_appointments' %}">Citas</a>
+        <a href="{% url 'appointments:my_appointments' %}">Citas</a> ·
+        <a href="{% url 'clinical_ui:audit_trail' %}">Audit trail</a>
       </dd>
     </div>
     {% endif %}
   </dl>
 </div>
 {% endif %}
+
+<div class="card card--narrow">
+  <h2 class="card__title">Cuenta</h2>
+  <dl class="data-list">
+    <div>
+      <dt class="data-list__label">Documentos de plataforma</dt>
+      <dd class="data-list__value"><a href="{% url 'accounts:consent' %}">Aviso de privacidad y términos</a></dd>
+    </div>
+  </dl>
+</div>
 {% endblock %}

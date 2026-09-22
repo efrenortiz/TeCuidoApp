@@ -1,0 +1,93 @@
+{% extends "layouts/app_base.html" %}
+{% block title %}Audit trail — TeCuidoApp{% endblock %}
+{% block app_content %}
+{% include "components/_page_header.html" with title="Audit trail" description="Historial de auditoría — exclusivo de Administrador (F6-D05)." %}
+
+<form method="get" class="card">
+  <div class="form-row">
+    <label for="id_action">Acción</label>
+    <select name="action" id="id_action">
+      <option value="">Todas</option>
+      {% for value, label in action_choices %}
+      <option value="{{ value }}" {% if filters.action == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="id_result">Resultado</label>
+    <select name="result" id="id_result">
+      <option value="">Todos</option>
+      {% for value, label in result_choices %}
+      <option value="{{ value }}" {% if filters.result == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="id_patient_id">ID de paciente</label>
+    <input type="number" name="patient_id" id="id_patient_id" value="{{ filters.patient_id|default:'' }}">
+  </div>
+  <div class="form-row">
+    <label for="id_date_from">Fecha desde</label>
+    <input type="date" name="date_from" id="id_date_from" value="{{ filters.date_from|default:'' }}">
+  </div>
+  <div class="form-row">
+    <label for="id_date_to">Fecha hasta</label>
+    <input type="date" name="date_to" id="id_date_to" value="{{ filters.date_to|default:'' }}">
+  </div>
+  <button type="submit" class="btn btn--secondary">Filtrar</button>
+</form>
+
+{% if page.object_list %}
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Fecha/hora</th>
+        <th>Actor</th>
+        <th>Rol</th>
+        <th>Acción</th>
+        <th>Resultado</th>
+        <th>Recurso</th>
+        <th>Motivo</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for event in page.object_list %}
+      <tr>
+        <td>{{ event.occurred_at|date:"d/m/Y H:i" }}</td>
+        <td>{{ event.actor_id }}</td>
+        <td>{{ event.actor_role }}</td>
+        <td>{{ event.get_action_display }}</td>
+        <td>
+          {% if event.result == "SUCCESS" %}
+          {% include "components/_badge.html" with text=event.get_result_display variant="success" %}
+          {% elif event.result == "DENIED" or event.result == "REJECTED" %}
+          {% include "components/_badge.html" with text=event.get_result_display variant="warning" %}
+          {% else %}
+          {% include "components/_badge.html" with text=event.get_result_display variant="danger" %}
+          {% endif %}
+        </td>
+        <td>{{ event.resource_type }} · {{ event.resource_id|default:"—" }}</td>
+        <td>{{ event.reason_code|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page.has_other_pages %}
+<nav class="pagination">
+  {% if page.has_previous %}
+  <a class="btn btn--secondary" href="?page={{ page.previous_page_number }}">&larr; Anterior</a>
+  {% endif %}
+  <span>Página {{ page.number }} de {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}
+  <a class="btn btn--secondary" href="?page={{ page.next_page_number }}">Siguiente &rarr;</a>
+  {% endif %}
+</nav>
+{% endif %}
+
+{% else %}
+{% include "components/_empty_state.html" with title="No hay eventos de auditoría que coincidan con el filtro." %}
+{% endif %}
+{% endblock %}

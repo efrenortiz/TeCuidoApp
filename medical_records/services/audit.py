@@ -102,11 +102,16 @@ def safe_record_event(**kwargs):
         return None
 
 
-def list_audit_events(*, actor, patient=None, action=None):
+def list_audit_events(*, actor, patient=None, action=None, result=None, date_from=None, date_to=None):
     """AH-107/108/109/182 (cerrado) — sin endpoint público general;
     lectura restringida al Administrador, con los filtros mínimos que
     AH-111 pide (por paciente y/o por acción) y orden estable/paginable
-    (AH-112/162: fecha descendente, id como desempate)."""
+    (AH-112/162: fecha descendente, id como desempate).
+
+    Fase 6 (docs/design/phase-6-audit-service-contracts.md §7) amplía los
+    filtros con `result`/`date_from`/`date_to` — misma frontera de
+    servicio, sin crear una segunda función ni una segunda fuente de
+    verdad de consulta."""
     from medical_records.services.permissions import can_view_audit_log
 
     if not can_view_audit_log(actor):
@@ -117,4 +122,10 @@ def list_audit_events(*, actor, patient=None, action=None):
         queryset = queryset.filter(patient=patient)
     if action is not None:
         queryset = queryset.filter(action=action)
+    if result is not None:
+        queryset = queryset.filter(result=result)
+    if date_from is not None:
+        queryset = queryset.filter(occurred_at__gte=date_from)
+    if date_to is not None:
+        queryset = queryset.filter(occurred_at__lte=date_to)
     return queryset.order_by("-occurred_at", "-pk")
