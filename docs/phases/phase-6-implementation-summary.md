@@ -1465,3 +1465,102 @@ PHASE 6 — PREPARED FOR FINAL VALIDATION
 Documentación consolidada. Tag: no creado. Commit de cierre definitivo: no creado. Pendiente el
 prompt 2/3 (revalidación completa) y su confirmación posterior antes de declarar
 `PHASE 6 — CLOSED`.
+
+---
+
+# Cierre formal — Prompt 2/3: validación final y commit de cierre (2026-09-22)
+
+Segunda de tres etapas del cierre formal. Objetivo: demostrar con evidencia fresca (no valores
+históricos) que el estado actual cumple los criterios de `PHASE 6 — CLOSED`, y producir el commit
+definitivo de cierre — sin crear todavía el tag remoto (eso es el prompt 3/3).
+
+## Validación de código (§2 del prompt 2/3)
+
+```text
+python manage.py check                  -> System check identified no issues (0 silenced)
+python manage.py makemigrations --check -> No changes detected
+python manage.py test (suite completa)  -> Ran 847 tests in 593.986s — OK
+python manage.py test notifications     -> Ran 36 tests — OK
+python manage.py test accounts          -> Ran 72 tests — OK   (incluye consent)
+python manage.py test appointments      -> Ran 186 tests — OK  (agenda)
+python manage.py test medical_records   -> Ran 217 tests — OK  (audit)
+```
+
+**Total: 847 tests, 847 ejecutados, 0 fallidos.** `check` limpio. `makemigrations --check`
+limpio. Número real de esta ejecución — no reutiliza el 847 de la ronda anterior por
+coincidencia numérica: es la misma cifra porque no se agregó ni quitó ningún test desde el
+prompt 4/4 (solo cambios documentales desde entonces), verificado ejecutando la suite de nuevo,
+no asumido.
+
+## Regresión por fase (§3 del prompt 2/3)
+
+| Fase | Cobertura | Resultado |
+|---|---|---|
+| Fase 1 — Fundaciones | `accounts` (72/72), `doctors`/`clinics`/`patients` (suite completa) | Sin fallos |
+| Fase 2 — Agenda | `appointments` (186/186) | Sin fallos |
+| Fase 3 — Gestión clínica | `medical_records` — encuentros clínicos (incluido en 217/217) | Sin fallos |
+| Fase 4 — Documentos | `clinical_documents`/`prescriptions`/`study_orders` (suite completa) | Sin fallos |
+| Fase 5 — CareRequest y operación | `care_requests` (suite completa) | Sin fallos |
+
+Ningún fallo, preexistente o nuevo, en ninguna fase. Ningún fallo introducido por Fase 6. Las
+tres trazas de excepción que imprime la corrida completa son tests que simulan fallos
+deliberadamente (outage de BD, SMTP caído, formato de destinatario inválido) — comportamiento
+esperado, no una regresión.
+
+## Matriz final de validación PD-001..PD-008 (§4 del prompt 2/3)
+
+| Decisión | Código | Test | Documentación | Estado |
+|---|---|---|---|---|
+| PD-001 | `medical_records/models.py::AuditEvent.Action.ADMIN_SENSITIVE_ACCESS` (definida, sin emisor) | N/A — ausencia verificada por `grep` | `phase-6-audit-domain.md` §3 | CONSISTENTE |
+| PD-002 | Sin cambio de código — `record_event`/`safe_record_event` exigen actor real (AH-086) | `LoginAuditTests`, `RejectionAuditCoverageTests` | `phase-6-audit-domain.md` §4; `phase-6-design-freeze.md` §11/§12 (C-017) | CONSISTENTE |
+| PD-003 | Sin cambios — `PasswordResetView`/`PasswordResetForm` nativos | Regresión completa de `accounts` (72/72) | `phase-6-notification-domain.md` §3 | CONSISTENTE |
+| PD-004 | `notifications/services.py::reschedule_appointment_reminders` (corregido, C-019) | `ReminderWindowReconfigurationTests` (6 tests) | `phase-6-notification-data-model.md` §2.2; C-019 en este documento | CONSISTENTE |
+| PD-005 | `notifications/services.py::_render`/`_appointment_essentials`/`_appointment_url` | `EmailContentTests` (5 tests) | `phase-6-notification-security-and-privacy.md` §1 | CONSISTENTE |
+| PD-006 | `accounts/services/consent.py::document_url`/`acceptance_trace`; `settings.LEGAL_DOCUMENT_URLS` | `ConsentDocumentReferenceTests` + tests de `acceptance_trace` | `phase-6-consent-domain.md` §1 | CONSISTENTE |
+| PD-007 | `notifications/services.py` (corregido, C-012/C-013) | `RetryBackoffTests` (15 tests) | `phase-6-notification-domain.md` §6; `phase-6-notification-service-contracts.md` §4 | CONSISTENTE |
+| PD-008 | Sin app nueva — `medical_records.AuditEvent`/`medical_records.services.audit` únicos | Toda `medical_records.tests.test_fase6_audit` (28 tests) | `phase-6-audit-domain.md` §2; `phase-6-design-freeze.md` §8.2 | CONSISTENTE |
+
+Las ocho `CONSISTENTE`. Ninguna se reabrió.
+
+## Validación browser (§5 del prompt 2/3)
+
+`git diff --stat 592c356 HEAD -- templates/ medical_records/views.py accounts/views.py
+notifications/services.py accounts/services/consent.py` → sin resultados: **ningún archivo que
+afecte la UI/comportamiento capturado en la evidencia cambió desde el commit de la Ronda 2**
+(`592c356`). La evidencia existente sigue siendo coherente con el código actual — no fue
+necesario repetir ninguna captura. Cobertura confirmada de las diez categorías mínimas exigidas:
+consentimiento, documento externo, audit trail, autorización administrativa, rechazo por rol,
+filtros, empty state, error state, ausencia de opt-out, enlaces de notificaciones — todas
+presentes en `docs/phases/evidence/phase-6-browser-validation/README.md`.
+
+## Verificación de seguridad (§6 del prompt 2/3)
+
+- `.env`: no tracked (`git ls-files` sin resultados), gitignorado (`.gitignore:19`).
+- Sin secretos/tokens/passwords hardcodeados: `git grep` con patrón de asignación de
+  `SECRET_KEY`/`PASSWORD`/`api_key`/`token` sobre archivos `.py` tracked, sin resultados fuera de
+  `settings.py` (que los lee de variables de entorno) y archivos de test/ejemplo.
+- Audit trail: `medical_records/admin.py::AuditEventAdmin.has_module_permission`/
+  `has_view_permission` y `medical_records/services/permissions.py::can_view_audit_log` exigen
+  `is_superuser` explícitamente en los tres puntos de acceso (API, UI, Django Admin) — un
+  `is_staff=True` sin `is_superuser` queda denegado en los tres, confirmado por
+  `test_django_admin_staff_without_superuser_cannot_see_audit_trail` y equivalentes.
+
+## Git (§7 del prompt 2/3)
+
+```text
+git status --short --branch -> ## main...origin/main [adelante 22]; solo .claude/settings.local.json
+git diff --stat              -> solo .claude/settings.local.json (config local, nunca commiteado)
+git diff --cached --stat     -> (vacío)
+git ls-files | grep -iE "^\.env$|private_media/|__pycache__|\.pyc$" -> sin resultados
+```
+
+Working tree limpio salvo el archivo local deliberadamente excluido. Nada ajeno a Fase 6 en el
+árbol de trabajo.
+
+## Release artifact (§8 del prompt 2/3)
+
+`git archive --format=zip --output=/tmp/tecuidoapp-phase-6-release.zip HEAD` → 576 archivos.
+`unzip -l` sin resultados para `\.env$`, `private_media/`, `__pycache__`, `\.pyc$` (ni siquiera
+`.env.example` coincide con el patrón exacto `\.env$`, confirmando que no hay ningún archivo
+`.env` real, solo el template esperado en el repositorio). Artifact eliminado tras la
+verificación (no se conserva en `/tmp`).
