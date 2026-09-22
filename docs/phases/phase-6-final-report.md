@@ -231,9 +231,9 @@ contra `origin/main`, que a la fecha de esta consolidación no incluye estos com
 
 Fecha de esta consolidación: 2026-09-22
 
-Commit de esta consolidación: ver auto-referencia en el commit inmediatamente posterior a este
-documento (mismo patrón que `79697e0`/`46a16af`/`a0793f0` — no confiar en un hash citado por
-adelantado; volver a ejecutar `git rev-parse HEAD` en cualquier auditoría posterior).
+Commit de esta consolidación: `0b4478ff773a523b8eca0e64f591fc3523b89161` (auto-referencia
+trivial, mismo patrón ya usado en `79697e0`/`46a16af`/`a0793f0` — no confiar en este hash citado,
+volver a ejecutar `git rev-parse HEAD` en cualquier auditoría posterior).
 
 Evidencia principal: `docs/phases/phase-6-implementation-summary.md` (bitácora técnica completa),
 `docs/phases/evidence/phase-6-browser-validation/README.md` (evidencia de navegador).
